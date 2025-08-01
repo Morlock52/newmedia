@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Media Server - Quantum Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+    <div id="quantum-overlay"></div>
+    <div id="particle-field"></div>
+    
+    <nav class="holographic-nav">
+        <div class="nav-orb" data-section="media">
+            <div class="orb-core"></div>
+            <span class="orb-label">Media Core</span>
+        </div>
+        <div class="nav-orb" data-section="neural">
+            <div class="orb-core"></div>
+            <span class="orb-label">Neural Net</span>
+        </div>
+        <div class="nav-orb" data-section="quantum">
+            <div class="orb-core"></div>
+            <span class="orb-label">Quantum</span>
+        </div>
+        <div class="nav-orb" data-section="collab">
+            <div class="orb-core"></div>
+            <span class="orb-label">Collab Space</span>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+        <header class="neural-header">
+            <h1 class="glitch-text" data-text="NEURAL MEDIA SERVER">NEURAL MEDIA SERVER</h1>
+            <div class="status-indicators">
+                <div class="status-orb active" data-status="quantum"></div>
+                <div class="status-orb active" data-status="neural"></div>
+                <div class="status-orb active" data-status="sync"></div>
+            </div>
+        </header>
+
+        <section class="media-sphere-container">
+            <div id="media-sphere-renderer"></div>
+            <div class="sphere-controls">
+                <button class="gesture-btn" data-gesture="rotate">↻</button>
+                <button class="gesture-btn" data-gesture="expand">⤢</button>
+                <button class="gesture-btn" data-gesture="neural">◈</button>
+            </div>
+        </section>
+
+        <section class="data-streams">
+            <div class="stream-panel" id="neural-activity">
+                <h3>Neural Activity</h3>
+                <canvas id="neural-canvas"></canvas>
+                <div class="neural-metrics">
+                    <span class="metric">Synaptic Load: <span class="value">87%</span></span>
+                    <span class="metric">Quantum State: <span class="value">Coherent</span></span>
+                </div>
+            </div>
+            
+            <div class="stream-panel" id="media-analytics">
+                <h3>Media Analytics</h3>
+                <div class="holographic-graph">
+                    <canvas id="analytics-canvas"></canvas>
+                </div>
+                <div class="media-stats">
+                    <div class="stat-cube">
+                        <span class="stat-value">1.2TB</span>
+                        <span class="stat-label">Processing</span>
+                    </div>
+                    <div class="stat-cube">
+                        <span class="stat-value">847</span>
+                        <span class="stat-label">Active Streams</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stream-panel" id="quantum-field">
+                <h3>Quantum Field</h3>
+                <canvas id="quantum-canvas"></canvas>
+                <div class="quantum-controls">
+                    <button class="quantum-btn">Entangle</button>
+                    <button class="quantum-btn">Collapse</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="ai-assistant">
+            <div class="ai-avatar">
+                <canvas id="ai-face"></canvas>
+            </div>
+            <div class="ai-interface">
+                <div class="ai-response" id="ai-output">
+                    <p>Neural pathways synchronized. Ready for quantum processing.</p>
+                </div>
+                <input type="text" class="ai-input" placeholder="Neural command interface..." />
+            </div>
+        </section>
+
+        <section class="collaboration-space">
+            <h3>Spatial Collaboration</h3>
+            <div id="collab-3d-space"></div>
+            <div class="collab-users">
+                <div class="user-avatar" style="--hue: 180">
+                    <div class="avatar-core"></div>
+                </div>
+                <div class="user-avatar" style="--hue: 280">
+                    <div class="avatar-core"></div>
+                </div>
+                <div class="user-avatar" style="--hue: 60">
+                    <div class="avatar-core"></div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="quantum-footer">
+            <div class="haptic-indicator">
+                <span class="pulse"></span>
+                <span class="label">Haptic Active</span>
+            </div>
+            <div class="eye-tracking-indicator">
+                <span class="eye-icon">👁</span>
+                <span class="label">Eye Tracking</span>
+            </div>
+            <div class="bci-indicator">
+                <span class="bci-icon">🧠</span>
+                <span class="label">BCI Ready</span>
+            </div>
+        </footer>
+    </main>
+
+    <div class="xr-mode-toggle">
+        <button id="xr-toggle">Enter XR</button>
+    </div>
+
+    <script src="neural-dashboard.js"></script>
+</body>
+</html>

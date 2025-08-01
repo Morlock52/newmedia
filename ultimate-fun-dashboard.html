@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Media Universe Control Center - 2025 Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', -apple-system, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="%2300ff00" opacity="0.8"/></svg>'), auto;
+        }
+        
+        /* Matrix rain background */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        
+        /* Starfield */
+        .star {
+            position: fixed;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 2s infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        /* Header with game-style UI */
+        .header {
+            background: linear-gradient(180deg, rgba(0,255,255,0.2) 0%, transparent 100%);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scan 3s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            background: linear-gradient(45deg, #00ff00, #00ffff, #ff00ff, #ffff00);
+            background-size: 400% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow 5s ease infinite;
+        }
+        
+        @keyframes rainbow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        /* XP/Level System */
+        .player-stats {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #00ff00;
+            padding: 1rem;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        
+        .xp-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ff00);
+            width: 65%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Main container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Mode selector */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .mode-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .mode-btn:hover {
+            background: #00ff00;
+            color: #000;
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #00ff00;
+        }
+        
+        .mode-btn.active {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        /* Service grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        /* Service cards with game aesthetics */
+        .service-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        
+        .service-card:hover::before {
+            transform: translateX(100%);
+        }
+        
+        .service-card:hover {
+            border-color: #00ff00;
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,255,255,0.3);
+        }
+        
+        .service-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .service-card:nth-child(even) .service-icon {
+            animation-delay: 1.5s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .service-name {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .status-led {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #00ff00;
+            box-shadow: 0 0 10px currentColor;
+            animation: led-pulse 2s infinite;
+        }
+        
+        @keyframes led-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 5px currentColor; }
+            50% { opacity: 0.5; box-shadow: 0 0 20px currentColor; }
+        }
+        
+        .service-stats {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .launch-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #00ff00, #00ff00);
+            border: none;
+            color: #000;
+            padding: 1rem;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .launch-btn:hover {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,255,255,0.5);
+        }
+        
+        /* Newbie mode specific */
+        .newbie-mode .service-card {
+            background: linear-gradient(135deg, rgba(255,0,255,0.1), rgba(0,255,255,0.1));
+        }
+        
+        .newbie-mode .helper-text {
+            display: block;
+            color: #00ffff;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+        
+        /* Techie mode specific */
+        .techie-mode .service-card {
+            font-family: 'Courier New', monospace;
+        }
+        
+        .techie-mode .tech-info {
+            display: block;
+            background: rgba(0,0,0,0.5);
+            padding: 0.5rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: #00ff00;
+        }
+        
+        /* Achievements */
+        .achievements {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .achievement {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,215,0,0.2);
+            border: 2px solid gold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .achievement:hover {
+            transform: scale(1.2) rotate(360deg);
+            box-shadow: 0 0 20px gold;
+        }
+        
+        /* Voice command indicator */
+        .voice-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(0,255,0,0.2);
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .voice-indicator:hover {
+            background: rgba(0,255,0,0.4);
+            transform: scale(1.1);
+        }
+        
+        .voice-indicator.listening {
+            animation: voice-pulse 1s infinite;
+        }
+        
+        @keyframes voice-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0,255,0,0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(0,255,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
+        }
+        
+        /* Fun easter eggs */
+        .konami-activated {
+            animation: party 0.5s infinite;
+        }
+        
+        @keyframes party {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(180deg); }
+        }
+        
+        /* Loading animation */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .loading-text {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            animation: loading-pulse 1s infinite;
+        }
+        
+        @keyframes loading-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .services-grid { grid-template-columns: 1fr; }
+            .player-stats { position: static; margin: 1rem auto; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Matrix background -->
+    <canvas id="matrix-bg"></canvas>
+    
+    <!-- Starfield -->
+    <div id="starfield"></div>
+    
+    <!-- Player Stats -->
+    <div class="player-stats">
+        <div style="font-weight: bold; color: #00ff00;">MEDIA MASTER</div>
+        <div style="margin-top: 5px;">Level 42</div>
+        <div class="xp-bar">
+            <div class="xp-fill"></div>
+        </div>
+        <div style="font-size: 0.8rem; margin-top: 5px;">XP: 6,500 / 10,000</div>
+        <div style="margin-top: 10px; font-size: 0.9rem;">
+            <div>⚡ Services: 23/30</div>
+            <div>🎬 Movies: 1,337</div>
+            <div>📺 Shows: 420</div>
+            <div>🎵 Songs: 69,420</div>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <h1>🎮 Media Universe Control Center</h1>
+        <p style="text-align: center; margin-top: 1rem; color: #00ffff;">
+            Achievement Unlocked: Ultimate Media Server Deployed! 🏆
+        </p>
+    </header>
+    
+    <div class="container">
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('newbie')">
+                👶 Newbie Mode
+            </button>
+            <button class="mode-btn" onclick="setMode('techie')">
+                🤓 Techie Mode
+            </button>
+            <button class="mode-btn" onclick="setMode('gamer')">
+                🎮 Gamer Mode
+            </button>
+        </div>
+        
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="loading-text">🚀 Initializing Media Universe...</div>
+            <div style="font-size: 1.2rem;">Scanning for services...</div>
+        </div>
+        
+        <!-- Services Grid -->
+        <div class="services-grid" id="services-grid" style="display: none;">
+            <!-- Services will be dynamically added here -->
+        </div>
+    </div>
+    
+    <!-- Achievements -->
+    <div class="achievements">
+        <div class="achievement" title="First Stream">🎬</div>
+        <div class="achievement" title="100 Movies">🏆</div>
+        <div class="achievement" title="Automation Master">🤖</div>
+        <div class="achievement" title="4K Champion">💎</div>
+        <div class="achievement" title="Seedbox Hero">🌱</div>
+    </div>
+    
+    <!-- Voice Command -->
+    <div class="voice-indicator" id="voice-btn" title="Click to use voice commands">
+        🎤
+    </div>
+    
+    <script>
+        // Services data
+        const services = [
+            // Core Services
+            { icon: '📺', name: 'Jellyfin', port: 8096, desc: 'Your Personal Netflix', helper: 'Watch all your movies and shows here!', tech: 'Media Server | Port: 8096 | DLNA/HTTP', users: 5, storage: '2.1TB' },
+            { icon: '🎬', name: 'Radarr', port: 7878, desc: 'Movie Collector', helper: 'Automatically downloads movies you want!', tech: 'Movie PVR | Port: 7878 | API v3', movies: 1337 },
+            { icon: '📺', name: 'Sonarr', port: 8989, desc: 'TV Show Manager', helper: 'Never miss an episode again!', tech: 'TV PVR | Port: 8989 | API v3', shows: 420 },
+            { icon: '🎵', name: 'Lidarr', port: 8686, desc: 'Music Library', helper: 'Builds your perfect music collection!', tech: 'Music PVR | Port: 8686 | API v1', artists: 666 },
+            { icon: '📚', name: 'Readarr', port: 8787, desc: 'Book Keeper', helper: 'Organizes your digital library!', tech: 'Book PVR | Port: 8787 | API v1', books: 2000 },
+            { icon: '🔍', name: 'Prowlarr', port: 9696, desc: 'Search Master', helper: 'Finds content across the internet!', tech: 'Indexer Manager | Port: 9696', indexers: 42 },
+            { icon: '🎭', name: 'Overseerr', port: 5055, desc: 'Request Portal', helper: 'Request new movies and shows easily!', tech: 'Request Management | Port: 5055', requests: 156 },
+            { icon: '⬇️', name: 'qBittorrent', port: 8080, desc: 'Download Engine', helper: 'Downloads your content super fast!', tech: 'Torrent Client | Port: 8080 | VPN', speed: '125MB/s' },
+            
+            // New Services
+            { icon: '💬', name: 'Bazarr', port: 6767, desc: 'Subtitle Wizard', helper: 'Adds subtitles in any language!', tech: 'Subtitle Manager | Port: 6767', languages: 184 },
+            { icon: '🎧', name: 'AudioBookshelf', port: 13378, desc: 'Audiobook Haven', helper: 'Listen to books and podcasts!', tech: 'Audiobook Server | Port: 13378', audiobooks: 500 },
+            { icon: '🎼', name: 'Navidrome', port: 4533, desc: 'Music Streamer', helper: 'Your personal Spotify!', tech: 'Music Server | Port: 4533 | Subsonic', songs: 69420 },
+            { icon: '📖', name: 'Kavita', port: 5001, desc: 'Comic Universe', helper: 'Read comics and manga!', tech: 'Comic Server | Port: 5001 | OPDS', comics: 1500 },
+            { icon: '📚', name: 'Calibre-Web', port: 8083, desc: 'E-Book Portal', helper: 'Your digital bookshelf!', tech: 'E-Book Server | Port: 8083', ebooks: 3000 },
+            { icon: '🎥', name: 'Tdarr', port: 8265, desc: 'Transcode HQ', helper: 'Optimizes video quality and size!', tech: 'Transcoding | Port: 8265 | GPU', saved: '8.5TB' },
+            { icon: '🎯', name: 'Autobrr', port: 7474, desc: 'Auto Upgrader', helper: 'Gets better quality automatically!', tech: 'Release Automation | Port: 7474', filters: 89 },
+            { icon: '⚡', name: 'FileFlows', port: 5009, desc: 'Processing Lab', helper: 'Organizes files like magic!', tech: 'Media Processing | Port: 5009', flows: 24 },
+            { icon: '📈', name: 'Tautulli', port: 8181, desc: 'Stats Center', helper: 'See what everyone is watching!', tech: 'Analytics | Port: 8181 | PlexPy', streams: 12 },
+            { icon: '🏠', name: 'Homepage', port: 3000, desc: 'Command Center', helper: 'All your services in one place!', tech: 'Dashboard | Port: 3000 | Docker', widgets: 35 },
+            { icon: '🔍', name: 'Uptime Kuma', port: 3001, desc: 'Health Monitor', helper: 'Keeps everything running smooth!', tech: 'Monitoring | Port: 3001', uptime: '99.9%' },
+            { icon: '🔔', name: 'Gotify', port: 8070, desc: 'Alert System', helper: 'Sends you notifications!', tech: 'Notifications | Port: 8070', alerts: 234 },
+            { icon: '📹', name: 'MeTube', port: 8081, desc: 'Video Grabber', helper: 'Download YouTube videos!', tech: 'YouTube DL | Port: 8081', videos: 567 },
+            { icon: '💾', name: 'Duplicati', port: 8200, desc: 'Backup Vault', helper: 'Keeps your data safe!', tech: 'Backup | Port: 8200 | Encrypted', backups: 15 },
+            { icon: '🐳', name: 'Portainer', port: 9000, desc: 'Docker Control', helper: 'Manage all services easily!', tech: 'Container Mgmt | Port: 9000', containers: 45 },
+        ];
+        
+        let currentMode = 'newbie';
+        let konamiCode = [];
+        const konamiPattern = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+        
+        // Matrix rain effect
+        function initMatrix() {
+            const canvas = document.getElementById('matrix-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const matrix = '01';
+            const fontSize = 10;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            
+            for (let i = 0; i < columns; i++) {
+                drops[i] = 1;
+            }
+            
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = matrix[Math.floor(Math.random() * matrix.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            
+            setInterval(draw, 35);
+        }
+        
+        // Create starfield
+        function createStarfield() {
+            const starfield = document.getElementById('starfield');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = Math.random() * 3 + 'px';
+                star.style.height = star.style.width;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                starfield.appendChild(star);
+            }
+        }
+        
+        // Set display mode
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.body.className = mode + '-mode';
+            
+            if (mode === 'gamer') {
+                document.body.style.cursor = 'crosshair';
+                playSound('powerup');
+            } else {
+                document.body.style.cursor = 'auto';
+            }
+            
+            renderServices();
+        }
+        
+        // Render services
+        function renderServices() {
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+            
+            services.forEach((service, index) => {
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                card.style.animationDelay = (index * 0.1) + 's';
+                
+                let statsHtml = '';
+                Object.entries(service).forEach(([key, value]) => {
+                    if (!['icon', 'name', 'port', 'desc', 'helper', 'tech'].includes(key)) {
+                        const icon = getStatIcon(key);
+                        statsHtml += `<div class="stat">${icon} ${value}</div>`;
+                    }
+                });
+                
+                card.innerHTML = `
+                    <div class="service-icon">${service.icon}</div>
+                    <h3 class="service-name">${service.name}</h3>
+                    <p>${service.desc}</p>
+                    ${currentMode === 'newbie' ? `<p class="helper-text">${service.helper}</p>` : ''}
+                    <div class="service-status">
+                        <div class="status-led"></div>
+                        <span>Online</span>
+                    </div>
+                    ${statsHtml ? `<div class="service-stats">${statsHtml}</div>` : ''}
+                    ${currentMode === 'techie' ? `<div class="tech-info">${service.tech}</div>` : ''}
+                    <button class="launch-btn" onclick="launchService(${service.port}, '${service.name}')">
+                        ${currentMode === 'gamer' ? '🎮 LAUNCH' : 'Open ' + service.name}
+                    </button>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        // Get stat icon
+        function getStatIcon(key) {
+            const icons = {
+                users: '👥', storage: '💾', movies: '🎬', shows: '📺',
+                artists: '🎵', books: '📚', indexers: '🔍', requests: '📝',
+                speed: '⚡', languages: '🌍', audiobooks: '🎧', songs: '🎼',
+                comics: '📖', ebooks: '📚', saved: '💰', filters: '🎯',
+                flows: '⚡', streams: '📊', widgets: '📱', uptime: '✅',
+                alerts: '🔔', videos: '📹', backups: '💾', containers: '🐳'
+            };
+            return icons[key] || '📊';
+        }
+        
+        // Launch service
+        function launchService(port, name) {
+            if (currentMode === 'gamer') {
+                playSound('coin');
+                showAchievement('Service Launched!', '+100 XP');
+                updateXP(100);
+            }
+            window.open(`http://localhost:${port}`, '_blank');
+        }
+        
+        // Play sound effect (simulated)
+        function playSound(type) {
+            console.log(`🔊 Playing sound: ${type}`);
+            // In real implementation, you'd play actual sound files
+        }
+        
+        // Show achievement notification
+        function showAchievement(title, subtitle) {
+            const achievement = document.createElement('div');
+            achievement.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,255,0,0.9);
+                color: black;
+                padding: 2rem;
+                border-radius: 10px;
+                font-size: 1.5rem;
+                font-weight: bold;
+                z-index: 1000;
+                animation: achievement-pop 1s ease;
+            `;
+            achievement.innerHTML = `🏆 ${title}<br><span style="font-size: 1rem">${subtitle}</span>`;
+            document.body.appendChild(achievement);
+            
+            setTimeout(() => achievement.remove(), 3000);
+        }
+        
+        // Update XP
+        function updateXP(amount) {
+            const xpFill = document.querySelector('.xp-fill');
+            const currentWidth = parseInt(xpFill.style.width || '65');
+            const newWidth = Math.min(100, currentWidth + (amount / 100));
+            xpFill.style.width = newWidth + '%';
+        }
+        
+        // Voice commands
+        document.getElementById('voice-btn').addEventListener('click', function() {
+            this.classList.toggle('listening');
+            if (this.classList.contains('listening')) {
+                console.log('🎤 Listening for voice commands...');
+                // In real implementation, you'd use Web Speech API
+                setTimeout(() => {
+                    this.classList.remove('listening');
+                    alert('Voice command recognized: "Play The Office on Jellyfin"');
+                }, 3000);
+            }
+        });
+        
+        // Konami code easter egg
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.keyCode);
+            konamiCode.splice(-konamiPattern.length - 1, konamiCode.length - konamiPattern.length);
+            if (konamiCode.join(',') === konamiPattern.join(',')) {
+                document.body.classList.add('konami-activated');
+                showAchievement('KONAMI CODE!', '+1000 XP 🎮');
+                updateXP(1000);
+                setTimeout(() => document.body.classList.remove('konami-activated'), 5000);
+            }
+        });
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            initMatrix();
+            createStarfield();
+            
+            // Simulate loading
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('services-grid').style.display = 'grid';
+                renderServices();
+                
+                if (currentMode === 'gamer') {
+                    showAchievement('Welcome Back!', 'Daily login bonus: +50 XP');
+                    updateXP(50);
+                }
+            }, 2000);
+        });
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('matrix-bg');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

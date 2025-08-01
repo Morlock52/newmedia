@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "🐳 Portainer Quick Setup"
+echo "======================="
+echo ""
+echo "✅ Portainer has been restarted and is ready for setup!"
+echo ""
+echo "⏰ IMPORTANT: You have 5 minutes to complete the initial setup!"
+echo ""
+echo "📝 Quick Setup Steps:"
+echo "1. Opening Portainer now..."
+echo "2. Create your admin account immediately:"
+echo "   - Username: admin"
+echo "   - Password: (12+ characters)"
+echo "3. Click 'Create user'"
+echo "4. Select 'Docker - Manage the local Docker environment'"
+echo "5. Click 'Connect'"
+echo ""
+echo "Opening http://localhost:9000 in your browser..."
+open http://localhost:9000
+
+echo ""
+echo "⏱️ Timer started! Complete setup within 5 minutes!"
+echo ""
+echo "If you miss the timeout again, run: docker restart portainer"
