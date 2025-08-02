@@ -1,5 +1,5 @@
 # Multi-stage build for optimized AI/ML image
-FROM node:20-slim AS base
+FROM node:24-slim AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
