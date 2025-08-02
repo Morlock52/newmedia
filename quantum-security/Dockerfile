@@ -1,5 +1,5 @@
 # Multi-stage build for quantum security system
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++ git
@@ -17,7 +17,7 @@ RUN npm ci --only=production
 COPY src/ ./src/
 
 # Second stage - runtime
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Install runtime dependencies
 RUN apk add --no-cache \
