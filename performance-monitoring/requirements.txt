@@ -37,7 +37,7 @@ structlog==23.1.0
 colorlog==6.7.0
 
 # Configuration
-click==8.1.6
+click==8.1.8
 python-dotenv==1.0.0
 
 # Testing & Benchmarking
