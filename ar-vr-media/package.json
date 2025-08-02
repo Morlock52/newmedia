@@ -13,7 +13,7 @@
     "generate-cert": "openssl req -newkey rsa:2048 -new -nodes -x509 -days 365 -keyout key.pem -out cert.pem"
   },
   "dependencies": {
-    "three": "^0.161.0",
+    "three": "^0.179.1",
     "resonance-audio": "^1.0.0",
     "webxr-polyfill": "^2.0.0",
     "simple-peer": "^9.11.1",
