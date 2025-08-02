@@ -1,0 +1,330 @@
+# Single Container Media Server 2025
+# Combines Jellyfin, *arr stack, download clients with Caddy reverse proxy
+# Uses s6-overlay for process supervision
+
+FROM ubuntu:22.04 AS base
+
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+ENV S6_VERBOSITY=1
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    wget \
+    xz-utils \
+    git \
+    tzdata \
+    locales \
+    ffmpeg \
+    vainfo \
+    mesa-va-drivers \
+    intel-media-va-driver-non-free \
+    sqlite3 \
+    python3 \
+    python3-pip \
+    mono-complete \
+    mediainfo \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set locale
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Install s6-overlay
+ARG S6_OVERLAY_VERSION=3.1.6.2
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
+RUN tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
+
+# Install Caddy
+RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg && \
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list && \
+    apt-get update && \
+    apt-get install -y caddy && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Jellyfin
+RUN wget -O - https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | apt-key add - && \
+    echo "deb [arch=$( dpkg --print-architecture )] https://repo.jellyfin.org/ubuntu $( lsb_release -c -s ) main" | tee /etc/apt/sources.list.d/jellyfin.list && \
+    apt-get update && \
+    apt-get install -y jellyfin && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Radarr
+ARG RADARR_VERSION=5.2.6.8376
+RUN mkdir -p /opt/Radarr && \
+    curl -L "https://github.com/Radarr/Radarr/releases/download/v${RADARR_VERSION}/Radarr.master.${RADARR_VERSION}.linux-core-x64.tar.gz" | \
+    tar -xz -C /opt/Radarr --strip-components=1
+
+# Install Sonarr
+ARG SONARR_VERSION=4.0.0.748
+RUN mkdir -p /opt/Sonarr && \
+    curl -L "https://github.com/Sonarr/Sonarr/releases/download/v${SONARR_VERSION}/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" | \
+    tar -xz -C /opt/Sonarr --strip-components=1
+
+# Install Prowlarr
+ARG PROWLARR_VERSION=1.11.4.4173
+RUN mkdir -p /opt/Prowlarr && \
+    curl -L "https://github.com/Prowlarr/Prowlarr/releases/download/v${PROWLARR_VERSION}/Prowlarr.master.${PROWLARR_VERSION}.linux-core-x64.tar.gz" | \
+    tar -xz -C /opt/Prowlarr --strip-components=1
+
+# Install qBittorrent-nox
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:qbittorrent-team/qbittorrent-stable && \
+    apt-get update && \
+    apt-get install -y qbittorrent-nox && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create user and directories
+RUN useradd -u 1000 -U -d /config -s /bin/false mediaserver && \
+    usermod -G users mediaserver
+
+# Create directory structure
+RUN mkdir -p \
+    /config/{caddy,jellyfin,radarr,sonarr,prowlarr,qbittorrent} \
+    /media/{movies,tv,music,photos} \
+    /downloads/{complete,incomplete} \
+    /transcodes \
+    /var/log/s6 \
+    /etc/s6-overlay/s6-rc.d/{caddy,jellyfin,radarr,sonarr,prowlarr,qbittorrent,user}
+
+# S6 service configurations
+# Base service type definitions
+RUN echo "longrun" > /etc/s6-overlay/s6-rc.d/caddy/type && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/jellyfin/type && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/radarr/type && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/sonarr/type && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/prowlarr/type && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/qbittorrent/type && \
+    echo "bundle" > /etc/s6-overlay/s6-rc.d/user/type
+
+# Service run scripts
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/caddy/run
+#!/usr/bin/with-contenv bash
+echo "Starting Caddy..."
+exec s6-setuidgid mediaserver \
+    /usr/bin/caddy run \
+    --config /config/caddy/Caddyfile \
+    --adapter caddyfile
+EOF
+
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/jellyfin/run
+#!/usr/bin/with-contenv bash
+echo "Starting Jellyfin..."
+export JELLYFIN_DATA_DIR=/config/jellyfin
+export JELLYFIN_CONFIG_DIR=/config/jellyfin
+export JELLYFIN_LOG_DIR=/config/jellyfin/log
+export JELLYFIN_CACHE_DIR=/transcodes
+exec s6-setuidgid mediaserver \
+    /usr/bin/jellyfin \
+    --datadir /config/jellyfin \
+    --cachedir /transcodes \
+    --webdir /usr/share/jellyfin/web
+EOF
+
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/radarr/run
+#!/usr/bin/with-contenv bash
+echo "Starting Radarr..."
+exec s6-setuidgid mediaserver \
+    /opt/Radarr/Radarr \
+    -nobrowser \
+    -data=/config/radarr
+EOF
+
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/sonarr/run
+#!/usr/bin/with-contenv bash
+echo "Starting Sonarr..."
+exec s6-setuidgid mediaserver \
+    /opt/Sonarr/Sonarr \
+    -nobrowser \
+    -data=/config/sonarr
+EOF
+
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/prowlarr/run
+#!/usr/bin/with-contenv bash
+echo "Starting Prowlarr..."
+exec s6-setuidgid mediaserver \
+    /opt/Prowlarr/Prowlarr \
+    -nobrowser \
+    -data=/config/prowlarr
+EOF
+
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/qbittorrent/run
+#!/usr/bin/with-contenv bash
+echo "Starting qBittorrent..."
+exec s6-setuidgid mediaserver \
+    /usr/bin/qbittorrent-nox \
+    --webui-port=8080 \
+    --profile=/config/qbittorrent
+EOF
+
+# Make run scripts executable
+RUN chmod +x /etc/s6-overlay/s6-rc.d/*/run
+
+# Service dependencies
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/{caddy,jellyfin,radarr,sonarr,prowlarr,qbittorrent}/dependencies.d && \
+    touch /etc/s6-overlay/s6-rc.d/caddy/dependencies.d/base && \
+    touch /etc/s6-overlay/s6-rc.d/jellyfin/dependencies.d/base && \
+    touch /etc/s6-overlay/s6-rc.d/prowlarr/dependencies.d/base && \
+    touch /etc/s6-overlay/s6-rc.d/qbittorrent/dependencies.d/base && \
+    touch /etc/s6-overlay/s6-rc.d/radarr/dependencies.d/prowlarr && \
+    touch /etc/s6-overlay/s6-rc.d/sonarr/dependencies.d/prowlarr
+
+# User bundle contents
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/caddy && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/jellyfin && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/radarr && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/sonarr && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/prowlarr && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/qbittorrent
+
+# Default Caddyfile
+COPY <<'EOF' /defaults/Caddyfile
+{
+    email admin@example.com
+    # Enable experimental HTTP/3 support
+    servers {
+        protocol {
+            experimental_http3
+        }
+    }
+}
+
+:80 {
+    # Redirect HTTP to HTTPS
+    redir https://{host}{uri} permanent
+}
+
+:443 {
+    # Enable TLS
+    tls internal
+
+    # Homepage - redirect to Jellyfin
+    handle / {
+        redir /web/ permanent
+    }
+
+    # Jellyfin
+    handle /web/* {
+        reverse_proxy localhost:8096
+    }
+    handle /socket {
+        reverse_proxy localhost:8096
+    }
+
+    # Radarr
+    handle /radarr/* {
+        reverse_proxy localhost:7878 {
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    # Sonarr
+    handle /sonarr/* {
+        reverse_proxy localhost:8989 {
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    # Prowlarr
+    handle /prowlarr/* {
+        reverse_proxy localhost:9696 {
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    # qBittorrent
+    handle /qbittorrent/* {
+        reverse_proxy localhost:8080 {
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Port {server_port}
+        }
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Adjust CSP as needed for your apps
+        # Content-Security-Policy "default-src 'self'"
+    }
+
+    # Enable compression
+    encode gzip
+
+    # Logging
+    log {
+        output file /config/caddy/access.log
+        format json
+    }
+}
+EOF
+
+# Container initialization script
+COPY <<'EOF' /etc/s6-overlay/s6-rc.d/init-mediaserver/run
+#!/usr/bin/with-contenv bash
+
+# Copy default configs if they don't exist
+if [ ! -f /config/caddy/Caddyfile ]; then
+    echo "Initializing Caddy configuration..."
+    cp /defaults/Caddyfile /config/caddy/Caddyfile
+fi
+
+# Fix permissions
+echo "Setting permissions..."
+chown -R mediaserver:mediaserver /config /media /downloads /transcodes
+
+# Create required directories
+mkdir -p /config/{caddy,jellyfin,radarr,sonarr,prowlarr,qbittorrent}
+mkdir -p /media/{movies,tv,music,photos}
+mkdir -p /downloads/{complete,incomplete}
+
+echo "Initialization complete!"
+EOF
+
+RUN echo "oneshot" > /etc/s6-overlay/s6-rc.d/init-mediaserver/type && \
+    chmod +x /etc/s6-overlay/s6-rc.d/init-mediaserver/run && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/init-mediaserver/dependencies.d && \
+    touch /etc/s6-overlay/s6-rc.d/init-mediaserver/dependencies.d/base && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/user/dependencies.d && \
+    touch /etc/s6-overlay/s6-rc.d/user/dependencies.d/init-mediaserver
+
+# Environment variables
+ENV PUID=1000
+ENV PGID=1000
+ENV TZ=UTC
+ENV UMASK=002
+
+# Expose ports
+EXPOSE 80 443 443/udp
+
+# Volumes
+VOLUME ["/config", "/media", "/downloads", "/transcodes"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/web/health || exit 1
+
+# Set entrypoint to s6-overlay
+ENTRYPOINT ["/init"]

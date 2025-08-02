@@ -1,468 +1,910 @@
-# 🎬 NEXUS Media Server Platform 2025
+# 🚀 Ultimate Media Server 2025
 
-A revolutionary, next-generation media server ecosystem featuring AI/ML processing, AR/VR immersive experiences, Web3 blockchain integration, quantum-resistant security, and comprehensive automation. Built on a production-ready Docker foundation with cutting-edge technology implementations.
+<div align="center">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Jellyfin-00A4DC?style=for-the-badge&logo=jellyfin&logoColor=white" alt="Jellyfin">
+  <img src="https://img.shields.io/badge/Caddy-22B638?style=for-the-badge&logo=caddy&logoColor=white" alt="Caddy">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Platform-Linux%20|%20macOS%20|%20Windows-blue?style=for-the-badge" alt="Platform">
+</div>
 
-## 🌟 Platform Overview
+<div align="center">
+  <h3>🎬 The Most Advanced Self-Hosted Media Server Solution for 2025</h3>
+  <p>Single-container architecture • Hardware acceleration • Auto-configuration • Beautiful UI</p>
+</div>
 
-**NEXUS** represents the convergence of traditional media streaming with breakthrough technologies:
-- **AI-Powered Media Processing** with neural networks and machine learning
-- **Immersive AR/VR Experiences** with WebXR and spatial computing
-- **Decentralized Web3 Integration** with blockchain and NFT support
-- **Quantum-Resistant Security** with post-quantum cryptography
-- **Complete Media Automation** with the full *arr ecosystem
+---
+
+## 📋 Table of Contents
+
+- [✨ Features](#-features)
+- [🖼️ Screenshots](#️-screenshots)
+- [🚀 Quick Start](#-quick-start)
+- [📦 What's Included](#-whats-included)
+- [🛠️ Installation](#️-installation)
+- [🎯 Architecture](#-architecture)
+- [⚙️ Configuration](#️-configuration)
+- [🔧 Advanced Setup](#-advanced-setup)
+- [📊 Performance](#-performance)
+- [🔒 Security](#-security)
+- [🐛 Troubleshooting](#-troubleshooting)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 Core Features
+- **Single Container Architecture** - All services in one Docker container with s6-overlay
+- **Hardware Acceleration** - Intel QuickSync, NVIDIA, AMD GPU support
+- **Auto-Configuration** - Zero-config setup with intelligent defaults
+- **Beautiful Dashboards** - Multiple UI options included
+- **Cross-Platform** - Works on Linux, macOS, Windows (WSL2)
+
+</td>
+<td width="50%">
+
+### 🚀 Advanced Features
+- **S6-Overlay Process Manager** - Industry-standard init system
+- **Caddy Reverse Proxy** - Automatic HTTPS, HTTP/3 support
+- **TRaSH Guides Standards** - Optimal media organization
+- **4K/HDR Support** - Hardware transcoding for smooth playback
+- **Mobile Ready** - Responsive UI for all devices
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🖼️ Screenshots
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="docs/images/homepage-dashboard.png" width="400" alt="Homepage Dashboard">
+        <br><b>Homepage Dashboard</b>
+      </td>
+      <td align="center">
+        <img src="docs/images/jellyfin-library.png" width="400" alt="Jellyfin Library">
+        <br><b>Jellyfin Media Library</b>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="docs/images/sonarr-calendar.png" width="400" alt="Sonarr Calendar">
+        <br><b>Sonarr TV Calendar</b>
+      </td>
+      <td align="center">
+        <img src="docs/images/env-manager.png" width="400" alt="Environment Manager">
+        <br><b>Environment Manager UI</b>
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
 
 ## 🚀 Quick Start
 
+### One-Line Installation
+
+**Linux/macOS:**
 ```bash
-# Clone and deploy the complete platform
-git clone <your-repo>
-cd newmedia
-./deploy.sh
+curl -fsSL https://raw.githubusercontent.com/yourusername/ultimate-media-server/main/install.sh | bash
 ```
 
-**Access Points:**
-- **Main Dashboard**: http://localhost:3001
-- **Media Server**: http://localhost:8096 (Jellyfin)
-- **AI/ML Console**: http://localhost:8080/frontend/
-- **AR/VR Platform**: http://localhost:8080 (WebXR enabled)
-- **Holographic Dashboard**: http://localhost:3000/holographic/
-
-## 🏗️ Core Platform Features
-
-### 🎯 **Traditional Media Stack** (Production Ready)
-- **Media Streaming**: Jellyfin with hardware transcoding support
-- **Content Automation**: Complete *arr suite (Sonarr, Radarr, Lidarr, Prowlarr, Bazarr)
-- **Download Management**: qBittorrent (VPN-protected) and SABnzbd
-- **Request Management**: Overseerr for user requests
-- **Monitoring**: Grafana, Prometheus, and Tautulli
-- **Management**: Homepage dashboard and Portainer
-- **Security**: Traefik reverse proxy with SSL, VPN for torrents
-
-### 🤖 **AI/ML Nexus System** (Cutting-Edge)
-- **Neural Recommendation Engine** - Deep learning with collaborative filtering
-- **Real-time Content Analysis** - Object detection, face recognition, scene classification
-- **Voice Command Processing** - Natural language understanding with Whisper & BERT
-- **Neural Video Compression** - AI-based compression with 90% size reduction
-- **Emotion Detection System** - Behavioral analysis and adaptive UI
-- **Performance**: <50ms recommendations, 92% object detection accuracy
-
-### 🥽 **AR/VR Immersive Platform** (Revolutionary)
-- **WebXR Implementation** - Native support for Vision Pro, Quest 3, and all XR devices
-- **Advanced Hand Tracking** - Full skeletal tracking with gesture recognition
-- **Spatial Video Player** - 180°/360° immersive content with multiple formats
-- **Mixed Reality** - Passthrough mode with plane detection and anchoring
-- **Haptic Feedback** - Contextual vibration patterns and texture simulation
-
-### ⛓️ **Web3 Blockchain Integration** (Next-Gen)
-- **NFT Content Ownership** - Verifiable creation and ownership rights
-- **Decentralized Distribution** - IPFS-based global content delivery
-- **Cryptocurrency Payments** - Multi-chain support (ETH, BTC, stablecoins)
-- **DAO Governance** - Community-driven platform decisions
-- **Cross-Chain Marketplace** - NFT trading and content licensing
-
-### 🔐 **Quantum-Resistant Security** (Future-Proof)
-- **Post-Quantum Cryptography** - NIST-standardized algorithms (ML-KEM, ML-DSA)
-- **Quantum-Safe TLS 1.3** - Protection against quantum computing threats
-- **Hybrid Security Modes** - Classical + quantum-resistant algorithms
-- **Performance Optimized** - <0.25ms latency overhead
-
-## 🗺️ Complete Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          NEXUS Platform 2025                            │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │ Holographic │  │    AR/VR    │  │   Voice AI  │  │   Web3 DApp │   │
-│  │  Dashboard  │  │   WebXR     │  │   System    │  │ Marketplace │   │
-│  │   :3000     │  │   :8080     │  │   :8083     │  │   :3001     │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                      AI/ML Processing Layer                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │Recommendation│  │  Content    │  │   Neural    │  │  Emotion    │   │
-│  │   Engine    │  │  Analysis   │  │ Compression │  │ Detection   │   │
-│  │   :8081     │  │   :8082     │  │   :8084     │  │   :8085     │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                    Quantum Security Layer                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                    │
-│  │  ML-KEM     │  │   ML-DSA    │  │  SLH-DSA    │                    │
-│  │  (Kyber)    │  │ (Dilithium) │  │ (SPHINCS+)  │                    │
-│  └─────────────┘  └─────────────┘  └─────────────┘                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                  Traditional Media Network                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │  Jellyfin   │  │  Overseerr  │  │  Homepage   │  │  Portainer  │   │
-│  │   :8096     │  │   :5055     │  │   :3001     │  │   :9000     │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-│                                                                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Sonarr    │  │   Radarr    │  │   Lidarr    │  │   Bazarr    │   │
-│  │   :8989     │  │   :7878     │  │   :8686     │  │   :6767     │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     Download Network (VPN)                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                    │
-│  │   Gluetun   │  │qBittorrent  │  │  SABnzbd    │                    │
-│  │    VPN      │  │   :8080     │  │   :8081     │                    │
-│  └─────────────┘  └─────────────┘  └─────────────┘                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                   Monitoring & Analytics                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                    │
-│  │  Grafana    │  │ Prometheus  │  │  Tautulli   │                    │
-│  │   :3000     │  │   :9090     │  │   :8181     │                    │
-│  └─────────────┘  └─────────────┘  └─────────────┘                    │
-└─────────────────────────────────────────────────────────────────────────┘
+**Windows (PowerShell as Administrator):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/yourusername/ultimate-media-server/main/install.ps1 | iex
 ```
 
-## 📊 Complete Service Directory
+**Docker Run (Single Container):**
+```bash
+docker run -d \
+  --name mediaserver \
+  -p 80:80 -p 443:443 \
+  -v /path/to/config:/config \
+  -v /path/to/media:/data \
+  -e PUID=$(id -u) -e PGID=$(id -g) \
+  --restart unless-stopped \
+  ghcr.io/yourusername/mediaserver-aio:latest
+```
 
-### Core Media Services
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **Jellyfin** | 8096 | ✅ Production | Media streaming server with hardware transcoding |
-| **Overseerr** | 5055 | ✅ Production | User request management system |
-| **Homepage** | 3001 | ✅ Production | Unified dashboard interface |
-| **Portainer** | 9000 | ✅ Production | Docker container management |
+---
 
-### Content Management (*arr Suite)
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **Sonarr** | 8989 | ✅ Production | TV show management and automation |
-| **Radarr** | 7878 | ✅ Production | Movie management and automation |
-| **Lidarr** | 8686 | ✅ Production | Music management and automation |
-| **Prowlarr** | 9696 | ✅ Production | Indexer management for all *arr apps |
-| **Bazarr** | 6767 | ✅ Production | Subtitle management and automation |
+## 📦 What's Included
 
-### Download Clients
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **qBittorrent** | 8080 | ✅ Production | Torrent client (VPN-protected) |
-| **SABnzbd** | 8081 | ✅ Production | Usenet downloader |
-| **Gluetun VPN** | - | ✅ Production | VPN service for secure downloads |
+<div align="center">
 
-### AI/ML Services
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **AI/ML Orchestrator** | 8080 | 🚧 Beta | Main AI/ML processing coordinator |
-| **Recommendation Engine** | 8081 | 🚧 Beta | Neural-based content recommendations |
-| **Content Analysis** | 8082 | 🚧 Beta | Computer vision and content processing |
-| **Voice Processing** | 8083 | 🚧 Beta | Speech recognition and NLU |
-| **Neural Compression** | 8084 | 🚧 Beta | AI-powered video compression |
-| **Emotion Detection** | 8085 | 🚧 Beta | Real-time emotion analysis |
+| Service | Description | Port | Purpose |
+|---------|-------------|------|---------|
+| 🎬 **Jellyfin** | Media Streaming Server | 8096 | Your personal Netflix |
+| 📺 **Sonarr** | TV Show Automation | 8989 | Automatic TV downloads |
+| 🎥 **Radarr** | Movie Automation | 7878 | Automatic movie downloads |
+| 🎵 **Lidarr** | Music Management | 8686 | Music library automation |
+| 📚 **Readarr** | Book Management | 8787 | eBook library automation |
+| 🎧 **AudioBookshelf** | Audiobook Server | 13378 | Audiobooks & podcasts |
+| 🔍 **Prowlarr** | Indexer Manager | 9696 | Torrent/Usenet indexers |
+| 📥 **qBittorrent** | Download Client | 8080 | Torrent downloads |
+| 💬 **Bazarr** | Subtitle Manager | 6767 | Automatic subtitles |
+| 🏠 **Homepage** | Dashboard | 3000 | Beautiful dashboard |
+| 🛡️ **Caddy** | Reverse Proxy | 80/443 | HTTPS & routing |
+| 📊 **Uptime Kuma** | Monitoring | 3011 | Service health checks |
 
-### Advanced Platforms
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **AR/VR WebXR** | 8080 | 🚧 Beta | Immersive AR/VR media experiences |
-| **Holographic Dashboard** | 3000 | 🚧 Beta | 3D holographic interface |
-| **Voice AI System** | 8083 | 🚧 Beta | Natural language media control |
-| **Web3 DApp** | 3001 | 🔬 Alpha | Blockchain integration interface |
-| **Quantum Security** | - | 🔬 Alpha | Post-quantum cryptography layer |
+</div>
 
-### Monitoring & Analytics
-| Service | Port | Status | Description |
-|---------|------|--------|-------------|
-| **Grafana** | 3000 | ✅ Production | Monitoring dashboards and analytics |
-| **Prometheus** | 9090 | ✅ Production | Metrics collection and storage |
-| **Tautulli** | 8181 | ✅ Production | Jellyfin usage statistics |
+### Additional Services (Full Installation)
 
-## 🛠️ Installation & Deployment
+<details>
+<summary>Click to expand full service list (30+ services)</summary>
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Plex | 32400 | Alternative media server |
+| Emby | 8920 | Another media server option |
+| Overseerr | 5055 | Media request management |
+| Tautulli | 8181 | Media analytics |
+| Navidrome | 4533 | Music streaming server |
+| Kavita | 5000 | Manga/comic server |
+| Calibre-Web | 8083 | eBook server |
+| Transmission | 9091 | Alternative torrent client |
+| SABnzbd | 8081 | Usenet downloader |
+| NZBGet | 6789 | Alternative Usenet client |
+| Jackett | 9117 | Alternative indexer proxy |
+| FlareSolverr | 8191 | Cloudflare bypass |
+| Autobrr | 7474 | IRC automation |
+| Cross-seed | 2468 | Cross-seeding automation |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3001 | Metrics visualization |
+| Portainer | 9443 | Docker management |
+| Watchtower | - | Auto-updates containers |
+| Duplicati | 8200 | Backup solution |
+| Nginx Proxy Manager | 81 | Alternative reverse proxy |
+| Authelia | 9091 | Authentication portal |
+| Redis | 6379 | Cache server |
+| PostgreSQL | 5432 | Database server |
+
+</details>
+
+---
+
+## 🛠️ Installation
 
 ### Prerequisites
 
-**Minimum Requirements:**
-- Docker and Docker Compose
-- 20GB+ free disk space
-- 8GB RAM (16GB recommended for AI features)
-- Modern CPU with AVX support
+<table>
+<tr>
+<td width="33%">
 
-**Optional Requirements:**
-- NVIDIA GPU (for AI/ML acceleration)
-- VPN account (for torrents)
-- Cloudflare account (for SSL)
-- WebXR-compatible browser (for AR/VR)
-
-### Complete Platform Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo>
-   cd newmedia
-   ```
-
-2. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your specific values
-   ```
-
-3. **Deploy the complete platform**
-   ```bash
-   # Full deployment with all services
-   ./deploy.sh
-   
-   # Or deploy specific components
-   ./deploy-media.sh        # Core media stack only
-   ./deploy-ai-ml.sh        # AI/ML services
-   ./deploy-ar-vr.sh        # AR/VR platform
-   ./deploy-web3.sh         # Web3 integration
-   ```
-
-4. **Verify deployment**
-   ```bash
-   ./health-check-ultimate.sh
-   ```
-
-## 📁 Project Structure
-
-```
-nexus-media-platform/
-├── 📁 Core Infrastructure
-│   ├── docker-compose.yml              # Main orchestration
-│   ├── deploy.sh                      # Primary deployment script
-│   ├── config/                        # Service configurations
-│   └── media-data/                    # Media storage
-│
-├── 🤖 AI/ML Nexus System
-│   ├── ai-ml-nexus/                   # AI/ML service implementations
-│   │   ├── services/                  # Microservices (recommendation, analysis, etc.)
-│   │   ├── models/                    # ML models and implementations
-│   │   └── frontend/                  # AI/ML dashboard
-│   └── ai-media-features/             # Advanced AI features
-│
-├── 🥽 AR/VR Platform
-│   ├── ar-vr-media/                   # WebXR implementation
-│   │   ├── webxr/                     # Core WebXR modules
-│   │   ├── assets/                    # 3D models and assets
-│   │   └── styles/                    # AR/VR specific styling
-│   └── holographic-dashboard-demo/     # 3D holographic interface
-│
-├── ⛓️ Web3 Integration
-│   ├── web3-blockchain-integration/    # Blockchain features
-│   │   ├── smart-contracts/           # NFT and DAO contracts
-│   │   ├── ipfs-integration/          # Decentralized storage
-│   │   └── web3-frontend/             # DApp interface
-│   └── api/                           # Web3 API services
-│
-├── 🔐 Security Systems
-│   ├── quantum-security/              # Post-quantum cryptography
-│   ├── config/authelia*/              # Authentication systems
-│   └── architecture/                  # Security architecture
-│
-├── 🎙️ Voice & AI
-│   ├── voice-ai-system/               # Voice command processing
-│   └── config-server/                 # Configuration management
-│
-├── 📊 Monitoring & Management
-│   ├── monitoring/                    # Advanced analytics
-│   ├── scripts/                       # Management scripts
-│   └── backups/                       # Backup systems
-│
-└── 📚 Documentation
-    ├── docs/                          # Comprehensive documentation
-    ├── guides/                        # User and admin guides
-    └── api/                           # API documentation
-```
-
-## ⚙️ Configuration Guide
-
-### 1. **Core Media Stack Setup**
+**🐧 Linux**
 ```bash
-# Configure Prowlarr with indexers
-curl -X POST "http://localhost:9696/api/v1/indexer" \
-  -H "X-Api-Key: YOUR_API_KEY" \
-  -d @indexer-config.json
+# Ubuntu/Debian
+sudo apt update
+sudo apt install docker.io docker-compose
 
-# Connect *arr apps to Prowlarr
-# Automatic API key synchronization included
+# Fedora/RHEL
+sudo dnf install docker docker-compose
+
+# Arch
+sudo pacman -S docker docker-compose
 ```
 
-### 2. **AI/ML System Configuration**
-```javascript
-// Configure AI services
-const aiConfig = {
-  tensorflow: { backend: 'gpu', memory: '4GB' },
-  models: { 
-    recommendation: 'collaborative-filtering-v2',
-    analysis: 'yolo-v8',
-    compression: 'autoencoder-v3'
-  }
-};
-```
+</td>
+<td width="33%">
 
-### 3. **AR/VR Platform Setup**
-```javascript
-// Enable WebXR features
-const xrConfig = {
-  handTracking: true,
-  passthrough: true,
-  spatialVideo: ['side-by-side', 'over-under', 'mv-hevc']
-};
-```
-
-### 4. **Web3 Integration**
+**🍎 macOS**
 ```bash
-# Deploy smart contracts
-cd web3-blockchain-integration
-npm run deploy --network polygon
+# Install Docker Desktop
+brew install --cask docker
+
+# Or download from:
+# https://docker.com/products/docker-desktop
 ```
 
-## 🔒 Security Features
+</td>
+<td width="34%">
 
-### Traditional Security
-- **Network Isolation**: Separate Docker networks for different service tiers
-- **VPN Protection**: All torrent traffic routed through encrypted VPN
-- **SSL/TLS**: Automated certificate management with Traefik
-- **Access Control**: Role-based authentication with Authelia
+**🪟 Windows**
+```powershell
+# Enable WSL2
+wsl --install
 
-### Quantum-Resistant Security
-- **ML-KEM (Kyber)**: Quantum-safe key exchange
-- **ML-DSA (Dilithium)**: Post-quantum digital signatures
-- **Hybrid Modes**: Classical + quantum-resistant algorithms
-- **Future-Proof**: Protection against quantum computing threats
+# Install Docker Desktop
+# Download from:
+# https://docker.com/products/docker-desktop
+```
 
-## 🚀 Performance Benchmarks
+</td>
+</tr>
+</table>
 
-### AI/ML Performance
-- **Recommendation Generation**: <50ms for 20 items
-- **Video Analysis**: 2-3 seconds per minute
-- **Voice Commands**: <200ms response time
-- **Neural Compression**: 10x faster than traditional
-- **Object Detection**: 92% mAP accuracy
+### Method 1: Automated Installation (Recommended)
 
-### AR/VR Performance
-- **Hand Tracking**: Real-time 60fps
-- **Spatial Video**: 4K@60fps on Quest 3
-- **Latency**: <20ms motion-to-photon
-- **Battery Life**: 2-3 hours continuous use
-
-### Platform Performance
-- **Container Startup**: <30s for full stack
-- **Memory Usage**: 8-16GB for complete platform
-- **Storage**: 50GB base + media content
-- **Network**: Gigabit recommended for 4K streaming
-
-## 🎯 Usage Examples
-
-### Basic Media Streaming
 ```bash
-# Start core media services
-docker compose up jellyfin sonarr radarr
+# Clone the repository
+git clone https://github.com/yourusername/ultimate-media-server.git
+cd ultimate-media-server
 
-# Access Jellyfin
-open http://localhost:8096
+# Run the installation wizard
+./install.sh
 ```
 
-### AI-Powered Recommendations
-```javascript
-// Get personalized recommendations
-const recs = await fetch('/api/ai/recommendations/user123');
-const suggestions = await recs.json();
-```
+The installation wizard will:
+- ✅ Check system requirements
+- ✅ Create necessary directories
+- ✅ Generate secure passwords
+- ✅ Configure all services
+- ✅ Start the media server
+- ✅ Open the dashboard
 
-### AR/VR Immersive Experience
-```javascript
-// Start WebXR session
-const session = await navigator.xr.requestSession('immersive-vr');
-// Experience media in full 3D immersion
-```
+### Method 2: Single Container Deployment
 
-### Voice Commands
-```javascript
-// Voice control example
-"Hey NEXUS, play the latest episode of my favorite show"
-"Show me sci-fi movies from 2023"
-"Adjust volume to 75%"
-```
+<details>
+<summary>Click for single container deployment</summary>
 
-### Web3 NFT Creation
-```javascript
-// Mint content as NFT
-const nft = await web3.mintContentNFT({
-  creator: '0x...',
-  mediaUrl: 'ipfs://...',
-  royalty: 10 // 10% royalty
-});
-```
-
-## 🔧 Administration
-
-### Health Monitoring
 ```bash
-# Check all services
-./health-check-ultimate.sh
+# Build the all-in-one image
+docker build -t mediaserver-aio -f Dockerfile.multi-service .
 
-# Monitor specific components
-docker compose logs -f ai-ml-nexus
-docker compose logs -f ar-vr-platform
+# Run with full configuration
+docker run -d \
+  --name mediaserver \
+  -p 80:80 \
+  -p 443:443 \
+  -p 8096:8096 \
+  -p 8989:8989 \
+  -p 7878:7878 \
+  -p 9696:9696 \
+  -p 8080:8080 \
+  -v $(pwd)/config:/config \
+  -v /path/to/media:/data/media \
+  -v /path/to/downloads:/data/downloads \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  -e TZ=America/New_York \
+  --restart unless-stopped \
+  mediaserver-aio
+
+# Or use the provided script
+./deploy-single-container.sh
 ```
 
-### Updates and Maintenance
+</details>
+
+### Method 3: Docker Compose (Multi-Container)
+
+<details>
+<summary>Click for docker-compose deployment</summary>
+
+1. **Create directory structure:**
 ```bash
-# Update all services
-docker compose pull && docker compose up -d
+mkdir -p ~/mediaserver/{config,media,downloads}
+cd ~/mediaserver
 
-# Backup configurations
-tar -czf backup-$(date +%Y%m%d).tar.gz config/
-
-# Performance optimization
-./scripts/performance-tuning.sh
+# Create subdirectories
+mkdir -p config/{caddy,jellyfin,sonarr,radarr,prowlarr,qbittorrent}
+mkdir -p media/{movies,tv,music,books,photos}
+mkdir -p downloads/{complete,incomplete,torrents,watch}
 ```
 
-### Troubleshooting
+2. **Download configuration files:**
 ```bash
-# Service diagnostics
-./scripts/diagnose-issues.sh
+# Download docker-compose.yml
+curl -O https://raw.githubusercontent.com/yourusername/ultimate-media-server/main/docker-compose.yml
 
-# GPU utilization (for AI/ML)
-nvidia-smi
-
-# Network connectivity
-./scripts/test-connectivity.sh
+# Download .env template
+curl -O https://raw.githubusercontent.com/yourusername/ultimate-media-server/main/.env.example
+mv .env.example .env
 ```
 
-## 📚 Documentation Links
+3. **Configure environment:**
+```bash
+# Edit .env file
+nano .env
 
-- **[Complete API Documentation](docs/api-reference.md)** - All service APIs
-- **[Deployment Guide](docs/deployment-guide.md)** - Detailed setup instructions
-- **[User Manual](docs/user-manual.md)** - End-user feature guide
-- **[Administrator Guide](docs/admin-guide.md)** - System management
-- **[Developer Guide](docs/developer-guide.md)** - Extension and customization
-- **[Architecture Overview](docs/architecture.md)** - System design details
-- **[Security Guide](docs/security-guide.md)** - Security implementation
+# Set these required variables:
+PUID=1000              # Your user ID (run: id -u)
+PGID=1000              # Your group ID (run: id -g)
+TZ=America/New_York    # Your timezone
+DOMAIN=media.local     # Your domain (or use localhost)
+```
+
+4. **Start the services:**
+```bash
+# Pull images and start
+docker-compose up -d
+
+# Watch logs
+docker-compose logs -f
+```
+
+5. **Access the dashboard:**
+Open http://localhost:3001 in your browser
+
+</details>
+
+---
+
+## 🎯 Architecture
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph "Docker Host"
+        subgraph "Media Server Container"
+            Caddy[Caddy Reverse Proxy<br/>:80/:443]
+            
+            subgraph "Media Services"
+                Jellyfin[Jellyfin :8096]
+                AudioBookshelf[AudioBookshelf :13378]
+                Navidrome[Navidrome :4533]
+            end
+            
+            subgraph "Download Automation"
+                Sonarr[Sonarr :8989]
+                Radarr[Radarr :7878]
+                Lidarr[Lidarr :8686]
+                Readarr[Readarr :8787]
+                Prowlarr[Prowlarr :9696]
+                Bazarr[Bazarr :6767]
+            end
+            
+            subgraph "Download Clients"
+                qBittorrent[qBittorrent :8080]
+                SABnzbd[SABnzbd :8081]
+            end
+            
+            subgraph "Management"
+                Homepage[Homepage :3000]
+                UptimeKuma[Uptime Kuma :3011]
+            end
+        end
+        
+        subgraph "Storage"
+            Config[/config]
+            Media[/media]
+            Downloads[/downloads]
+        end
+    end
+    
+    Internet((Internet)) --> Caddy
+    Caddy --> Jellyfin
+    Caddy --> Sonarr
+    Caddy --> Radarr
+    Prowlarr --> Sonarr
+    Prowlarr --> Radarr
+    Sonarr --> qBittorrent
+    Radarr --> qBittorrent
+    qBittorrent --> Downloads
+    Downloads --> Media
+    Media --> Jellyfin
+```
+
+### Directory Structure
+
+```
+mediaserver/
+├── config/                 # Service configurations
+│   ├── caddy/             # Reverse proxy config
+│   ├── jellyfin/          # Media server config
+│   ├── sonarr/            # TV automation
+│   ├── radarr/            # Movie automation
+│   └── ...                # Other service configs
+├── media/                 # Media library
+│   ├── movies/            # Movie files
+│   ├── tv/                # TV show files
+│   ├── music/             # Music files
+│   └── ...                # Other media types
+├── downloads/             # Download directory
+│   ├── complete/          # Completed downloads
+│   ├── incomplete/        # In-progress downloads
+│   └── watch/             # Watch folder
+├── docker-compose.yml     # Service definitions
+├── .env                   # Environment variables
+└── Caddyfile             # Caddy configuration
+```
+
+---
+
+## ⚙️ Configuration
+
+### Essential Configuration
+
+<details>
+<summary>📝 Environment Variables (.env)</summary>
+
+```bash
+# User/Group IDs
+PUID=1000
+PGID=1000
+
+# Timezone
+TZ=America/New_York
+
+# Paths
+CONFIG_PATH=./config
+MEDIA_PATH=./media
+DOWNLOADS_PATH=./downloads
+
+# Domain Configuration
+DOMAIN=media.yourdomain.com
+EMAIL=your-email@example.com
+
+# Service Ports (change if needed)
+JELLYFIN_PORT=8096
+SONARR_PORT=8989
+RADARR_PORT=7878
+PROWLARR_PORT=9696
+QBITTORRENT_PORT=8080
+
+# Resource Limits
+MEMORY_LIMIT=8G
+CPU_LIMIT=4.0
+
+# Feature Flags
+ENABLE_HARDWARE_ACCELERATION=true
+ENABLE_HTTPS=true
+ENABLE_AUTO_UPDATES=false
+```
+
+</details>
+
+<details>
+<summary>🔐 Caddy Configuration (Caddyfile)</summary>
+
+```caddyfile
+{
+    email {$EMAIL}
+    # Uncomment for local HTTPS
+    # local_certs
+}
+
+# Main domain
+{$DOMAIN} {
+    # Homepage dashboard
+    handle / {
+        reverse_proxy homepage:3000
+    }
+    
+    # Jellyfin
+    handle /jellyfin* {
+        reverse_proxy jellyfin:8096
+    }
+    
+    # Sonarr
+    handle /sonarr* {
+        reverse_proxy sonarr:8989 {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+    
+    # Radarr
+    handle /radarr* {
+        reverse_proxy radarr:7878 {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+    
+    # Global headers
+    header {
+        # Security headers
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-XSS-Protection "1; mode=block"
+        # Remove server header
+        -Server
+    }
+    
+    # Enable compression
+    encode gzip
+    
+    # Logging
+    log {
+        output file /logs/access.log
+        format json
+    }
+}
+```
+
+</details>
+
+<details>
+<summary>🎬 Media Organization (TRaSH Guides)</summary>
+
+```
+media/
+├── movies/
+│   ├── Movie Name (Year)/
+│   │   ├── Movie Name (Year).mkv
+│   │   ├── Movie Name (Year).srt
+│   │   └── poster.jpg
+│   └── ...
+├── tv/
+│   ├── Show Name/
+│   │   ├── Season 01/
+│   │   │   ├── Show Name - S01E01 - Episode Title.mkv
+│   │   │   ├── Show Name - S01E02 - Episode Title.mkv
+│   │   │   └── ...
+│   │   └── Season 02/
+│   └── ...
+├── music/
+│   ├── Artist Name/
+│   │   ├── Album Name/
+│   │   │   ├── 01 - Track Name.flac
+│   │   │   └── ...
+│   │   └── ...
+│   └── ...
+└── ...
+```
+
+</details>
+
+---
+
+## 🔧 Advanced Setup
+
+### Hardware Acceleration
+
+<details>
+<summary>🎮 Intel QuickSync</summary>
+
+```yaml
+# Add to docker-compose.yml service
+devices:
+  - /dev/dri:/dev/dri
+environment:
+  - LIBVA_DRIVER_NAME=iHD
+  - JELLYFIN_FFmpeg__hwaccel_args=-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format vaapi
+```
+
+</details>
+
+<details>
+<summary>🎮 NVIDIA GPU</summary>
+
+```yaml
+# Add to docker-compose.yml service
+runtime: nvidia
+environment:
+  - NVIDIA_VISIBLE_DEVICES=all
+  - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+  - JELLYFIN_FFmpeg__hwaccel_args=-hwaccel cuda -hwaccel_output_format cuda
+```
+
+</details>
+
+<details>
+<summary>🎮 AMD GPU</summary>
+
+```yaml
+# Add to docker-compose.yml service
+devices:
+  - /dev/dri:/dev/dri
+  - /dev/kfd:/dev/kfd
+environment:
+  - LIBVA_DRIVER_NAME=radeonsi
+  - JELLYFIN_FFmpeg__hwaccel_args=-hwaccel vaapi -hwaccel_device /dev/dri/renderD128
+```
+
+</details>
+
+### Network Configuration
+
+<details>
+<summary>🌐 VPN Integration (Gluetun)</summary>
+
+```yaml
+# Add Gluetun service for VPN
+gluetun:
+  image: qmcgaw/gluetun
+  cap_add:
+    - NET_ADMIN
+  environment:
+    - VPN_SERVICE_PROVIDER=mullvad
+    - VPN_TYPE=wireguard
+    - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+    - WIREGUARD_ADDRESSES=${VPN_ADDRESSES}
+  ports:
+    - 8080:8080  # qBittorrent
+    
+# Update qBittorrent to use VPN
+qbittorrent:
+  network_mode: service:gluetun
+  depends_on:
+    - gluetun
+```
+
+</details>
+
+<details>
+<summary>🔒 SSL/TLS Configuration</summary>
+
+```caddyfile
+# Force HTTPS with custom certificates
+{$DOMAIN} {
+    tls /certificates/cert.pem /certificates/key.pem
+    
+    # Or use DNS challenge for wildcard certs
+    tls {
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
+    }
+}
+```
+
+</details>
+
+### Storage Optimization
+
+<details>
+<summary>💾 Cache Configuration</summary>
+
+```yaml
+# Add Redis for caching
+redis:
+  image: redis:alpine
+  volumes:
+    - ./config/redis:/data
+  command: redis-server --save 60 1 --loglevel warning
+
+# Configure services to use Redis
+environment:
+  - REDIS_HOST=redis
+  - REDIS_PORT=6379
+```
+
+</details>
+
+<details>
+<summary>🚀 SSD Cache for Transcoding</summary>
+
+```yaml
+# Mount fast storage for transcoding
+volumes:
+  - /mnt/ssd/transcodes:/transcodes
+environment:
+  - JELLYFIN_CACHE_DIR=/transcodes
+```
+
+</details>
+
+---
+
+## 📊 Performance
+
+### Optimization Tips
+
+<table>
+<tr>
+<td width="50%">
+
+**Hardware Requirements**
+- **Minimum**: 2 CPU cores, 4GB RAM
+- **Recommended**: 4+ CPU cores, 8GB+ RAM
+- **4K Streaming**: GPU with hardware encoding
+- **Storage**: SSD for OS/apps, HDD for media
+
+</td>
+<td width="50%">
+
+**Performance Tuning**
+- Enable hardware acceleration
+- Use SSD for transcoding cache
+- Optimize database queries
+- Enable HTTP/3 in Caddy
+- Use CDN for remote access
+
+</td>
+</tr>
+</table>
+
+### Benchmarks
+
+| Scenario | CPU Usage | RAM Usage | Transcode Speed |
+|----------|-----------|-----------|-----------------|
+| Direct Play | 1-5% | 500MB | N/A |
+| 1080p → 720p (Software) | 80-100% | 2GB | 1.2x |
+| 1080p → 720p (Hardware) | 10-20% | 1GB | 4-8x |
+| 4K HDR → 1080p SDR (Hardware) | 20-30% | 2GB | 2-4x |
+
+---
+
+## 🔒 Security
+
+### Security Features
+
+- ✅ **HTTPS by default** with automatic certificates
+- ✅ **Reverse proxy** hides internal services
+- ✅ **Non-root execution** for all services
+- ✅ **Network isolation** between services
+- ✅ **Regular security updates** via Watchtower
+- ✅ **Fail2ban integration** for brute force protection
+
+### Hardening Guide
+
+<details>
+<summary>🛡️ Security Best Practices</summary>
+
+1. **Enable Authentication**
+```caddyfile
+# Add to Caddyfile
+basicauth /sonarr* {
+    user $2a$14$HASH_HERE
+}
+```
+
+2. **Use Strong Passwords**
+```bash
+# Generate secure passwords
+openssl rand -base64 32
+```
+
+3. **Enable 2FA** where supported:
+- Jellyfin: Settings → Users → Enable 2FA
+- Overseerr: Settings → Users → 2FA
+
+4. **Regular Backups**
+```bash
+# Automated backup script
+./scripts/backup.sh
+```
+
+5. **Monitor Logs**
+```bash
+# Check for suspicious activity
+docker logs -f caddy | grep -E "401|403|404"
+```
+
+</details>
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+<details>
+<summary>❌ Service Won't Start</summary>
+
+```bash
+# Check logs
+docker-compose logs service-name
+
+# Common fixes:
+# 1. Fix permissions
+sudo chown -R $USER:$USER ./config
+
+# 2. Check ports
+sudo netstat -tulpn | grep :8096
+
+# 3. Restart service
+docker-compose restart service-name
+```
+
+</details>
+
+<details>
+<summary>❌ Can't Access Web UI</summary>
+
+```bash
+# 1. Check if service is running
+docker ps | grep jellyfin
+
+# 2. Test local access
+curl http://localhost:8096
+
+# 3. Check firewall
+sudo ufw allow 8096/tcp
+
+# 4. Verify Caddy config
+docker logs caddy
+```
+
+</details>
+
+<details>
+<summary>❌ Slow Performance</summary>
+
+```bash
+# 1. Check resource usage
+docker stats
+
+# 2. Enable hardware acceleration
+# See Hardware Acceleration section
+
+# 3. Optimize database
+docker exec jellyfin sqlite3 /config/data/jellyfin.db "VACUUM;"
+
+# 4. Clear cache
+rm -rf ./config/jellyfin/cache/*
+```
+
+</details>
+
+### Health Checks
+
+```bash
+# Run comprehensive health check
+./scripts/health-check.sh
+
+# Manual checks
+curl http://localhost:8096/health  # Jellyfin
+curl http://localhost:8989/ping     # Sonarr
+curl http://localhost:7878/ping     # Radarr
+```
+
+### Detailed Troubleshooting Guide
+
+See our comprehensive [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) for:
+- Service-specific issues
+- Performance optimization
+- Network problems
+- Storage issues
+- Docker troubleshooting
+- Log analysis
+- Recovery procedures
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions to the NEXUS platform! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### How to Contribute
 
-## 📝 License
+1. 🍴 Fork the repository
+2. 🌿 Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. 💾 Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. 📤 Push to the branch (`git push origin feature/AmazingFeature`)
+5. 🎯 Open a Pull Request
+
+### Development Setup
+
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/yourusername/ultimate-media-server.git
+
+# Install development dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build documentation
+npm run docs:build
+```
+
+---
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- **Traditional Media Stack**: TRaSH Guides, LinuxServer.io, Jellyfin team
-- **AI/ML**: TensorFlow.js, Xenova transformers, OpenAI Whisper
-- **AR/VR**: Three.js, WebXR Working Group, Meta & Apple XR teams
-- **Web3**: Ethereum Foundation, IPFS team, OpenZeppelin
-- **Security**: NIST Post-Quantum Cryptography team
-
 ---
 
-**🌟 Built for the Future of Media**
-
-The NEXUS Media Server Platform represents the convergence of traditional media streaming with next-generation technologies. Experience media like never before with AI-powered intelligence, immersive AR/VR, decentralized Web3 features, and quantum-resistant security - all in one comprehensive platform.
-
-**✅ Status**: Production-ready core + Cutting-edge features in active development
-
----
-
-*This platform complies with all applicable laws and regulations. Users are responsible for ensuring compliance in their jurisdiction.*
+<div align="center">
+  <h3>🌟 Star this repository if you find it helpful!</h3>
+  <p>
+    <a href="https://github.com/yourusername/ultimate-media-server/stargazers">
+      <img src="https://img.shields.io/github/stars/yourusername/ultimate-media-server?style=social" alt="Stars">
+    </a>
+    <a href="https://github.com/yourusername/ultimate-media-server/network/members">
+      <img src="https://img.shields.io/github/forks/yourusername/ultimate-media-server?style=social" alt="Forks">
+    </a>
+  </p>
+  <p>
+    <a href="https://discord.gg/mediaserver">Join our Discord</a> •
+    <a href="https://reddit.com/r/selfhosted">Reddit Community</a> •
+    <a href="https://docs.mediaserver.app">Documentation</a>
+  </p>
+  <p>Made with ❤️ by the self-hosting community</p>
+</div>

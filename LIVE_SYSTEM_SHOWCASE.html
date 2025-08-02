@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server 2025 - Live System Showcase</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #000;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .hero {
+            height: 100vh;
+            background: linear-gradient(135deg, #0f0f23 0%, #1e1e2e 50%, #0f0f23 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0,255,135,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+        }
+        
+        .title {
+            font-size: 5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ff87, #60efff, #667eea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            z-index: 1;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(0,255,135,0.5); }
+            50% { text-shadow: 0 0 40px rgba(96,239,255,0.8); }
+        }
+        
+        .subtitle {
+            font-size: 1.5rem;
+            color: #ccc;
+            margin-top: 20px;
+            z-index: 1;
+        }
+        
+        .live-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #00ff87;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #ff0000;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .services-showcase {
+            padding: 80px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 60px;
+            background: linear-gradient(45deg, #00ff87, #60efff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .service-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+        
+        .service-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ff87, #60efff, #667eea);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .service-card:hover::before {
+            opacity: 1;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-10px);
+            background: rgba(0,0,0,0.8);
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .service-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .service-status {
+            color: #00ff87;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .service-info {
+            color: #ccc;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .access-button {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin-top: 15px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .access-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.5);
+        }
+        
+        .media-stats {
+            background: linear-gradient(135deg, rgba(0,255,135,0.1) 0%, rgba(96,239,255,0.1) 100%);
+            border-radius: 30px;
+            padding: 60px;
+            margin: 80px 0;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .stat-item {
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-number {
+            font-size: 4rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ff87, #60efff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            color: #ccc;
+            margin-top: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .workflow-visual {
+            background: rgba(255,255,255,0.05);
+            border-radius: 30px;
+            padding: 60px;
+            margin: 80px 0;
+        }
+        
+        .workflow-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .workflow-step {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .workflow-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #00ff87, #60efff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 20px;
+            color: #000;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .workflow-arrow {
+            position: absolute;
+            top: 50px;
+            right: -15%;
+            width: 30%;
+            height: 2px;
+            background: linear-gradient(90deg, #60efff, transparent);
+        }
+        
+        .workflow-step:last-child .workflow-arrow {
+            display: none;
+        }
+        
+        .quick-links {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .quick-link {
+            display: block;
+            color: #60efff;
+            text-decoration: none;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-link:hover {
+            color: #00ff87;
+            transform: translateX(5px);
+        }
+        
+        .floating-media {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(0,255,135,0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+        
+        .floating-media:nth-child(odd) {
+            animation-delay: 3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="live-status">
+            <div class="live-dot"></div>
+            LIVE SYSTEM
+        </div>
+        
+        <div class="floating-media" style="top: 10%; left: 5%;">🎬</div>
+        <div class="floating-media" style="top: 20%; right: 10%;">📺</div>
+        <div class="floating-media" style="bottom: 15%; left: 8%;">🎵</div>
+        <div class="floating-media" style="bottom: 25%; right: 5%;">🎥</div>
+        
+        <h1 class="title">Ultimate Media Server 2025</h1>
+        <p class="subtitle">Your Personal Netflix + Spotify + More</p>
+        
+        <div style="margin-top: 50px; z-index: 1;">
+            <a href="#services" class="access-button" style="font-size: 1.2rem; padding: 15px 30px;">
+                Explore Your Media Empire
+            </a>
+        </div>
+    </div>
+
+    <div class="services-showcase" id="services">
+        <h2 class="section-title">🚀 Your Media Services</h2>
+        
+        <div class="service-cards">
+            <div class="service-card">
+                <div class="service-icon">🎬</div>
+                <div class="service-name">Jellyfin</div>
+                <div class="service-status">● RUNNING</div>
+                <div class="service-info">
+                    Your primary media server with access to 1,041 media items. 
+                    Stream anywhere, no subscriptions.
+                </div>
+                <a href="http://localhost:8096" class="access-button" target="_blank">Open Jellyfin</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-icon">📺</div>
+                <div class="service-name">Plex</div>
+                <div class="service-status">● RUNNING</div>
+                <div class="service-info">
+                    Alternative media server for maximum device compatibility.
+                    Premium features without the premium.
+                </div>
+                <a href="http://localhost:32400/web" class="access-button" target="_blank">Open Plex</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-icon">🔍</div>
+                <div class="service-name">Prowlarr</div>
+                <div class="service-status">● 2 INDEXERS ACTIVE</div>
+                <div class="service-info">
+                    Your content discovery hub. YTS and YourBittorrent configured
+                    for finding any media you want.
+                </div>
+                <a href="http://localhost:9696" class="access-button" target="_blank">Manage Indexers</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-icon">📺</div>
+                <div class="service-name">Sonarr</div>
+                <div class="service-status">● CONFIGURED</div>
+                <div class="service-info">
+                    Automated TV show management. Never miss an episode again.
+                    Connected to Prowlarr and ready.
+                </div>
+                <a href="http://localhost:8989" class="access-button" target="_blank">Manage TV Shows</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-icon">🎥</div>
+                <div class="service-name">Radarr</div>
+                <div class="service-status">● CONFIGURED</div>
+                <div class="service-info">
+                    Movie automation at its finest. Add movies and watch them
+                    appear in your library automatically.
+                </div>
+                <a href="http://localhost:7878" class="access-button" target="_blank">Manage Movies</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-icon">⬇️</div>
+                <div class="service-name">qBittorrent</div>
+                <div class="service-status">● READY</div>
+                <div class="service-info">
+                    Your download powerhouse. Integrated with all ARR services
+                    for seamless media acquisition.
+                </div>
+                <a href="http://localhost:8090" class="access-button" target="_blank">Download Manager</a>
+            </div>
+        </div>
+
+        <div class="media-stats">
+            <h2 class="section-title">📊 Your Media Empire</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">666</div>
+                    <div class="stat-label">Movies</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">269</div>
+                    <div class="stat-label">TV Series</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">106</div>
+                    <div class="stat-label">Music Artists</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">21TB</div>
+                    <div class="stat-label">Storage Space</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="workflow-visual">
+            <h2 class="section-title">🔄 Automated Workflow</h2>
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="workflow-icon">🔍</div>
+                    <h3>Search</h3>
+                    <p>Prowlarr finds content</p>
+                    <div class="workflow-arrow"></div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-icon">📺</div>
+                    <h3>Request</h3>
+                    <p>ARR apps manage it</p>
+                    <div class="workflow-arrow"></div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-icon">⬇️</div>
+                    <h3>Download</h3>
+                    <p>qBittorrent fetches it</p>
+                    <div class="workflow-arrow"></div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-icon">🎬</div>
+                    <h3>Stream</h3>
+                    <p>Watch on any device</p>
+                </div>
+            </div>
+            <p style="text-align: center; color: #00ff87; font-size: 1.2rem; margin-top: 40px;">
+                Everything works together automatically. Just add what you want to watch!
+            </p>
+        </div>
+
+        <div style="text-align: center; margin: 100px 0;">
+            <h2 class="section-title">✨ Ready to Start?</h2>
+            <p style="font-size: 1.5rem; color: #ccc; margin: 30px 0;">
+                Your media server is configured and running.<br>
+                Complete the final setup in Jellyfin or Plex to start streaming!
+            </p>
+            <a href="http://localhost:7575" class="access-button" style="font-size: 1.3rem; padding: 20px 40px;">
+                Open Main Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="quick-links">
+        <h4 style="margin-bottom: 15px; color: #60efff;">Quick Access</h4>
+        <a href="http://localhost:7575" class="quick-link">🏠 Dashboard</a>
+        <a href="http://localhost:8096" class="quick-link">🎬 Jellyfin</a>
+        <a href="http://localhost:9696" class="quick-link">🔍 Prowlarr</a>
+        <a href="http://localhost:3000" class="quick-link">📊 Grafana</a>
+    </div>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+        
+        // Console message
+        console.log(`
+        🎉 Ultimate Media Server 2025 - Live System
+        ==========================================
+        Status: All Services Running
+        Media: 1,041 items available
+        Storage: 21TB (3.3TB free)
+        
+        Services:
+        - Jellyfin: http://localhost:8096
+        - Plex: http://localhost:32400
+        - Prowlarr: http://localhost:9696
+        - Sonarr: http://localhost:8989
+        - Radarr: http://localhost:7878
+        - qBittorrent: http://localhost:8090
+        
+        Your personal media empire is ready! 🚀
+        `);
+    </script>
+</body>
+</html>

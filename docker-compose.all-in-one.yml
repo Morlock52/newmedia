@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  mediaserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.all-in-one
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: mediaserver-aio:2025
+    container_name: mediaserver-aio
+    hostname: mediaserver
+    
+    # Environment configuration
+    environment:
+      # User/Group IDs
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      
+      # Timezone
+      - TZ=${TZ:-America/New_York}
+      
+      # Jellyfin specific
+      - JELLYFIN_PublishedServerUrl=${DOMAIN:-https://localhost}
+      
+      # Hardware acceleration (Intel)
+      - LIBVA_DRIVER_NAME=iHD
+      
+      # S6 overlay configuration
+      - S6_VERBOSITY=1
+      - S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+      - S6_SERVICES_GRACETIME=30000
+      - S6_KILL_GRACETIME=5000
+      - S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+      
+    # Volume mounts
+    volumes:
+      # Configuration directories
+      - ./config:/config
+      
+      # Media libraries
+      - ${MEDIA_PATH:-./media}:/media
+      - ${MOVIES_PATH:-./media/movies}:/media/movies
+      - ${TV_PATH:-./media/tv}:/media/tv
+      - ${MUSIC_PATH:-./media/music}:/media/music
+      - ${PHOTOS_PATH:-./media/photos}:/media/photos
+      
+      # Download directories
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+      - ${DOWNLOADS_COMPLETE:-./downloads/complete}:/downloads/complete
+      - ${DOWNLOADS_INCOMPLETE:-./downloads/incomplete}:/downloads/incomplete
+      
+      # Transcoding directory (use fast storage if possible)
+      - ${TRANSCODES_PATH:-./transcodes}:/transcodes
+      
+      # Optional: External Caddyfile override
+      # - ./Caddyfile:/config/caddy/Caddyfile:ro
+    
+    # Port mappings
+    ports:
+      # HTTP/HTTPS
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"  # HTTP/3 (QUIC)
+      
+      # Optional: Direct service access (for initial setup/debugging)
+      # - "8096:8096"   # Jellyfin
+      # - "7878:7878"   # Radarr
+      # - "8989:8989"   # Sonarr
+      # - "9696:9696"   # Prowlarr
+      # - "8080:8080"   # qBittorrent
+    
+    # Hardware acceleration
+    devices:
+      # Intel Quick Sync Video
+      - /dev/dri:/dev/dri
+      
+      # NVIDIA GPU (uncomment if using NVIDIA)
+      # - /dev/nvidia0:/dev/nvidia0
+      # - /dev/nvidiactl:/dev/nvidiactl
+      # - /dev/nvidia-modeset:/dev/nvidia-modeset
+      # - /dev/nvidia-uvm:/dev/nvidia-uvm
+      # - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-8G}
+          cpus: '${CPU_LIMIT:-4.0}'
+        reservations:
+          memory: ${MEMORY_RESERVATION:-2G}
+          cpus: '${CPU_RESERVATION:-1.0}'
+    
+    # Container capabilities
+    cap_add:
+      - NET_ADMIN       # For VPN support (future enhancement)
+      - SYS_NICE        # For process priority adjustments
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Required for some media operations
+    
+    # Network configuration
+    networks:
+      - medianet
+    
+    # DNS configuration
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+    
+    # System limits
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Labels for organization
+    labels:
+      - "com.mediaserver.description=All-in-one media server 2025"
+      - "com.mediaserver.version=1.0.0"
+      - "com.centurylinklabs.watchtower.enable=false"  # Disable auto-updates
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+# Network definition
+networks:
+  medianet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Example .env file content:
+# TZ=America/New_York
+# DOMAIN=https://media.example.com
+# MEDIA_PATH=/mnt/storage/media
+# MOVIES_PATH=/mnt/storage/media/movies
+# TV_PATH=/mnt/storage/media/tv
+# MUSIC_PATH=/mnt/storage/media/music
+# PHOTOS_PATH=/mnt/storage/media/photos
+# DOWNLOADS_PATH=/mnt/storage/downloads
+# TRANSCODES_PATH=/mnt/nvme/transcodes
+# HTTP_PORT=80
+# HTTPS_PORT=443
+# MEMORY_LIMIT=16G
+# CPU_LIMIT=8.0
+# MEMORY_RESERVATION=4G
+# CPU_RESERVATION=2.0
