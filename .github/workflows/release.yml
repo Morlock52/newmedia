@@ -375,7 +375,7 @@ jobs:
           find charts -name "Chart.yaml" -type f | xargs sed -i "s/^appVersion: .*/appVersion: $VERSION/g"
 
       - name: Create PR for documentation updates
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: 'docs: update version to ${{ needs.prepare-release.outputs.version }}'
           title: '[Release] Update documentation for ${{ needs.prepare-release.outputs.version }}'
