@@ -59,7 +59,7 @@ RUN apk add --no-cache \
 # =========================================================
 # Stage 3: Node.js Base (for Node-based services)
 # =========================================================
-FROM node:20-alpine AS node-base
+FROM node:24-alpine AS node-base
 
 # Copy security certificates
 COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
