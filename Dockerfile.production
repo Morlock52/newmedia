@@ -6,7 +6,7 @@
 # =========================================================
 # Stage 1: Base Security Layer
 # =========================================================
-FROM alpine:3.19 AS security-base
+FROM alpine:3.22 AS security-base
 
 # Install security tools and certificates
 RUN apk add --no-cache \
@@ -77,7 +77,7 @@ RUN apk add --no-cache \
 # =========================================================
 # Stage 4: Media Processing Base
 # =========================================================
-FROM alpine:3.19 AS media-base
+FROM alpine:3.22 AS media-base
 
 # Copy security setup
 COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -204,7 +204,7 @@ CMD ["nginx", "-g", "daemon off;"]
 # =========================================================
 # Stage 8: Monitoring Agent
 # =========================================================
-FROM alpine:3.19 AS monitoring-agent
+FROM alpine:3.22 AS monitoring-agent
 
 # Copy base security
 COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -237,7 +237,7 @@ CMD ["/scripts/monitor.sh"]
 # =========================================================
 # Stage 9: Backup Agent
 # =========================================================
-FROM alpine:3.19 AS backup-agent
+FROM alpine:3.22 AS backup-agent
 
 # Copy base security
 COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -272,7 +272,7 @@ CMD ["/scripts/backup.sh"]
 # =========================================================
 # Stage 10: Init Container
 # =========================================================
-FROM alpine:3.19 AS init-container
+FROM alpine:3.22 AS init-container
 
 # Copy base utilities
 COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
