@@ -31,3 +31,13 @@ logs/
 status.html
 arm64-status.html
 node_modules
+
+# Database files (runtime data)
+*.db
+*.db-shm
+*.db-wal
+
+# Application config files with sensitive data
+*-config/*.conf
+*-config/*.db*
+*-config/logs.db*
