@@ -152,7 +152,7 @@ RUN git clone --branch release-${QBITTORRENT_VERSION} --depth 1 https://github.c
     cmake --install build
 
 # Stage 6: Homepage builder
-FROM node:20-alpine AS homepage-builder
+FROM node:24-alpine AS homepage-builder
 ARG HOMEPAGE_VERSION
 
 # Clone and build Homepage
