@@ -1,5 +1,5 @@
 # Multi-stage build for Web3 Media API
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . ./
 RUN npm run build 2>/dev/null || echo "No build script found"
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:24-alpine AS production
 
 # Install system dependencies
 RUN apk add --no-cache \
