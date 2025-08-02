@@ -1,0 +1,7 @@
+tunnel: 4d685f6d-2c81-45d7-a9c7-ab96c1b4b12f
+ingress:
+  - hostname: home.morloksmaze.com
+    service: http://172.25.0.2:80
+  - hostname: "*.home.morloksmaze.com"
+    service: http://172.25.0.2:80
+  - service: http_status:404

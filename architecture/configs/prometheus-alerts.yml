@@ -1,0 +1,222 @@
+# Prometheus Alert Rules
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # CPU Alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current value: {{ $value }}%)"
+      
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 95% (current value: {{ $value }}%)"
+      
+      # Memory Alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% (current value: {{ $value }}%)"
+      
+      - alert: OutOfMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Out of memory on {{ $labels.instance }}"
+          description: "Memory usage is above 95% (current value: {{ $value }}%)"
+      
+      # Disk Alerts
+      - alert: DiskSpaceWarning
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space warning on {{ $labels.instance }}"
+          description: "Disk usage is above 80% on {{ $labels.device }} (current value: {{ $value }}%)"
+      
+      - alert: DiskSpaceCritical
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes)) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk usage is above 90% on {{ $labels.device }} (current value: {{ $value }}%)"
+      
+      # System Load
+      - alert: HighSystemLoad
+        expr: node_load15 / count by (instance) (node_cpu_seconds_total{mode="idle"}) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High system load on {{ $labels.instance }}"
+          description: "15-minute load average is high (current value: {{ $value }})"
+
+  - name: service_alerts
+    interval: 30s
+    rules:
+      # Service Availability
+      - alert: ServiceDown
+        expr: up{job=~"jellyfin|navidrome|immich|audiobookshelf|kavita"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} is not responding"
+      
+      # HTTP Response Time
+      - alert: SlowHTTPResponse
+        expr: probe_http_duration_seconds{job="blackbox-http"} > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow HTTP response for {{ $labels.instance }}"
+          description: "HTTP response time is above 2 seconds (current value: {{ $value }}s)"
+      
+      # Container Health
+      - alert: ContainerRestarting
+        expr: rate(container_restart_count[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting"
+          description: "Container has restarted {{ $value }} times in the last 5 minutes"
+      
+      # Database Connection Pool
+      - alert: DatabaseConnectionPoolExhausted
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "{{ $value }}% of max connections are in use"
+
+  - name: media_processing_alerts
+    interval: 30s
+    rules:
+      # Transcoding Performance
+      - alert: TranscodingQueueBacklog
+        expr: jellyfin_transcode_queue_size > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transcoding queue backlog"
+          description: "{{ $value }} items waiting in transcode queue"
+      
+      # GPU Utilization
+      - alert: GPUHighTemperature
+        expr: nvidia_gpu_temperature_celsius > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU temperature high"
+          description: "GPU {{ $labels.gpu }} temperature is {{ $value }}°C"
+      
+      - alert: GPUMemoryExhausted
+        expr: (1 - (nvidia_gpu_memory_free_bytes / nvidia_gpu_memory_total_bytes)) * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GPU memory exhausted"
+          description: "GPU {{ $labels.gpu }} memory usage is {{ $value }}%"
+      
+      # Storage I/O
+      - alert: HighDiskIOWait
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O wait"
+          description: "Disk {{ $labels.device }} I/O wait is high"
+
+  - name: network_alerts
+    interval: 30s
+    rules:
+      # Bandwidth Usage
+      - alert: HighBandwidthUsage
+        expr: rate(node_network_transmit_bytes_total[5m]) > 100000000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network bandwidth usage"
+          description: "Network interface {{ $labels.device }} transmitting at {{ humanize $value }}B/s"
+      
+      # Network Errors
+      - alert: NetworkInterfaceErrors
+        expr: rate(node_network_transmit_errs_total[5m]) > 0 or rate(node_network_receive_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network interface errors on {{ $labels.device }}"
+          description: "Network interface experiencing errors"
+      
+      # SSL Certificate Expiry
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ humanizeDuration ($value) }}"
+
+  - name: security_alerts
+    interval: 30s
+    rules:
+      # Authentication Failures
+      - alert: HighAuthenticationFailures
+        expr: rate(authelia_authentication_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} authentication failures per second"
+      
+      # Suspicious Activity
+      - alert: SuspiciousIPActivity
+        expr: rate(crowdsec_alerts_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Suspicious activity detected"
+          description: "CrowdSec detected {{ $value }} alerts per second"
+      
+      # Backup Failures
+      - alert: BackupFailed
+        expr: duplicati_backup_status != 1
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup failed"
+          description: "Backup job {{ $labels.job_name }} failed"

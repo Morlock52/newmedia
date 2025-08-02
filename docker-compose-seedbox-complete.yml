@@ -1,0 +1,981 @@
+version: "3.9"
+
+# Complete Seedbox Architecture Docker Compose
+# This file includes ALL services for a comprehensive media server
+
+networks:
+  dmz_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.1.0/24
+  management_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.2.0/24
+  download_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.3.0/24
+  data_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.4.0/24
+
+volumes:
+  # Data volumes
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  minio_data:
+  kafka_data:
+  
+  # Config volumes
+  traefik_config:
+  authelia_config:
+  kong_config:
+  
+  # Media volumes
+  media_movies:
+  media_tv:
+  media_music:
+  media_audiobooks:
+  media_podcasts:
+  media_photos:
+  media_books:
+  media_comics:
+
+services:
+  # =========================
+  # Edge Services (DMZ)
+  # =========================
+  
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${CF_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+      - --metrics.prometheus=true
+      - --tracing.jaeger=true
+      - --tracing.jaeger.localAgentHostPort=jaeger:6831
+    environment:
+      - CF_API_EMAIL=${CF_EMAIL}
+      - CF_API_KEY=${CF_API_KEY}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_config:/letsencrypt
+    networks:
+      - dmz_network
+      - media_network
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - authelia_config:/config
+    networks:
+      - dmz_network
+      - data_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls.certresolver=cloudflare"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+    restart: unless-stopped
+
+  kong:
+    image: kong:3.4-alpine
+    container_name: kong
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: ${KONG_DB_PASSWORD}
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - kong_config:/usr/local/kong
+    networks:
+      - dmz_network
+      - data_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # =========================
+  # Media Servers
+  # =========================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/jellyfin:/config
+      - media_movies:/media/movies:ro
+      - media_tv:/media/tv:ro
+      - media_music:/media/music:ro
+      - /tmp/jellyfin-transcode:/transcode
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=cloudflare"
+      - "traefik.http.routers.jellyfin.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_BASEURL=/music
+      - ND_SESSIONTIMEOUT=24h
+      - ND_ENABLETRANSCODINGCONFIG=true
+      - ND_ENABLEDOWNLOADS=true
+      - ND_ENABLESHARING=true
+    volumes:
+      - ./config/navidrome:/data
+      - media_music:/music:ro
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=Host(`music.${DOMAIN}`)"
+      - "traefik.http.routers.navidrome.entrypoints=websecure"
+      - "traefik.http.routers.navidrome.tls.certresolver=cloudflare"
+      - "traefik.http.routers.navidrome.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/audiobookshelf:/config
+      - media_audiobooks:/audiobooks
+      - media_podcasts:/podcasts
+      - ./metadata/audiobookshelf:/metadata
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN}`)"
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=cloudflare"
+      - "traefik.http.routers.audiobookshelf.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - UPLOAD_LOCATION=/usr/src/app/upload
+    volumes:
+      - media_photos:/usr/src/app/upload
+    networks:
+      - media_network
+      - data_network
+    depends_on:
+      - postgres
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(`photos.${DOMAIN}`)"
+      - "traefik.http.routers.immich.entrypoints=websecure"
+      - "traefik.http.routers.immich.tls.certresolver=cloudflare"
+      - "traefik.http.routers.immich.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-microservices
+    command: ["start.sh", "microservices"]
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+    volumes:
+      - media_photos:/usr/src/app/upload
+    networks:
+      - media_network
+      - data_network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-machine-learning
+    volumes:
+      - ./config/immich-ml:/cache
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/calibre-web:/config
+      - media_books:/books
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calibre.rule=Host(`books.${DOMAIN}`)"
+      - "traefik.http.routers.calibre.entrypoints=websecure"
+      - "traefik.http.routers.calibre.tls.certresolver=cloudflare"
+      - "traefik.http.routers.calibre.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  kavita:
+    image: kizaing/kavita:latest
+    container_name: kavita
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/kavita:/kavita/config
+      - media_books:/books
+      - media_comics:/comics
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.rule=Host(`comics.${DOMAIN}`)"
+      - "traefik.http.routers.kavita.entrypoints=websecure"
+      - "traefik.http.routers.kavita.tls.certresolver=cloudflare"
+      - "traefik.http.routers.kavita.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  tube-archivist:
+    image: bbilly1/tubearchivist:latest
+    container_name: tube-archivist
+    environment:
+      - ES_URL=http://elasticsearch:9200
+      - REDIS_HOST=redis
+      - HOST_UID=1000
+      - HOST_GID=1000
+      - TA_HOST=youtube.${DOMAIN}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    volumes:
+      - ./config/tube-archivist:/cache
+      - ./media-data/youtube:/youtube
+    networks:
+      - media_network
+      - data_network
+    depends_on:
+      - elasticsearch
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tubearchivist.rule=Host(`youtube.${DOMAIN}`)"
+      - "traefik.http.routers.tubearchivist.entrypoints=websecure"
+      - "traefik.http.routers.tubearchivist.tls.certresolver=cloudflare"
+      - "traefik.http.routers.tubearchivist.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  # =========================
+  # Content Management
+  # =========================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sonarr:/config
+      - media_tv:/tv
+      - ./media-data/downloads:/downloads
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.sonarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/radarr:/config
+      - media_movies:/movies
+      - ./media-data/downloads:/downloads
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.radarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/lidarr:/config
+      - media_music:/music
+      - ./media-data/downloads:/downloads
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr.entrypoints=websecure"
+      - "traefik.http.routers.lidarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/readarr:/config
+      - media_books:/books
+      - media_audiobooks:/audiobooks
+      - ./media-data/downloads:/downloads
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr.entrypoints=websecure"
+      - "traefik.http.routers.readarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.readarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  mylar3:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar3
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/mylar3:/config
+      - media_comics:/comics
+      - ./media-data/downloads:/downloads
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mylar.rule=Host(`mylar.${DOMAIN}`)"
+      - "traefik.http.routers.mylar.entrypoints=websecure"
+      - "traefik.http.routers.mylar.tls.certresolver=cloudflare"
+      - "traefik.http.routers.mylar.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/prowlarr:/config
+    networks:
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.prowlarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/bazarr:/config
+      - media_movies:/movies
+      - media_tv:/tv
+    networks:
+      - management_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr.entrypoints=websecure"
+      - "traefik.http.routers.bazarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.bazarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/overseerr:/config
+    networks:
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.rule=Host(`request.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.overseerr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  # =========================
+  # Download Services
+  # =========================
+  
+  vpn:
+    image: qmcgaw/gluetun:latest
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-mullvad}
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${VPN_ADDRESSES}
+      - FIREWALL_OUTBOUND_SUBNETS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      - FIREWALL_VPN_INPUT_PORTS=8080,8081,8082
+    ports:
+      - "8080:8080"  # qBittorrent
+      - "8081:8081"  # SABnzbd
+      - "8082:8082"  # JDownloader2
+    networks:
+      - download_network
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ./media-data/downloads:/downloads
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sabnzbd:/config
+      - ./media-data/downloads:/downloads
+      - ./media-data/usenet:/usenet
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+
+  jdownloader2:
+    image: jlesage/jdownloader-2
+    container_name: jdownloader2
+    environment:
+      - USER_ID=1000
+      - GROUP_ID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/jdownloader2:/config
+      - ./media-data/downloads:/downloads
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+
+  # =========================
+  # Processing Services
+  # =========================
+  
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - PUID=1000
+      - PGID=1000
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+    volumes:
+      - ./config/tdarr/server:/app/server
+      - ./config/tdarr/configs:/app/configs
+      - ./config/tdarr/logs:/app/logs
+      - media_movies:/media/movies
+      - media_tv:/media/tv
+      - /tmp/tdarr_transcode:/temp
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tdarr.rule=Host(`tdarr.${DOMAIN}`)"
+      - "traefik.http.routers.tdarr.entrypoints=websecure"
+      - "traefik.http.routers.tdarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.tdarr.middlewares=authelia@docker"
+      - "traefik.http.services.tdarr.loadbalancer.server.port=8265"
+    restart: unless-stopped
+
+  fileflows:
+    image: revenz/fileflows:latest
+    container_name: fileflows
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/fileflows:/app/Data
+      - media_movies:/media/movies
+      - media_tv:/media/tv
+      - ./media-data/downloads:/downloads
+      - /tmp/fileflows:/temp
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fileflows.rule=Host(`fileflows.${DOMAIN}`)"
+      - "traefik.http.routers.fileflows.entrypoints=websecure"
+      - "traefik.http.routers.fileflows.tls.certresolver=cloudflare"
+      - "traefik.http.routers.fileflows.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  # =========================
+  # Event Streaming
+  # =========================
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - ./data/zookeeper:/var/lib/zookeeper/data
+      - ./data/zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.5.0
+    container_name: kafka-connect
+    depends_on:
+      - kafka
+      - schema-registry
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # =========================
+  # Data Services
+  # =========================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_MULTIPLE_DATABASES=authelia,kong,immich,sonarr,radarr,lidarr,readarr,mylar,overseerr
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init-performance.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - data_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`s3.${DOMAIN}`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.routers.minio.tls.certresolver=cloudflare"
+      - "traefik.http.routers.minio.service=minio"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`minio.${DOMAIN}`)"
+      - "traefik.http.routers.minio-console.entrypoints=websecure"
+      - "traefik.http.routers.minio-console.tls.certresolver=cloudflare"
+      - "traefik.http.routers.minio-console.service=minio-console"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+      - "traefik.http.routers.minio-console.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  # =========================
+  # Monitoring & Analytics
+  # =========================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - media_network
+      - management_network
+      - data_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=cloudflare"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    networks:
+      - media_network
+      - data_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflare"
+      - "traefik.http.routers.grafana.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    volumes:
+      - ./config/loki:/etc/loki
+      - loki_data:/loki
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/promtail:/etc/promtail
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    networks:
+      - data_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jaeger.rule=Host(`jaeger.${DOMAIN}`)"
+      - "traefik.http.routers.jaeger.entrypoints=websecure"
+      - "traefik.http.routers.jaeger.tls.certresolver=cloudflare"
+      - "traefik.http.routers.jaeger.middlewares=authelia@docker"
+      - "traefik.http.services.jaeger.loadbalancer.server.port=16686"
+    restart: unless-stopped
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/tautulli:/config
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.tls.certresolver=cloudflare"
+      - "traefik.http.routers.tautulli.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  # =========================
+  # Management & Dashboard
+  # =========================
+  
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    volumes:
+      - ./config/homarr/configs:/app/data/configs
+      - ./config/homarr/icons:/app/public/icons
+      - ./config/homarr/data:/data
+    environment:
+      - BASE_URL=https://dashboard.${DOMAIN}
+    networks:
+      - media_network
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homarr.rule=Host(`dashboard.${DOMAIN}`)"
+      - "traefik.http.routers.homarr.entrypoints=websecure"
+      - "traefik.http.routers.homarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.homarr.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/portainer:/data
+    networks:
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=cloudflare"
+      - "traefik.http.routers.portainer.middlewares=authelia@docker"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    restart: unless-stopped
+
+  # =========================
+  # Additional Services
+  # =========================
+  
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    volumes:
+      - ./media-data:/srv
+      - ./config/filebrowser/filebrowser.db:/database.db
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.filebrowser.rule=Host(`files.${DOMAIN}`)"
+      - "traefik.http.routers.filebrowser.entrypoints=websecure"
+      - "traefik.http.routers.filebrowser.tls.certresolver=cloudflare"
+      - "traefik.http.routers.filebrowser.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/duplicati:/config
+      - ./backups:/backups
+      - ./media-data:/source:ro
+    networks:
+      - management_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=cloudflare"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker"
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - dmz_network
+    restart: unless-stopped
+
+# Volume declarations for monitoring
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:

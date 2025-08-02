@@ -1,0 +1,242 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-recommendation-config
+  namespace: media-platform
+data:
+  model-config.yaml: |
+    models:
+      collaborative_filtering:
+        type: neural_collaborative_filtering
+        version: "2.0.0"
+        features:
+          - user_id
+          - item_id
+          - user_embedding
+          - item_embedding
+        hyperparameters:
+          embedding_dim: 128
+          hidden_layers: [256, 128, 64]
+          dropout_rate: 0.3
+          learning_rate: 0.001
+      
+      content_based:
+        type: transformer
+        version: "2.0.0"
+        base_model: "sentence-transformers/all-MiniLM-L6-v2"
+        features:
+          - title
+          - description
+          - genre
+          - tags
+          
+      reinforcement_learning:
+        type: contextual_bandit
+        version: "2.0.0"
+        algorithm: "LinUCB"
+        hyperparameters:
+          alpha: 0.1
+          update_interval: 3600
+          
+    serving:
+      batch_size: 32
+      timeout_ms: 100
+      cache_ttl: 300
+      fallback_strategy: "popular_items"
+      
+    edge_inference:
+      enabled: true
+      model_format: "onnx"
+      quantization: "int8"
+      target_devices:
+        - "wasm"
+        - "webgpu"
+        - "cpu"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-engine
+  namespace: media-platform
+  labels:
+    app: recommendation-engine
+    ml-workload: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: recommendation-engine
+  template:
+    metadata:
+      labels:
+        app: recommendation-engine
+        version: v2
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      serviceAccountName: ml-service
+      nodeSelector:
+        node.kubernetes.io/instance-type: g4dn.xlarge  # GPU instances
+      containers:
+      - name: model-server
+        image: media-platform/recommendation-engine:2.0.0
+        ports:
+        - containerPort: 8501
+          name: grpc
+        - containerPort: 8500
+          name: rest
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: MODEL_NAME
+          value: recommendation_ensemble
+        - name: TRITON_MODEL_REPOSITORY
+          value: s3://media-platform-models/recommendation/
+        - name: FEATURE_STORE_URL
+          value: feast://feature-store:6566
+        - name: ENABLE_GPU
+          value: "true"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+            nvidia.com/gpu: "1"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /models
+        - name: config
+          mountPath: /config
+        livenessProbe:
+          httpGet:
+            path: /v2/health/live
+            port: 8500
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v2/health/ready
+            port: 8500
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      
+      - name: feature-enricher
+        image: media-platform/feature-enricher:2.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: REDIS_URL
+          value: redis://redis-cluster:6379
+        - name: KAFKA_BROKERS
+          value: kafka-cluster:9092
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+            
+      - name: edge-model-converter
+        image: media-platform/edge-converter:2.0.0
+        ports:
+        - containerPort: 8082
+          name: http
+        env:
+        - name: OPTIMIZATION_LEVEL
+          value: "O3"
+        - name: TARGET_FORMATS
+          value: "onnx,tflite,wasm"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+            
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: ml-model-cache
+      - name: config
+        configMap:
+          name: ml-recommendation-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation-engine
+  namespace: media-platform
+spec:
+  ports:
+  - port: 8501
+    targetPort: 8501
+    name: grpc
+  - port: 8500
+    targetPort: 8500
+    name: rest
+  - port: 8080
+    targetPort: 8080
+    name: features
+  - port: 8082
+    targetPort: 8082
+    name: edge-models
+  selector:
+    app: recommendation-engine
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: recommendation-model-updater
+  namespace: media-platform
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ml-service
+          containers:
+          - name: model-trainer
+            image: media-platform/ml-trainer:2.0.0
+            command:
+            - python
+            - -m
+            - recommendation_trainer
+            env:
+            - name: TRAINING_DATASET
+              value: "s3://media-platform-data/training/latest/"
+            - name: MODEL_REGISTRY
+              value: "mlflow://mlflow-server:5000"
+            - name: EXPERIMENT_NAME
+              value: "recommendation_daily_training"
+            - name: DISTRIBUTED_TRAINING
+              value: "true"
+            resources:
+              requests:
+                memory: "16Gi"
+                cpu: "8"
+                nvidia.com/gpu: "4"
+              limits:
+                memory: "32Gi"
+                cpu: "16"
+                nvidia.com/gpu: "4"
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ml-model-cache
+  namespace: media-platform
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 100Gi

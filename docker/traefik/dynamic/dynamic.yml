@@ -1,0 +1,268 @@
+# Traefik Dynamic Configuration - Production 2025
+# ================================================
+# Security-focused dynamic routing and middleware configuration
+
+http:
+  # ============================================
+  # MIDDLEWARES - Security & Performance
+  # ============================================
+  
+  middlewares:
+    # Security Headers Middleware
+    security-headers:
+      headers:
+        customFrameOptionsValue: "SAMEORIGIN"
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        forceSTSHeader: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          server: ""
+          X-Powered-By: ""
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
+        contentSecurityPolicy: |
+          default-src 'self';
+          script-src 'self' 'unsafe-inline' 'unsafe-eval';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data: https:;
+          font-src 'self' data:;
+          connect-src 'self' wss: ws:;
+          media-src 'self' blob:;
+          object-src 'none';
+          base-uri 'self';
+          form-action 'self';
+          frame-ancestors 'none';
+          upgrade-insecure-requests;
+
+    # Rate Limiting Middleware
+    rate-limit:
+      rateLimit:
+        burst: 100
+        period: 1m
+        average: 50
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # IP Whitelist for Admin Services
+    admin-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+
+    # Media Compression
+    compress:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"
+          - "application/grpc"
+
+    # Retry Middleware
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.3 || ResponseCodeRatio(500, 600, 0, 600) > 0.3"
+        checkPeriod: 3s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+
+    # CORS for API Services
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowOriginList:
+          - "https://*.morloksmaze.com"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        accessControlExposeHeaders:
+          - "X-Total-Count"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Strip Prefix for API paths
+    api-stripprefix:
+      stripPrefix:
+        prefixes:
+          - "/api/v1"
+
+  # ============================================
+  # ROUTERS - Production Service Routing
+  # ============================================
+  
+  routers:
+    # Health Check Router (No Auth)
+    health-check:
+      rule: "PathPrefix(`/.well-known/`) || Path(`/health`) || Path(`/ping`) || Path(`/status`)"
+      service: "api@internal"
+      priority: 1000
+      middlewares:
+        - "security-headers"
+
+    # Admin Services Router (Restricted Access)
+    admin-services:
+      rule: "Host(`traefik.{{ env "DOMAIN" }}`) || Host(`portainer.{{ env "DOMAIN" }}`)"
+      service: "api@internal"
+      middlewares:
+        - "admin-whitelist"
+        - "security-headers"
+        - "rate-limit"
+      tls:
+        certResolver: "cloudflare"
+
+  # ============================================
+  # SERVICES - Load Balancing & Health Checks
+  # ============================================
+  
+  services:
+    # Jellyfin Load Balancer
+    jellyfin-lb:
+      loadBalancer:
+        servers:
+          - url: "http://jellyfin:8096"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+          scheme: "http"
+        sticky:
+          cookie:
+            name: "jellyfin-server"
+            secure: true
+            httpOnly: true
+
+    # API Gateway Load Balancer
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://api-service:8000"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+        passHostHeader: true
+
+# ============================================
+# TCP CONFIGURATION
+# ============================================
+
+tcp:
+  routers:
+    # PostgreSQL Router (Internal)
+    postgres-router:
+      rule: "HostSNI(`*`)"
+      service: "postgres-service"
+      tls:
+        passthrough: true
+
+  services:
+    postgres-service:
+      loadBalancer:
+        servers:
+          - address: "postgres:5432"
+
+# ============================================
+# TLS CONFIGURATION
+# ============================================
+
+tls:
+  options:
+    # Default TLS Options
+    default:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+      sniStrict: true
+      preferServerCipherSuites: true
+
+    # Modern TLS Options
+    modern:
+      minVersion: "VersionTLS13"
+      maxVersion: "VersionTLS13"
+      sniStrict: true
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/letsencrypt/default.crt"
+        keyFile: "/letsencrypt/default.key"
+
+# ============================================
+# API CONFIGURATION
+# ============================================
+
+api:
+  dashboard: true
+  debug: false
+  insecure: false
+
+# ============================================
+# METRICS CONFIGURATION
+# ============================================
+
+metrics:
+  prometheus:
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addMiddlewaresLabels: true
+
+# ============================================
+# LOG CONFIGURATION
+# ============================================
+
+log:
+  level: "INFO"
+  format: "json"
+  filePath: "/logs/traefik.log"
+
+accessLog:
+  format: "json"
+  filePath: "/logs/access.log"
+  filters:
+    statusCodes:
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+
+# ============================================
+# PILOT CONFIGURATION (Disabled for Security)
+# ============================================
+
+pilot:
+  dashboard: false

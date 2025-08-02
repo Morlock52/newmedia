@@ -1,0 +1,570 @@
+version: "3.9"
+
+# Advanced AI-Powered Monitoring Infrastructure
+# Comprehensive monitoring stack with ML capabilities
+
+networks:
+  monitoring_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  ai_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
+  ai_models_data:
+  monitoring_db:
+  neural_cache:
+  vector_db:
+
+services:
+  # =========================
+  # Core Monitoring Stack
+  # =========================
+  
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: ai_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--log.level=info'
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: ai_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel,marcusolsson-treemap-panel,vonage-status-panel
+      - GF_FEATURE_TOGGLES_ENABLE=publicDashboards
+      - GF_SERVER_DOMAIN=${DOMAIN:-localhost}
+      - GF_SERVER_ROOT_URL=https://${DOMAIN:-localhost}/grafana/
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+    networks:
+      - monitoring_network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: ai_alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - alertmanager_data:/alertmanager
+      - ./config/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--web.route-prefix=/'
+      - '--cluster.listen-address=0.0.0.0:9094'
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  loki:
+    image: grafana/loki:2.8.0
+    container_name: ai_loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./config/loki:/etc/loki
+    command: -config.file=/etc/loki/loki.yml
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:2.8.0
+    container_name: ai_promtail
+    restart: unless-stopped
+    volumes:
+      - ./config/promtail:/etc/promtail
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/promtail.yml
+    networks:
+      - monitoring_network
+    depends_on:
+      - loki
+
+  # =========================
+  # AI/ML Analytics Stack
+  # =========================
+
+  ai_anomaly_detector:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-analytics
+    container_name: ai_anomaly_detector
+    restart: unless-stopped
+    ports:
+      - "8765:8765"  # WebSocket port
+      - "8080:8080"  # HTTP API port
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - DATABASE_PATH=/app/data/monitoring.db
+      - MODEL_PATH=/app/models
+      - LOG_LEVEL=INFO
+      - WEBSOCKET_PORT=8765
+      - HTTP_PORT=8080
+    volumes:
+      - ai_models_data:/app/models
+      - monitoring_db:/app/data
+      - ./monitoring/ai-analytics:/app/src
+      - ./config/ai-monitoring.yml:/app/config/monitoring.yml
+    networks:
+      - monitoring_network
+      - ai_network
+    depends_on:
+      - prometheus
+      - vector_db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  predictive_maintenance:
+    build:
+      context: .
+      dockerfile: Dockerfile.predictive
+    container_name: ai_predictive_maintenance
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_PATH=/app/data/predictive_maintenance.db
+      - MODEL_PATH=/app/models
+      - ANALYSIS_INTERVAL=3600  # 1 hour
+      - PREDICTION_HORIZON_DAYS=30
+      - LOG_LEVEL=INFO
+    volumes:
+      - ai_models_data:/app/models
+      - monitoring_db:/app/data
+      - ./monitoring/ai-analytics:/app/src
+      - ./config/predictive-maintenance.yml:/app/config/predictive-maintenance.yml
+    networks:
+      - monitoring_network
+      - ai_network
+    depends_on:
+      - ai_anomaly_detector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+
+  neural_dashboard:
+    image: nginx:alpine
+    container_name: ai_neural_dashboard
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ./monitoring/dashboards:/usr/share/nginx/html
+      - ./config/nginx-dashboard.conf:/etc/nginx/nginx.conf
+    networks:
+      - monitoring_network
+    depends_on:
+      - ai_anomaly_detector
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Vector Database for AI
+  # =========================
+
+  vector_db:
+    image: qdrant/qdrant:v1.3.0
+    container_name: ai_vector_db
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - vector_db:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+    networks:
+      - ai_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Advanced Exporters
+  # =========================
+
+  node_exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: ai_node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.systemd'
+      - '--collector.processes'
+    networks:
+      - monitoring_network
+    pid: host
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: ai_cadvisor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - monitoring_network
+    privileged: true
+
+  docker_exporter:
+    image: prometheusnetworks/docker_exporter:latest
+    container_name: ai_docker_exporter
+    restart: unless-stopped
+    ports:
+      - "9417:9417"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - monitoring_network
+
+  # =========================
+  # Performance Optimization
+  # =========================
+
+  performance_optimizer:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimizer
+    container_name: ai_performance_optimizer
+    restart: unless-stopped
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - OPTIMIZATION_INTERVAL=300  # 5 minutes
+      - LOG_LEVEL=INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/optimization:/app/src
+    networks:
+      - monitoring_network
+      - ai_network
+    depends_on:
+      - prometheus
+      - ai_anomaly_detector
+    privileged: true
+
+  # =========================
+  # Network Monitoring
+  # =========================
+
+  network_monitor:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: ai_network_monitor
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./config/blackbox:/etc/blackbox_exporter
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
+    networks:
+      - monitoring_network
+
+  # =========================
+  # Security Monitoring
+  # =========================
+
+  security_monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: ai_security_monitor
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - LOG_LEVEL=INFO
+      - SCAN_INTERVAL=3600  # 1 hour
+      - ALERT_WEBHOOK_URL=${SECURITY_WEBHOOK_URL}
+    volumes:
+      - /var/log:/var/log:ro
+      - /proc:/host/proc:ro
+      - ./monitoring/security:/app/src
+      - ./config/security-monitoring.yml:/app/config/security.yml
+    networks:
+      - monitoring_network
+    pid: host
+    privileged: true
+
+  # =========================
+  # Data Processing Pipeline
+  # =========================
+
+  data_processor:
+    image: apache/kafka:2.8.1
+    container_name: ai_data_processor
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    networks:
+      - ai_network
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: ai_zookeeper
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    networks:
+      - ai_network
+
+  # =========================
+  # Machine Learning Pipeline
+  # =========================
+
+  ml_pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml-pipeline
+    container_name: ai_ml_pipeline
+    restart: unless-stopped
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=data_processor:9092
+      - VECTOR_DB_URL=http://vector_db:6333
+      - MODEL_REGISTRY_URL=http://model_registry:8084
+      - TRAINING_INTERVAL=86400  # 24 hours
+      - LOG_LEVEL=INFO
+    volumes:
+      - ai_models_data:/app/models
+      - neural_cache:/app/cache
+      - ./monitoring/ml-pipeline:/app/src
+    networks:
+      - ai_network
+    depends_on:
+      - data_processor
+      - vector_db
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  model_registry:
+    image: mlflow/mlflow:2.5.0
+    container_name: ai_model_registry
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+      - MLFLOW_HOST=0.0.0.0
+      - MLFLOW_PORT=8084
+    volumes:
+      - ai_models_data:/mlflow
+    networks:
+      - ai_network
+    command: mlflow server --host 0.0.0.0 --port 8084
+
+  # =========================
+  # API Gateway for Monitoring
+  # =========================
+
+  monitoring_gateway:
+    image: traefik:v3.0
+    container_name: ai_monitoring_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8088:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik-monitoring.yml:/etc/traefik/traefik.yml
+      - ./config/dynamic-monitoring.yml:/etc/traefik/dynamic.yml
+    networks:
+      - monitoring_network
+      - ai_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`monitoring.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # =========================
+  # Notification Services
+  # =========================
+
+  notification_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.notifications
+    container_name: ai_notification_service
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./monitoring/notifications:/app/src
+      - ./config/notifications.yml:/app/config/notifications.yml
+    networks:
+      - monitoring_network
+    depends_on:
+      - alertmanager
+
+  # =========================
+  # Backup and Recovery
+  # =========================
+
+  backup_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    container_name: ai_backup_service
+    restart: unless-stopped
+    environment:
+      - BACKUP_INTERVAL=86400  # 24 hours
+      - RETENTION_DAYS=30
+      - S3_BUCKET=${BACKUP_S3_BUCKET}
+      - S3_ACCESS_KEY=${BACKUP_S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${BACKUP_S3_SECRET_KEY}
+      - LOG_LEVEL=INFO
+    volumes:
+      - prometheus_data:/backup/prometheus:ro
+      - grafana_data:/backup/grafana:ro
+      - monitoring_db:/backup/db:ro
+      - ai_models_data:/backup/models:ro
+      - ./monitoring/backup:/app/src
+    networks:
+      - monitoring_network
+    depends_on:
+      - prometheus
+      - grafana
+
+  # =========================
+  # Health Check Service
+  # =========================
+
+  health_checker:
+    build:
+      context: .
+      dockerfile: Dockerfile.health
+    container_name: ai_health_checker
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - CHECK_INTERVAL=60  # 1 minute
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./monitoring/health:/app/src
+      - ./config/health-checks.yml:/app/config/health.yml
+    networks:
+      - monitoring_network
+      - ai_network
+    depends_on:
+      - prometheus
+      - grafana
+      - ai_anomaly_detector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

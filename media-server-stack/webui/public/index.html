@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Server Stack - Setup & Management</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .tabs {
+      display: flex;
+      background: white;
+      border-radius: 8px 8px 0 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 15px 20px;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: #f8f9fa;
+      color: #666;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+      background: white;
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    
+    .tab:hover {
+      background: #e9ecef;
+    }
+    
+    .content {
+      background: white;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      min-height: 600px;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 30px;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #5a6fd8;
+      transform: translateY(-2px);
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #218838;
+    }
+    
+    .btn-warning {
+      background: #ffc107;
+      color: #212529;
+    }
+    
+    .btn-warning:hover {
+      background: #e0a800;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .status-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .status-card h3 {
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+    
+    .status-card.success {
+      border-left-color: #28a745;
+    }
+    
+    .status-card.success h3 {
+      color: #28a745;
+    }
+    
+    .status-card.warning {
+      border-left-color: #ffc107;
+    }
+    
+    .status-card.warning h3 {
+      color: #e0a800;
+    }
+    
+    .status-card.error {
+      border-left-color: #dc3545;
+    }
+    
+    .status-card.error h3 {
+      color: #dc3545;
+    }
+    
+    .output {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+    
+    .setup-progress {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .progress-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    
+    .progress-step.completed {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .progress-step.active {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .progress-step.pending {
+      background: #e2e3e5;
+      color: #6c757d;
+    }
+    
+    .step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      font-weight: bold;
+    }
+    
+    .completed .step-icon {
+      background: #28a745;
+      color: white;
+    }
+    
+    .active .step-icon {
+      background: #ffc107;
+      color: #212529;
+    }
+    
+    .pending .step-icon {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .service-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    .service-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .service-card h4 {
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+    
+    .service-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    .service-status.running {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .service-status.stopped {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .service-status.starting {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .help-text {
+      font-size: 0.9rem;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+    
+    .alert {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+    
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .tabs {
+        flex-direction: column;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 Media Server Stack</h1>
+      <p>Production-Ready Docker Media Server with VPN Integration & SSL</p>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('setup')">🔧 Setup</button>
+      <button class="tab" onclick="showTab('management')">⚙️ Management</button>
+      <button class="tab" onclick="showTab('monitoring')">📊 Monitoring</button>
+      <button class="tab" onclick="showTab('logs')">📋 Logs</button>
+    </div>
+    
+    <div class="content">
+      <!-- Setup Tab -->
+      <div id="setup" class="tab-content active">
+        <h2>Environment Setup</h2>
+        <p>Configure your media server stack with guided setup.</p>
+        
+        <div class="setup-progress">
+          <h3>Setup Progress</h3>
+          <div class="progress-step completed">
+            <div class="step-icon">✓</div>
+            <div>
+              <strong>Prerequisites Check</strong>
+              <div class="help-text">Docker, Node.js, and system requirements</div>
+            </div>
+          </div>
+          <div class="progress-step active">
+            <div class="step-icon">2</div>
+            <div>
+              <strong>Environment Configuration</strong>
+              <div class="help-text">Domain, VPN, and service settings</div>
+            </div>
+          </div>
+          <div class="progress-step pending">
+            <div class="step-icon">3</div>
+            <div>
+              <strong>Security Setup</strong>
+              <div class="help-text">SSL certificates and secret generation</div>
+            </div>
+          </div>
+          <div class="progress-step pending">
+            <div class="step-icon">4</div>
+            <div>
+              <strong>Stack Deployment</strong>
+              <div class="help-text">Start all services and verify health</div>
+            </div>
+          </div>
+        </div>
+        
+        <form id="setupForm">
+          <h3>Core Configuration</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="domain">Domain Name</label>
+              <input type="text" id="domain" name="domain" placeholder="yourdomain.com or localhost" required>
+              <div class="help-text">Your domain name for SSL certificates and external access</div>
+            </div>
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" placeholder="admin@yourdomain.com">
+              <div class="help-text">For SSL certificate notifications</div>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="timezone">Timezone</label>
+              <input type="text" id="timezone" name="timezone" placeholder="America/New_York">
+              <div class="help-text">System timezone (auto-detected)</div>
+            </div>
+            <div class="form-group">
+              <label for="puid">User ID (PUID)</label>
+              <input type="number" id="puid" name="puid" placeholder="1000">
+              <div class="help-text">Your system user ID (auto-detected)</div>
+            </div>
+          </div>
+          
+          <h3>VPN Configuration</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="vpnProvider">VPN Provider</label>
+              <select id="vpnProvider" name="vpnProvider">
+                <option value="">Select VPN Provider</option>
+                <option value="pia">Private Internet Access</option>
+                <option value="mullvad">Mullvad</option>
+                <option value="expressvpn">ExpressVPN</option>
+                <option value="nordvpn">NordVPN</option>
+                <option value="surfshark">Surfshark</option>
+                <option value="cyberghost">CyberGhost</option>
+              </select>
+              <div class="help-text">Choose your VPN provider for secure torrenting</div>
+            </div>
+            <div class="form-group">
+              <label for="vpnType">VPN Type</label>
+              <select id="vpnType" name="vpnType">
+                <option value="wireguard">WireGuard (Recommended)</option>
+                <option value="openvpn">OpenVPN</option>
+              </select>
+            </div>
+          </div>
+          
+          <h3>Storage Configuration</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dataRoot">Data Directory</label>
+              <input type="text" id="dataRoot" name="dataRoot" placeholder="./data" value="./data">
+              <div class="help-text">Where your media files will be stored</div>
+            </div>
+            <div class="form-group">
+              <label for="configRoot">Config Directory</label>
+              <input type="text" id="configRoot" name="configRoot" placeholder="./config" value="./config">
+              <div class="help-text">Where service configurations are stored</div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <button type="button" class="btn btn-primary" onclick="validateSetup()">
+              <span class="loading hidden"></span>
+              Validate Configuration
+            </button>
+            <button type="button" class="btn btn-success" onclick="runSetup()">Generate Environment</button>
+            <button type="button" class="btn btn-secondary" onclick="loadDefaults()">Load Defaults</button>
+          </div>
+        </form>
+        
+        <div id="setupOutput" class="output hidden"></div>
+      </div>
+      
+      <!-- Management Tab -->      <div id="management" class="tab-content">
+        <h2>Stack Management</h2>
+        <p>Control your media server stack deployment and services.</p>
+        
+        <div class="status-grid">
+          <div class="status-card">
+            <h3>Environment</h3>
+            <p id="envStatus">Checking...</p>
+            <button class="btn btn-primary" onclick="checkEnvironment()">Check Environment</button>
+          </div>
+          <div class="status-card">
+            <h3>Docker Status</h3>
+            <p id="dockerStatus">Checking...</p>
+            <button class="btn btn-primary" onclick="checkDocker()">Check Docker</button>
+          </div>
+          <div class="status-card">
+            <h3>Services</h3>
+            <p id="serviceCount">0 services running</p>
+            <button class="btn btn-success" onclick="fetchStatus()">Check Status</button>
+          </div>
+        </div>
+
+        <div class="status-grid">
+          <div class="status-card">
+            <h3>🚀 Stack Deployment</h3>
+            <p>Deploy the complete media server stack</p>
+            <button class="btn btn-success" onclick="deployStack()">Deploy Complete Stack</button>
+            <button class="btn btn-warning" onclick="deployWithMonitoring()">Deploy + Monitoring</button>
+            <div class="help-text">Deploys all services including VPN, media management, and reverse proxy</div>
+          </div>
+          <div class="status-card">
+            <h3>🎛️ Service Control</h3>
+            <p>Control individual services or entire stack</p>
+            <button class="btn btn-success" onclick="startStack()">Start All</button>
+            <button class="btn btn-danger" onclick="stopStack()">Stop All</button>
+            <button class="btn btn-warning" onclick="restartStack()">Restart Stack</button>
+          </div>
+          <div class="status-card">
+            <h3>🔄 Maintenance</h3>
+            <p>Update and maintain your stack</p>
+            <button class="btn btn-secondary" onclick="updateStack()">Update Images</button>
+            <button class="btn btn-primary" onclick="openHealthCheck()">Health Check</button>
+            <button class="btn btn-secondary" onclick="viewDeployLogs()">Deployment Logs</button>
+          </div>
+        </div>
+        
+        <div class="service-grid" id="serviceGrid">
+          <!-- Services will be populated here -->
+        </div>
+
+        <div id="managementOutput" class="output hidden"></div>
+      </div>
+      
+      <!-- Monitoring Tab -->
+      <div id="monitoring" class="tab-content">
+        <h2>System Monitoring</h2>
+        <p>Monitor system resources and service health.</p>
+        
+        <div class="status-grid">
+          <div class="status-card">
+            <h3>CPU Usage</h3>
+            <p id="cpuUsage">Loading...</p>
+          </div>
+          <div class="status-card">
+            <h3>Memory Usage</h3>
+            <p id="memoryUsage">Loading...</p>
+          </div>
+          <div class="status-card">
+            <h3>Disk Usage</h3>
+            <p id="diskUsage">Loading...</p>
+          </div>
+          <div class="status-card">
+            <h3>Network I/O</h3>
+            <p id="networkUsage">Loading...</p>
+          </div>
+        </div>
+        
+        <div>
+          <h3>Service Links</h3>
+          <p>Access your media server services:</p>
+          <div class="service-grid" id="serviceLinks">
+            <!-- Service links will be populated here -->
+          </div>
+        </div>
+        
+        <div>
+          <button class="btn btn-primary" onclick="refreshMonitoring()">Refresh Stats</button>
+          <button class="btn btn-secondary" onclick="exportLogs()">Export Logs</button>
+        </div>
+      </div>
+      
+      <!-- Logs Tab -->
+      <div id="logs" class="tab-content">
+        <h2>System Logs</h2>
+        <p>View and search through service logs.</p>
+        
+        <div class="form-group">
+          <label for="logService">Service</label>
+          <select id="logService" name="logService">
+            <option value="all">All Services</option>
+            <option value="webui">Web UI</option>
+            <option value="jellyfin">Jellyfin</option>
+            <option value="sonarr">Sonarr</option>
+            <option value="radarr">Radarr</option>
+            <option value="prowlarr">Prowlarr</option>
+            <option value="qbittorrent">qBittorrent</option>
+            <option value="gluetun">VPN (Gluetun)</option>
+            <option value="traefik">Traefik</option>
+          </select>
+        </div>
+        
+        <div>
+          <button class="btn btn-primary" onclick="fetchLogs()">Fetch Logs</button>
+          <button class="btn btn-secondary" onclick="clearLogs()">Clear Display</button>
+          <button class="btn btn-warning" onclick="downloadLogs()">Download Logs</button>
+        </div>
+        
+        <div id="logsOutput" class="output"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

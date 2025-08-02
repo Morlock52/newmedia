@@ -1,0 +1,181 @@
+{
+  "docker_performance_optimization": {
+    "strategies": {
+      "multi_stage_builds": {
+        "benefits": {
+          "image_size_reduction": "50-90%",
+          "build_time_improvement": "30-60%",
+          "memory_footprint_reduction": "40-70%"
+        },
+        "best_practices": [
+          "Separate build and runtime dependencies",
+          "Use minimal base images (alpine, scratch)",
+          "Copy only necessary artifacts between stages",
+          "Compile and optimize in build stage"
+        ]
+      },
+      "layer_caching": {
+        "techniques": [
+          "Order dependencies by change frequency",
+          "Combine RUN commands intelligently",
+          "Use .dockerignore effectively",
+          "Leverage BuildKit cache mounts"
+        ],
+        "performance_gains": {
+          "build_speed": "2-5x faster rebuilds",
+          "cache_hit_rate": "80-95% on unchanged layers"
+        }
+      },
+      "buildkit_features": {
+        "advantages": [
+          "Parallel build execution",
+          "Advanced caching mechanisms",
+          "Secret mount support",
+          "SSH forwarding for private repos"
+        ],
+        "performance_improvements": {
+          "build_parallelization": "40% faster",
+          "cache_efficiency": "60% better",
+          "resource_usage": "30% lower"
+        }
+      },
+      "resource_optimization": {
+        "memory": {
+          "limits": "Set appropriate limits to prevent OOM",
+          "reservations": "Guarantee minimum resources",
+          "optimization_flags": "Language-specific memory tuning"
+        },
+        "cpu": {
+          "limits": "Prevent resource monopolization",
+          "cpuset": "Pin to specific cores for performance",
+          "shares": "Relative weight for scheduling"
+        },
+        "io": {
+          "blkio_weight": "Prioritize disk I/O",
+          "device_limits": "Cap read/write speeds"
+        }
+      },
+      "health_checks": {
+        "best_practices": [
+          "Use lightweight checks",
+          "Appropriate intervals and timeouts",
+          "Built-in health endpoints",
+          "Avoid heavy operations"
+        ],
+        "performance_impact": "< 1% CPU overhead when optimized"
+      },
+      "startup_optimization": {
+        "techniques": [
+          "Precompile code/bytecode",
+          "Lazy loading of modules",
+          "Init containers for setup",
+          "Optimize base image selection"
+        ],
+        "improvements": {
+          "cold_start": "50-70% faster",
+          "warm_start": "80-90% faster"
+        }
+      },
+      "volume_performance": {
+        "types": {
+          "tmpfs": "Best for temporary data (10x faster)",
+          "named_volumes": "Best for persistent data",
+          "bind_mounts": "Use cached/delegated modes on macOS"
+        },
+        "optimizations": [
+          "Use appropriate mount options",
+          "Minimize cross-filesystem operations",
+          "Consider volume drivers for specific workloads"
+        ]
+      },
+      "network_optimization": {
+        "strategies": [
+          "Enable jumbo frames (MTU 9000)",
+          "Use appropriate network drivers",
+          "Optimize DNS resolution",
+          "Configure TCP parameters"
+        ],
+        "performance_gains": {
+          "throughput": "20-40% improvement",
+          "latency": "15-25% reduction"
+        }
+      }
+    },
+    "benchmarking_tools": {
+      "build_performance": [
+        "docker buildx build --progress=plain",
+        "time docker build",
+        "docker history --no-trunc"
+      ],
+      "runtime_performance": [
+        "docker stats",
+        "cAdvisor",
+        "Prometheus + Grafana"
+      ],
+      "specialized_tools": [
+        "dive (image analysis)",
+        "docker-slim (image optimization)",
+        "container-structure-test"
+      ]
+    },
+    "optimization_results": {
+      "typical_improvements": {
+        "image_size": "70% reduction average",
+        "build_time": "50% faster with caching",
+        "startup_time": "60% faster cold starts",
+        "memory_usage": "40% lower footprint",
+        "network_throughput": "30% higher"
+      },
+      "real_world_examples": {
+        "nodejs_app": {
+          "before": {
+            "image_size": "1.2GB",
+            "startup_time": "8s",
+            "memory_usage": "512MB"
+          },
+          "after": {
+            "image_size": "180MB",
+            "startup_time": "2s",
+            "memory_usage": "256MB"
+          }
+        },
+        "python_app": {
+          "before": {
+            "image_size": "900MB",
+            "startup_time": "6s",
+            "memory_usage": "400MB"
+          },
+          "after": {
+            "image_size": "250MB",
+            "startup_time": "1.5s",
+            "memory_usage": "200MB"
+          }
+        },
+        "go_app": {
+          "before": {
+            "image_size": "800MB",
+            "startup_time": "1s",
+            "memory_usage": "100MB"
+          },
+          "after": {
+            "image_size": "15MB",
+            "startup_time": "0.1s",
+            "memory_usage": "20MB"
+          }
+        }
+      }
+    },
+    "implementation_checklist": [
+      "Enable Docker BuildKit",
+      "Implement multi-stage builds",
+      "Optimize Dockerfile layer ordering",
+      "Configure resource limits appropriately",
+      "Set up efficient health checks",
+      "Use appropriate volume types",
+      "Configure network optimizations",
+      "Implement monitoring and metrics",
+      "Regular cleanup of unused resources",
+      "Performance testing and benchmarking"
+    ]
+  }
+}

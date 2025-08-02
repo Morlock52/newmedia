@@ -1,0 +1,29 @@
+{
+  "name": "media-stack-env-config",
+  "version": "1.0.0",
+  "description": "Environment configuration tool for Media Server Stack",
+  "type": "module",
+  "main": "setup-env.js",
+  "scripts": {
+    "setup": "node setup-env.js",
+    "start": "node setup-env.js",
+    "validate": "node setup-env.js --validate-only",
+    "dry-run": "node setup-env.js --dry-run",
+    "help": "node setup-env.js --help",
+    "auto": "node setup-env.js --no-interactive"
+  },
+  "dependencies": {
+    "inquirer": "^9.2.12",
+    "chalk": "^5.3.0",
+    "figlet": "^1.7.0"
+  },
+  "keywords": [
+    "media-server",
+    "docker",
+    "environment",
+    "configuration",
+    "cli"
+  ],
+  "author": "Media Stack Project",
+  "license": "MIT"
+}

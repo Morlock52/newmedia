@@ -1,0 +1,105 @@
+---
+# Homepage services configuration
+# For details, see https://gethomepage.dev/latest/configs/services/
+
+- Media Servers:
+    - Jellyfin:
+        href: http://localhost:8096
+        description: Primary media streaming
+        icon: jellyfin.png
+        widget:
+          type: jellyfin
+          url: http://localhost:8096
+          key: # Add API key after setup
+    - Plex:
+        href: http://localhost:32400
+        description: Alternative streaming
+        icon: plex.png
+
+- Content Management:
+    - Sonarr:
+        href: http://localhost:8989
+        description: TV show automation
+        icon: sonarr.png
+        widget:
+          type: sonarr
+          url: http://localhost:8989
+          key: # Add API key after setup
+    - Radarr:
+        href: http://localhost:7878
+        description: Movie automation
+        icon: radarr.png
+        widget:
+          type: radarr
+          url: http://localhost:7878
+          key: # Add API key after setup
+    - Lidarr:
+        href: http://localhost:8686
+        description: Music automation
+        icon: lidarr.png
+    - Bazarr:
+        href: http://localhost:6767
+        description: Subtitle automation
+        icon: bazarr.png
+    - Prowlarr:
+        href: http://localhost:9696
+        description: Indexer management
+        icon: prowlarr.png
+
+- Request Services:
+    - Jellyseerr:
+        href: http://localhost:5055
+        description: Media requests
+        icon: jellyseerr.png
+    - Overseerr:
+        href: http://localhost:5056
+        description: Plex requests
+        icon: overseerr.png
+
+- Download Clients:
+    - qBittorrent:
+        href: http://localhost:8090
+        description: Torrent downloads
+        icon: qbittorrent.png
+        widget:
+          type: qbittorrent
+          url: http://localhost:8090
+          username: admin
+          password: adminadmin
+    - Transmission:
+        href: http://localhost:9091
+        description: Alternative torrents
+        icon: transmission.png
+    - SABnzbd:
+        href: http://localhost:8085
+        description: Usenet downloads
+        icon: sabnzbd.png
+
+- Monitoring:
+    - Grafana:
+        href: http://localhost:3000
+        description: Metrics visualization
+        icon: grafana.png
+    - Prometheus:
+        href: http://localhost:9090
+        description: Metrics collection
+        icon: prometheus.png
+    - Uptime Kuma:
+        href: http://localhost:3004
+        description: Service monitoring
+        icon: uptime-kuma.png
+
+- Management:
+    - Portainer:
+        href: http://localhost:9000
+        description: Container management
+        icon: portainer.png
+        widget:
+          type: portainer
+          url: http://localhost:9000
+          env: 2
+          key: # Add API key after setup
+    - Nginx Proxy Manager:
+        href: http://localhost:8181
+        description: Reverse proxy
+        icon: nginx-proxy-manager.png

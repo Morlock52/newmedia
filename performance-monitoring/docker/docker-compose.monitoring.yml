@@ -1,0 +1,638 @@
+version: "3.9"
+
+networks:
+  monitoring_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  media_network:
+    external: true
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  influxdb_data:
+    driver: local
+  monitoring_db:
+    driver: local
+  loki_data:
+    driver: local
+  vector_data:
+    driver: local
+
+services:
+  # =========================
+  # Core Monitoring Stack
+  # =========================
+  
+  # Performance Monitoring Service
+  performance-monitor:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.monitor
+    container_name: performance-monitor
+    restart: unless-stopped
+    environment:
+      - CONFIG_PATH=/app/config/monitoring.yml
+      - DB_PATH=/app/data/monitoring.db
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+    volumes:
+      - ../config:/app/config:ro
+      - monitoring_db:/app/data
+      - ../logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "8765:8765"  # WebSocket server
+      - "8766:8766"  # HTTP API
+    networks:
+      - monitoring_network
+      - media_network
+    depends_on:
+      - prometheus
+      - influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8766/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Benchmark Runner Service
+  benchmark-runner:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.benchmark
+    container_name: benchmark-runner
+    restart: unless-stopped
+    environment:
+      - CONFIG_PATH=/app/config/monitoring.yml
+      - BENCHMARK_DATA_PATH=/app/data/benchmarks
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../config:/app/config:ro
+      - ../benchmarks:/app/benchmarks
+      - monitoring_db:/app/data
+      - /tmp:/tmp
+    networks:
+      - monitoring_network
+    depends_on:
+      - performance-monitor
+    command: ["python", "-m", "benchmarks.benchmark_scheduler"]
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+
+  # Performance Optimizer Service
+  performance-optimizer:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.optimizer
+    container_name: performance-optimizer
+    restart: unless-stopped
+    privileged: true  # Required for system optimizations
+    environment:
+      - CONFIG_PATH=/app/config/monitoring.yml
+      - OPTIMIZATION_DB_PATH=/app/data/optimizations.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../config:/app/config:ro
+      - monitoring_db:/app/data
+      - /proc:/host/proc
+      - /sys:/host/sys
+      - /etc:/host/etc
+    networks:
+      - monitoring_network
+    depends_on:
+      - performance-monitor
+    command: ["python", "-m", "optimization.optimizer_service"]
+
+  # =========================
+  # Data Collection
+  # =========================
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus-monitor
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--log.level=info'
+    volumes:
+      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_network
+      - media_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node Exporter - System Metrics
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.systemd'
+      - '--collector.processes'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # cAdvisor - Container Metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - monitoring_network
+    command:
+      - '--housekeeping_interval=30s'
+      - '--max_housekeeping_interval=35s'
+      - '--event_storage_event_limit=default=0'
+      - '--event_storage_age_limit=default=0'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,accelerator,hugetlb,referenced_memory,cpu_topology,resctrl'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Blackbox Exporter - Endpoint Monitoring
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    volumes:
+      - ../config/blackbox/blackbox.yml:/config/blackbox.yml:ro
+    ports:
+      - "9115:9115"
+    networks:
+      - monitoring_network
+      - media_network
+    command:
+      - '--config.file=/config/blackbox.yml'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # =========================
+  # Time Series Database
+  # =========================
+
+  # InfluxDB - High Performance Time Series
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: influxdb-monitor
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=monitoring123!
+      - DOCKER_INFLUXDB_INIT_ORG=performance-monitoring
+      - DOCKER_INFLUXDB_INIT_BUCKET=metrics
+      - DOCKER_INFLUXDB_INIT_RETENTION=90d
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=performance-monitoring-token-12345
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - ../config/influxdb:/etc/influxdb2
+    ports:
+      - "8086:8086"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # =========================
+  # Log Management
+  # =========================
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:2.9.1
+    container_name: loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ../config/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Promtail - Log Collection
+  promtail:
+    image: grafana/promtail:2.9.1
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ../config/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ../logs:/app/logs:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring_network
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # Vector - Data Pipeline
+  vector:
+    image: timberio/vector:0.33.0-alpine
+    container_name: vector
+    restart: unless-stopped
+    volumes:
+      - ../config/vector/vector.toml:/etc/vector/vector.toml:ro
+      - vector_data:/var/lib/vector
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring_network
+    depends_on:
+      - influxdb
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # =========================
+  # Visualization & Analytics
+  # =========================
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:10.1.2
+    container_name: grafana-monitor
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=monitoring123!
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel,grafana-worldmap-panel
+      - GF_FEATURE_TOGGLES_ENABLE=ngalert
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring_network
+    depends_on:
+      - prometheus
+      - influxdb
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Performance Dashboard
+  performance-dashboard:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: performance-dashboard
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://performance-monitor:8766
+      - WS_URL=ws://performance-monitor:8765
+    volumes:
+      - ../dashboard:/app/dashboard:ro
+    ports:
+      - "8090:8090"
+    networks:
+      - monitoring_network
+    depends_on:
+      - performance-monitor
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Alerting
+  # =========================
+
+  # AlertManager - Alert Routing
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--web.route-prefix=/'
+    volumes:
+      - ../config/alertmanager/alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - ../config/alertmanager/templates:/etc/alertmanager/templates:ro
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # =========================
+  # Service Discovery
+  # =========================
+
+  # Consul - Service Discovery
+  consul:
+    image: consul:1.16.1
+    container_name: consul
+    restart: unless-stopped
+    command: agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    volumes:
+      - ../config/consul:/consul/config:ro
+    ports:
+      - "8500:8500"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # =========================
+  # ML & Analytics
+  # =========================
+
+  # TensorFlow Serving - ML Model Serving
+  tensorflow-serving:
+    image: tensorflow/serving:2.13.0
+    container_name: ml-model-server
+    restart: unless-stopped
+    environment:
+      - MODEL_NAME=performance_anomaly_detection
+    volumes:
+      - ../ml-models:/models
+    ports:
+      - "8501:8501"  # REST API
+      - "8500:8500"  # gRPC API
+    networks:
+      - monitoring_network
+    command:
+      - "--model_config_file=/models/models.config"
+      - "--model_config_file_poll_wait_seconds=60"
+      - "--allow_version_labels_for_unavailable_models"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Redis - Caching & Queuing
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-monitoring
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ../config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.2'
+
+  # =========================
+  # Reverse Proxy & Load Balancer
+  # =========================
+
+  # Traefik - Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik-monitoring
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.consul.endpoints=consul:8500
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.monitoring.address=:8080
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+      - --log.level=INFO
+      - --accesslog=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../config/traefik:/etc/traefik:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    networks:
+      - monitoring_network
+      - media_network
+    depends_on:
+      - consul
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.monitoring.local`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # =========================
+  # Backup & Recovery
+  # =========================
+
+  # Backup Service
+  backup-service:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.backup
+    container_name: backup-service
+    restart: unless-stopped
+    environment:
+      - BACKUP_SCHEDULE=0 2 * * *  # Daily at 2 AM
+      - BACKUP_RETENTION_DAYS=30
+      - S3_BUCKET=monitoring-backups
+    volumes:
+      - prometheus_data:/backup/prometheus:ro
+      - grafana_data:/backup/grafana:ro
+      - influxdb_data:/backup/influxdb:ro
+      - monitoring_db:/backup/monitoring:ro
+      - ../backups:/backups
+      - ../config/backup:/app/config:ro
+    networks:
+      - monitoring_network
+    command: ["python", "-m", "backup.backup_scheduler"]
+
+  # =========================
+  # Development & Testing
+  # =========================
+
+  # Load Testing
+  k6:
+    image: grafana/k6:0.46.0
+    container_name: k6-load-testing
+    restart: "no"
+    volumes:
+      - ../tests/load-tests:/scripts
+    networks:
+      - monitoring_network
+      - media_network
+    command: ["sleep", "infinity"]  # Keep container running
+    profiles:
+      - testing
+
+  # Chaos Engineering
+  chaos-monkey:
+    image: quay.io/linki/chaoskube:v0.21.0
+    container_name: chaos-monkey
+    restart: unless-stopped
+    command:
+      - --interval=10m
+      - --dry-run
+      - --metrics-addr=0.0.0.0:8080
+      - --log-level=info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - monitoring_network
+    profiles:
+      - chaos-testing
+
+# =========================
+# Health Checks & Dependencies
+# =========================
+
+# Global health check service
+healthcheck:
+  image: alpine/curl:latest
+  container_name: monitoring-healthcheck
+  restart: unless-stopped
+  volumes:
+    - ../scripts/healthcheck.sh:/healthcheck.sh:ro
+  command: ["sh", "/healthcheck.sh"]
+  networks:
+    - monitoring_network
+  depends_on:
+    - prometheus
+    - grafana
+    - performance-monitor
+  profiles:
+    - healthcheck

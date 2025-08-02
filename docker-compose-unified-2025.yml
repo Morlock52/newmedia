@@ -1,0 +1,918 @@
+# Ultimate Media Server 2025 - Unified Architecture with Enable/Disable
+# =====================================================================
+# Features: Service Profiles, Hardware Acceleration, Security First
+# Usage: docker compose --profile core --profile media up -d
+
+version: '3.9'
+
+# =====================================================================
+# NETWORKS - Segmented for Security and Performance
+# =====================================================================
+networks:
+  public:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+  frontend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.1.0/24
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.2.0/24
+  downloads:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.3.0/24
+  monitoring:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.4.0/24
+
+# =====================================================================
+# VOLUMES - Persistent Storage
+# =====================================================================
+volumes:
+  # Core Infrastructure
+  traefik_certs:
+  authelia_data:
+  redis_data:
+  postgres_data:
+  
+  # Media Servers
+  jellyfin_config:
+  plex_config:
+  emby_config:
+  
+  # Music Services
+  navidrome_data:
+  lidarr_config:
+  
+  # Book Services
+  calibre_config:
+  readarr_config:
+  audiobookshelf_config:
+  kavita_config:
+  
+  # Photo Services
+  immich_upload:
+  photoprism_storage:
+  
+  # Automation
+  sonarr_config:
+  radarr_config:
+  prowlarr_config:
+  bazarr_config:
+  whisparr_config:
+  
+  # Download Clients
+  qbittorrent_config:
+  sabnzbd_config:
+  nzbget_config:
+  
+  # Request Management
+  overseerr_config:
+  ombi_config:
+  
+  # Monitoring
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  tautulli_config:
+  
+  # Management
+  homepage_config:
+  portainer_data:
+  yacht_config:
+  
+  # Backup
+  duplicati_config:
+  restic_data:
+
+# =====================================================================
+# EXTENSION FIELDS - Reusable Configurations
+# =====================================================================
+x-security-opts: &security-opts
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+x-common-env: &common-env
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+# =====================================================================
+# SERVICES - Organized by Profiles
+# =====================================================================
+services:
+  # =================================================================
+  # PROFILE: core - Essential Infrastructure Services
+  # =================================================================
+  
+  traefik:
+    profiles: ["core"]
+    image: traefik:v3.1
+    container_name: traefik
+    <<: *security-opts
+    networks:
+      - public
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CF_API_EMAIL: ${CLOUDFLARE_EMAIL:-}
+      CF_DNS_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=cloudflare"
+
+  authelia:
+    profiles: ["core"]
+    image: authelia/authelia:latest
+    container_name: authelia
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - authelia_data:/config
+    depends_on:
+      - redis
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls.certresolver=cloudflare"
+
+  redis:
+    profiles: ["core"]
+    image: redis:7-alpine
+    container_name: redis
+    <<: *security-opts
+    networks:
+      - backend
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    profiles: ["core"]
+    image: postgres:16-alpine
+    container_name: postgres
+    <<: *security-opts
+    networks:
+      - backend
+    environment:
+      POSTGRES_USER: ${DB_USER:-mediaserver}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-mediadb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # =================================================================
+  # PROFILE: media - Media Streaming Services
+  # =================================================================
+  
+  jellyfin:
+    profiles: ["media"]
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+      JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN:-localhost}
+    volumes:
+      - jellyfin_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - /dev/shm:/transcodes
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU
+    ports:
+      - "${JELLYFIN_PORT:-8096}:8096"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=cloudflare"
+
+  plex:
+    profiles: ["media"]
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+      VERSION: docker
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+    volumes:
+      - plex_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - /dev/shm:/transcode
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - "${PLEX_PORT:-32400}:32400"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plex.rule=Host(`plex.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.plex.entrypoints=websecure"
+      - "traefik.http.routers.plex.tls.certresolver=cloudflare"
+
+  emby:
+    profiles: ["media"]
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+    volumes:
+      - emby_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - /dev/shm:/transcode
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - "${EMBY_PORT:-8920}:8920"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.tls.certresolver=cloudflare"
+
+  # =================================================================
+  # PROFILE: music - Music Streaming Services
+  # =================================================================
+  
+  navidrome:
+    profiles: ["music"]
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: info
+      ND_BASEURL: /
+    volumes:
+      - navidrome_data:/data
+      - ${MEDIA_PATH:-./media}/music:/music:ro
+    ports:
+      - "${NAVIDROME_PORT:-4533}:4533"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=Host(`music.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.navidrome.entrypoints=websecure"
+      - "traefik.http.routers.navidrome.tls.certresolver=cloudflare"
+
+  lidarr:
+    profiles: ["music", "automation"]
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - lidarr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${LIDARR_PORT:-8686}:8686"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.lidarr.entrypoints=websecure"
+      - "traefik.http.routers.lidarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: books - E-book and Audiobook Services
+  # =================================================================
+  
+  calibre-web:
+    profiles: ["books"]
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+      DOCKER_MODS: linuxserver/mods:universal-calibre
+    volumes:
+      - calibre_config:/config
+      - ${MEDIA_PATH:-./media}/books:/books
+    ports:
+      - "${CALIBRE_PORT:-8083}:8083"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calibre.rule=Host(`books.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.calibre.entrypoints=websecure"
+      - "traefik.http.routers.calibre.tls.certresolver=cloudflare"
+
+  audiobookshelf:
+    profiles: ["books"]
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+    volumes:
+      - audiobookshelf_config:/config
+      - ${MEDIA_PATH:-./media}/audiobooks:/audiobooks
+      - ${MEDIA_PATH:-./media}/podcasts:/podcasts
+    ports:
+      - "${AUDIOBOOKSHELF_PORT:-13378}:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=cloudflare"
+
+  kavita:
+    profiles: ["books"]
+    image: kizaing/kavita:latest
+    container_name: kavita
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+    volumes:
+      - kavita_config:/kavita/config
+      - ${MEDIA_PATH:-./media}/comics:/comics
+      - ${MEDIA_PATH:-./media}/manga:/manga
+    ports:
+      - "${KAVITA_PORT:-5000}:5000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.rule=Host(`comics.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.kavita.entrypoints=websecure"
+      - "traefik.http.routers.kavita.tls.certresolver=cloudflare"
+
+  readarr:
+    profiles: ["books", "automation"]
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - readarr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${READARR_PORT:-8787}:8787"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.readarr.entrypoints=websecure"
+      - "traefik.http.routers.readarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.readarr.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: photos - Photo Management Services
+  # =================================================================
+  
+  immich-server:
+    profiles: ["photos"]
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+      DB_HOSTNAME: postgres
+      DB_USERNAME: ${DB_USER:-mediaserver}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+    volumes:
+      - immich_upload:/usr/src/app/upload
+      - ${MEDIA_PATH:-./media}/photos:/external:ro
+    depends_on:
+      - redis
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(`photos.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.immich.entrypoints=websecure"
+      - "traefik.http.routers.immich.tls.certresolver=cloudflare"
+
+  photoprism:
+    profiles: ["photos"]
+    image: photoprism/photoprism:latest
+    container_name: photoprism
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      PHOTOPRISM_ADMIN_USER: ${PHOTO_USER:-admin}
+      PHOTOPRISM_ADMIN_PASSWORD: ${PHOTO_PASSWORD:-changeme}
+      PHOTOPRISM_SITE_URL: https://gallery.${DOMAIN:-localhost}
+      PHOTOPRISM_PUBLIC: false
+    volumes:
+      - photoprism_storage:/photoprism/storage
+      - ${MEDIA_PATH:-./media}/photos:/photoprism/originals
+    ports:
+      - "${PHOTOPRISM_PORT:-2342}:2342"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.photoprism.rule=Host(`gallery.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.photoprism.entrypoints=websecure"
+      - "traefik.http.routers.photoprism.tls.certresolver=cloudflare"
+
+  # =================================================================
+  # PROFILE: automation - Media Automation Services
+  # =================================================================
+  
+  sonarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - sonarr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${SONARR_PORT:-8989}:8989"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.sonarr.middlewares=authelia@docker"
+
+  radarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - radarr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${RADARR_PORT:-7878}:7878"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.radarr.middlewares=authelia@docker"
+
+  prowlarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - prowlarr_config:/config
+    ports:
+      - "${PROWLARR_PORT:-9696}:9696"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.prowlarr.middlewares=authelia@docker"
+
+  bazarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - bazarr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+    ports:
+      - "${BAZARR_PORT:-6767}:6767"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.bazarr.entrypoints=websecure"
+      - "traefik.http.routers.bazarr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.bazarr.middlewares=authelia@docker"
+
+  whisparr:
+    profiles: ["automation"]
+    image: ghcr.io/whisparr/whisparr:nightly
+    container_name: whisparr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - whisparr_config:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${WHISPARR_PORT:-6969}:6969"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whisparr.rule=Host(`whisparr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.whisparr.entrypoints=websecure"
+      - "traefik.http.routers.whisparr.tls.certresolver=cloudflare"
+      - "traefik.http.routers.whisparr.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: downloads - Download Clients
+  # =================================================================
+  
+  gluetun:
+    profiles: ["downloads"]
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    <<: *security-opts
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - downloads
+      - frontend
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-mullvad}
+      VPN_TYPE: ${VPN_TYPE:-wireguard}
+      WIREGUARD_PRIVATE_KEY: ${VPN_PRIVATE_KEY:-}
+      WIREGUARD_ADDRESSES: ${VPN_ADDRESSES:-}
+      FIREWALL_OUTBOUND_SUBNETS: 172.25.0.0/16
+    ports:
+      - "${QBITTORRENT_PORT:-8080}:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+
+  qbittorrent:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    <<: *security-opts
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      <<: *common-env
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent_config:/config
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+
+  sabnzbd:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    <<: *security-opts
+    networks:
+      - frontend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - sabnzbd_config:/config
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${SABNZBD_PORT:-8081}:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.sabnzbd.entrypoints=websecure"
+      - "traefik.http.routers.sabnzbd.tls.certresolver=cloudflare"
+      - "traefik.http.routers.sabnzbd.middlewares=authelia@docker"
+
+  nzbget:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    <<: *security-opts
+    networks:
+      - frontend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - nzbget_config:/config
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - "${NZBGET_PORT:-6789}:6789"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nzbget.rule=Host(`nzbget.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.nzbget.entrypoints=websecure"
+      - "traefik.http.routers.nzbget.tls.certresolver=cloudflare"
+      - "traefik.http.routers.nzbget.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: requests - Media Request Management
+  # =================================================================
+  
+  overseerr:
+    profiles: ["requests"]
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - overseerr_config:/app/config
+    ports:
+      - "${OVERSEERR_PORT:-5055}:5055"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.rule=Host(`requests.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
+
+  ombi:
+    profiles: ["requests"]
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - ombi_config:/config
+    ports:
+      - "${OMBI_PORT:-3579}:3579"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ombi.rule=Host(`ombi.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.ombi.entrypoints=websecure"
+      - "traefik.http.routers.ombi.tls.certresolver=cloudflare"
+
+  # =================================================================
+  # PROFILE: monitoring - System Monitoring
+  # =================================================================
+  
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:latest
+    container_name: prometheus
+    <<: *security-opts
+    networks:
+      - monitoring
+      - backend
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=cloudflare"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:latest
+    container_name: grafana
+    <<: *security-opts
+    networks:
+      - frontend
+      - monitoring
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflare"
+
+  loki:
+    profiles: ["monitoring"]
+    image: grafana/loki:latest
+    container_name: loki
+    <<: *security-opts
+    networks:
+      - monitoring
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  tautulli:
+    profiles: ["monitoring"]
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - tautulli_config:/config
+    ports:
+      - "${TAUTULLI_PORT:-8181}:8181"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`analytics.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.tls.certresolver=cloudflare"
+      - "traefik.http.routers.tautulli.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: management - Container & System Management
+  # =================================================================
+  
+  homepage:
+    profiles: ["management"]
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+    volumes:
+      - homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${HOMEPAGE_PORT:-3001}:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN:-localhost}`) || Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls.certresolver=cloudflare"
+
+  portainer:
+    profiles: ["management"]
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    <<: *security-opts
+    networks:
+      - frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    ports:
+      - "${PORTAINER_PORT:-9000}:9000"
+      - "${PORTAINER_HTTPS_PORT:-9443}:9443"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=cloudflare"
+      - "traefik.http.routers.portainer.middlewares=authelia@docker"
+
+  yacht:
+    profiles: ["management"]
+    image: selfhostedpro/yacht:latest
+    container_name: yacht
+    <<: *security-opts
+    networks:
+      - frontend
+    volumes:
+      - yacht_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${YACHT_PORT:-8001}:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.yacht.rule=Host(`yacht.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.yacht.entrypoints=websecure"
+      - "traefik.http.routers.yacht.tls.certresolver=cloudflare"
+      - "traefik.http.routers.yacht.middlewares=authelia@docker"
+
+  # =================================================================
+  # PROFILE: backup - Backup Solutions
+  # =================================================================
+  
+  duplicati:
+    profiles: ["backup"]
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - duplicati_config:/config
+      - ${BACKUP_PATH:-./backups}:/backups
+      - ./:/source:ro
+    ports:
+      - "${DUPLICATI_PORT:-8200}:8200"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=cloudflare"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker"
+
+  restic:
+    profiles: ["backup"]
+    image: lobaro/restic-backup-docker:latest
+    container_name: restic
+    <<: *security-opts
+    networks:
+      - backend
+    environment:
+      RESTIC_REPOSITORY: ${RESTIC_REPO:-/backup}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-changeme}
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+    volumes:
+      - restic_data:/backup
+      - ./:/data:ro
+
+  # =================================================================
+  # PROFILE: advanced - Advanced/Experimental Services
+  # =================================================================
+  
+  # Add your advanced services here (AI, ML, Blockchain, etc.)
+
+# =====================================================================
+# Service Management Helper Script
+# =====================================================================
+# Save this as manage-services.sh
+# Usage: ./manage-services.sh [enable|disable] [profile_name]
+# Example: ./manage-services.sh enable media
+# Example: ./manage-services.sh disable downloads

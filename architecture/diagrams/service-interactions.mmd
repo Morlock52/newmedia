@@ -1,0 +1,85 @@
+sequenceDiagram
+    participant U as User
+    participant CF as Cloudflare
+    participant T as Traefik
+    participant A as Authelia
+    participant K as Kong Gateway
+    participant BFF as GraphQL BFF
+    participant I as Istio Mesh
+    participant O as Overseerr
+    participant S as Sonarr
+    participant P as Prowlarr
+    participant Q as qBittorrent
+    participant V as VPN
+    participant J as Jellyfin
+    participant Kf as Kafka
+    participant DB as PostgreSQL
+    participant R as Redis
+    participant E as Elasticsearch
+    participant M as MinIO
+
+    Note over U,M: User Request Flow - Requesting New Media
+
+    U->>CF: Request movie via web
+    CF->>T: Route to Traefik
+    T->>A: Check authentication
+    A->>U: Login prompt (if needed)
+    U->>A: Credentials + MFA
+    A->>T: Auth token
+    T->>K: Forward authenticated request
+    K->>BFF: GraphQL query
+    BFF->>I: Service mesh routing
+    I->>O: Get available media
+    O->>DB: Query request history
+    DB->>O: Return history
+    O->>BFF: Available options
+    BFF->>U: Display options
+
+    U->>BFF: Confirm request
+    BFF->>O: Create request
+    O->>Kf: Publish media.requested event
+    O->>S: Approved request
+    S->>P: Search indexers
+    P->>S: Torrent results
+    S->>Q: Add download
+    Q->>V: Route through VPN
+    V->>Q: Download torrent
+
+    Note over Q,J: Download and Processing Flow
+
+    Q->>Kf: Publish download.started event
+    Q->>S: Download progress
+    S->>DB: Update status
+    Q->>S: Download complete
+    S->>Kf: Publish download.completed event
+    S->>J: Import media
+    J->>M: Store media file
+    J->>DB: Update library
+    J->>E: Index metadata
+    J->>R: Cache metadata
+    J->>Kf: Publish media.added event
+
+    Note over J,U: Media Streaming Flow
+
+    U->>CF: Stream request
+    CF->>R: Check CDN cache
+    R-->>CF: Cache miss
+    CF->>T: Forward request
+    T->>A: Validate session
+    A->>T: Session valid
+    T->>K: Route request
+    K->>BFF: Get stream
+    BFF->>I: Route to service
+    I->>J: Stream request
+    J->>DB: Check permissions
+    DB->>J: Authorized
+    J->>M: Get media file
+    M->>J: Media stream
+    J->>U: Adaptive bitrate stream
+    J->>Kf: Publish media.played event
+
+    Note over Kf,E: Event Processing
+
+    Kf->>E: Store events
+    Kf->>DB: Update analytics
+    Kf->>R: Update recommendations

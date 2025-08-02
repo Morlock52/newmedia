@@ -1,0 +1,183 @@
+# Prometheus Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'media-server'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+      timeout: 10s
+
+# Load rules files
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'prometheus'
+
+  # Node Exporter - System Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: instance
+        replacement: '$1'
+
+  # Docker Containers
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'docker-host'
+
+  # Traefik Metrics
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+    metrics_path: '/metrics'
+
+  # Media Services
+  - job_name: 'jellyfin'
+    static_configs:
+      - targets: ['jellyfin:8096']
+    metrics_path: '/metrics'
+    scheme: 'http'
+    
+  - job_name: 'navidrome'
+    static_configs:
+      - targets: ['navidrome:4533']
+    metrics_path: '/metrics'
+    
+  - job_name: 'immich'
+    static_configs:
+      - targets: ['immich-server:3001']
+    metrics_path: '/metrics'
+
+  # Content Management
+  - job_name: 'sonarr'
+    static_configs:
+      - targets: ['sonarr-exporter:9707']
+    
+  - job_name: 'radarr'
+    static_configs:
+      - targets: ['radarr-exporter:9708']
+    
+  - job_name: 'lidarr'
+    static_configs:
+      - targets: ['lidarr-exporter:9709']
+
+  # Download Clients
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent-exporter:9666']
+
+  # Databases
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    params:
+      auth_module: ['postgres']
+    
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Elasticsearch
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch-exporter:9114']
+    metrics_path: '/metrics'
+
+  # GPU Metrics
+  - job_name: 'nvidia-gpu'
+    static_configs:
+      - targets: ['nvidia-gpu-exporter:9835']
+
+  # Network Metrics
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://jellyfin.media.example.com
+          - https://music.media.example.com
+          - https://audiobooks.media.example.com
+          - https://photos.media.example.com
+          - https://books.media.example.com
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # SNMP Metrics for Network Equipment
+  - job_name: 'snmp'
+    static_configs:
+      - targets:
+          - 10.10.4.1  # pfSense
+          - 10.10.3.100  # NAS
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: snmp-exporter:9116
+
+  # Custom Application Metrics
+  - job_name: 'custom-apps'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['media-apps']
+    relabel_configs:
+      - source_labels: ['__meta_consul_service']
+        target_label: 'service'
+      - source_labels: ['__meta_consul_node']
+        target_label: 'node'
+
+# Remote Write for Long-term Storage
+remote_write:
+  - url: "http://thanos-receive:19291/api/v1/receive"
+    queue_config:
+      capacity: 10000
+      max_shards: 200
+      min_shards: 1
+      max_samples_per_send: 5000
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms
+    metadata_config:
+      send: true
+      send_interval: 1m
+
+# Remote Read for Historical Data
+remote_read:
+  - url: "http://thanos-query:9090/api/v1/read"
+    read_recent: true
+    required_matchers:
+      - '__name__'

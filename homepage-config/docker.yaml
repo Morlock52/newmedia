@@ -1,0 +1,8 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/docker
+
+# Docker daemon configuration for Homepage using Socket Proxy
+my-docker:
+  host: docker-socket-proxy
+  port: 2375

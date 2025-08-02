@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoloMedia Hub - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/app-integration.css">
+    <script src="js/router.js"></script>
+    <script src="js/navigation-component.js"></script>
+</head>
+<body>
+    <!-- Skip to content for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    
+    <!-- Navigation Header Component -->
+    <navigation-header></navigation-header>
+    
+    <!-- Navigation Progress Bar -->
+    <div class="nav-progress"></div>
+    
+    <!-- Navigation Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="hologram-icon">⬡</div>
+                <h1>HoloMedia Hub</h1>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        
+        <div class="nav-items">
+            <a href="/dashboard" class="nav-item active" data-page="dashboard" data-route="/dashboard">
+                <span class="icon">📊</span>
+                <span class="label">Dashboard</span>
+            </a>
+            <a href="/media-library" class="nav-item" data-page="media-library" data-route="/media-library">
+                <span class="icon">🎬</span>
+                <span class="label">Media Library</span>
+            </a>
+            <a href="/config-manager" class="nav-item" data-page="config-manager" data-route="/config-manager">
+                <span class="icon">⚙️</span>
+                <span class="label">Configuration</span>
+            </a>
+            <a href="/env-editor" class="nav-item" data-page="env-editor" data-route="/env-editor">
+                <span class="icon">🔧</span>
+                <span class="label">.env Editor</span>
+            </a>
+            <a href="/ai-assistant" class="nav-item" data-page="ai-assistant" data-route="/ai-assistant">
+                <span class="icon">🤖</span>
+                <span class="label">AI Assistant</span>
+            </a>
+            <a href="/workflow-builder" class="nav-item" data-page="workflow-builder" data-route="/workflow-builder">
+                <span class="icon">🔄</span>
+                <span class="label">Workflows</span>
+            </a>
+            <a href="/health-monitor" class="nav-item" data-page="health-monitor" data-route="/health-monitor">
+                <span class="icon">💚</span>
+                <span class="label">Health Monitor</span>
+            </a>
+            <a href="/documentation" class="nav-item" data-page="documentation" data-route="/documentation">
+                <span class="icon">📚</span>
+                <span class="label">Documentation</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <div class="user-section">
+                <img src="https://via.placeholder.com/32" alt="User" class="user-avatar">
+                <span class="username">Admin</span>
+                <button class="settings-btn" id="settingsBtn">⚙️</button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content Area -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="search-container">
+                <input type="text" class="global-search" id="globalSearch" placeholder="Search across all features...">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="top-bar-actions">
+                <button class="notification-btn" id="notificationBtn">
+                    <span class="icon">🔔</span>
+                    <span class="notification-badge" id="notificationBadge">3</span>
+                </button>
+                <button class="theme-toggle" id="themeToggle">🌙</button>
+                <button class="quick-action" id="quickAction">⚡</button>
+            </div>
+        </header>
+        
+        <!-- Dynamic Content Area -->
+        <div class="content-wrapper" id="contentWrapper" data-router-view>
+            <!-- Dashboard View -->
+            <div class="page-content active" id="dashboard-page">
+                <div class="page-header">
+                    <h2>Dashboard</h2>
+                    <p>Welcome to HoloMedia Hub</p>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <!-- Quick Stats -->
+                    <div class="stat-card">
+                        <div class="stat-icon">🎬</div>
+                        <div class="stat-content">
+                            <h3>Media Files</h3>
+                            <p class="stat-value">1,247</p>
+                            <p class="stat-change">+12% this week</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-content">
+                            <h3>Active Services</h3>
+                            <p class="stat-value">8/10</p>
+                            <p class="stat-change">All systems operational</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-content">
+                            <h3>Workflows</h3>
+                            <p class="stat-value">15</p>
+                            <p class="stat-change">3 running</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">💚</div>
+                        <div class="stat-content">
+                            <h3>System Health</h3>
+                            <p class="stat-value">98%</p>
+                            <p class="stat-change">Excellent</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Activity Feed -->
+                <div class="activity-section">
+                    <h3>Recent Activity</h3>
+                    <div class="activity-feed" id="activityFeed">
+                        <div class="activity-item">
+                            <span class="activity-icon">🎬</span>
+                            <div class="activity-content">
+                                <p>New movie added: "Inception"</p>
+                                <span class="activity-time">2 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-icon">⚙️</span>
+                            <div class="activity-content">
+                                <p>Configuration updated: Jellyfin settings</p>
+                                <span class="activity-time">15 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <span class="activity-icon">🔄</span>
+                            <div class="activity-content">
+                                <p>Workflow completed: Media scan</p>
+                                <span class="activity-time">1 hour ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions-grid">
+                    <button class="quick-action-card" data-action="scan-media">
+                        <span class="icon">📡</span>
+                        <span>Scan Media</span>
+                    </button>
+                    <button class="quick-action-card" data-action="add-media">
+                        <span class="icon">➕</span>
+                        <span>Add Media</span>
+                    </button>
+                    <button class="quick-action-card" data-action="run-workflow">
+                        <span class="icon">▶️</span>
+                        <span>Run Workflow</span>
+                    </button>
+                    <button class="quick-action-card" data-action="view-logs">
+                        <span class="icon">📋</span>
+                        <span>View Logs</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Media Library View -->
+            <div class="page-content" id="media-library-page" role="tabpanel" aria-labelledby="media-library-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading Media Library...</p>
+                </div>
+                <iframe src="../media-library.html" class="app-iframe" title="Media Library" loading="lazy"></iframe>
+            </div>
+            
+            <!-- Configuration Manager View -->
+            <div class="page-content" id="config-manager-page" role="tabpanel" aria-labelledby="config-manager-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading Configuration...</p>
+                </div>
+                <iframe src="config-manager-fixed.html" class="app-iframe" title="Configuration Manager" loading="lazy"></iframe>
+            </div>
+            
+            <!-- .env Editor View -->
+            <div class="page-content" id="env-editor-page" role="tabpanel" aria-labelledby="env-editor-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading .env Editor...</p>
+                </div>
+                <iframe src="smart-env-editor.html" class="app-iframe" title="Environment Editor" loading="lazy"></iframe>
+            </div>
+            
+            <!-- AI Assistant View -->
+            <div class="page-content" id="ai-assistant-page" role="tabpanel" aria-labelledby="ai-assistant-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading AI Assistant...</p>
+                </div>
+                <iframe src="media-assistant.html" class="app-iframe" title="AI Assistant" loading="lazy"></iframe>
+            </div>
+            
+            <!-- Workflow Builder View -->
+            <div class="page-content" id="workflow-builder-page" role="tabpanel" aria-labelledby="workflow-builder-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading Workflows...</p>
+                </div>
+                <iframe src="../workflow-builder.html" class="app-iframe" title="Workflow Builder" loading="lazy"></iframe>
+            </div>
+            
+            <!-- Health Monitor View -->
+            <div class="page-content" id="health-monitor-page" role="tabpanel" aria-labelledby="health-monitor-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading Health Monitor...</p>
+                </div>
+                <iframe src="../health-monitor.html" class="app-iframe" title="Health Monitor" loading="lazy"></iframe>
+            </div>
+            
+            <!-- Documentation View -->
+            <div class="page-content" id="documentation-page" role="tabpanel" aria-labelledby="documentation-nav">
+                <div class="page-loading" aria-hidden="true">
+                    <div class="loading-spinner"></div>
+                    <p>Loading Documentation...</p>
+                </div>
+                <iframe src="../documentation.html" class="app-iframe" title="Documentation" loading="lazy"></iframe>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button class="close-btn" id="closeNotifications">×</button>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <!-- Notifications will be dynamically added here -->
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn" id="closeSettings">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+                    <label class="setting-item">
+                        <span>Dark Mode</span>
+                        <input type="checkbox" id="darkModeToggle" checked>
+                    </label>
+                    <label class="setting-item">
+                        <span>Compact Sidebar</span>
+                        <input type="checkbox" id="compactSidebarToggle">
+                    </label>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Notifications</h3>
+                    <label class="setting-item">
+                        <span>Enable Desktop Notifications</span>
+                        <input type="checkbox" id="desktopNotificationsToggle">
+                    </label>
+                    <label class="setting-item">
+                        <span>Sound Alerts</span>
+                        <input type="checkbox" id="soundAlertsToggle" checked>
+                    </label>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Performance</h3>
+                    <label class="setting-item">
+                        <span>Enable Animations</span>
+                        <input type="checkbox" id="animationsToggle" checked>
+                    </label>
+                    <label class="setting-item">
+                        <span>Auto-refresh Dashboard</span>
+                        <input type="checkbox" id="autoRefreshToggle" checked>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveSettings">Save Settings</button>
+                <button class="btn btn-secondary" id="cancelSettings">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Action Menu -->
+    <div class="quick-action-menu" id="quickActionMenu">
+        <h3>Quick Actions</h3>
+        <div class="quick-action-list">
+            <button data-action="scan-all">🔍 Scan All Libraries</button>
+            <button data-action="restart-services">🔄 Restart Services</button>
+            <button data-action="clear-cache">🗑️ Clear Cache</button>
+            <button data-action="export-config">💾 Export Configuration</button>
+            <button data-action="view-logs">📋 View System Logs</button>
+        </div>
+    </div>
+    
+    <!-- Breadcrumbs -->
+    <div class="breadcrumbs" aria-label="Breadcrumb navigation"></div>
+    
+    <!-- Loading Overlay -->
+    <div class="nav-loading-overlay" aria-hidden="true">
+        <div class="nav-loading-spinner"></div>
+    </div>
+    
+    <!-- Back to Top Button -->
+    <div class="back-to-top" role="button" aria-label="Back to top" tabindex="0"></div>
+    
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay"></div>
+    
+    <style>
+        /* Additional styles for loading states and transitions */
+        .page-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--dark-bg);
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 255, 255, 0.2);
+            border-top-color: var(--neon-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .app-iframe {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .error-state button {
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+    </style>
+    
+    <script src="js/app-integration.js"></script>
+    <script>
+        // Initialize navigation manager after DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Register service worker for offline functionality
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+                        // Preload navigation routes
+                        registration.active?.postMessage({ type: 'PRELOAD_ROUTES' });
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            }
+            
+            // Listen for navigation events
+            window.addEventListener('navigation:navigationstart', (e) => {
+                console.log('Navigation started:', e.detail);
+            });
+            
+            window.addEventListener('navigation:navigationend', (e) => {
+                console.log('Navigation completed:', e.detail);
+            });
+            
+            window.addEventListener('navigation:pageready', (e) => {
+                console.log('Page ready:', e.detail);
+            });
+            
+            // Handle search from navigation component
+            window.addEventListener('navsearch', (e) => {
+                const query = e.detail.query;
+                if (window.holoMediaHub) {
+                    window.holoMediaHub.performSearch(query);
+                }
+            });
+            
+            // Setup iframe loading states with better error handling
+            document.querySelectorAll('.app-iframe').forEach(iframe => {
+                const container = iframe.closest('.page-content');
+                const loading = container.querySelector('.page-loading');
+                let loadTimeout;
+                
+                // Set a timeout for loading
+                loadTimeout = setTimeout(() => {
+                    if (loading && loading.style.display !== 'none') {
+                        showIframeError(loading, 'Page is taking too long to load');
+                    }
+                }, 10000); // 10 second timeout
+                
+                iframe.addEventListener('load', () => {
+                    clearTimeout(loadTimeout);
+                    try {
+                        // Test if the iframe content loaded successfully
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc && iframeDoc.body) {
+                            if (loading) loading.style.display = 'none';
+                            iframe.style.opacity = '1';
+                        } else {
+                            throw new Error('Empty content');
+                        }
+                    } catch (e) {
+                        // Cross-origin or other errors
+                        if (loading) loading.style.display = 'none';
+                        iframe.style.opacity = '1';
+                    }
+                });
+                
+                iframe.addEventListener('error', () => {
+                    clearTimeout(loadTimeout);
+                    showIframeError(loading, 'Failed to load page');
+                });
+            });
+            
+            function showIframeError(loading, message) {
+                if (loading) {
+                    loading.innerHTML = `
+                        <div class="error-state">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                            <h3>Unable to Load Page</h3>
+                            <p>${message}</p>
+                            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+                                <button onclick="location.reload()" class="error-button">
+                                    🔄 Retry
+                                </button>
+                                <button onclick="window.location.href='main-app.html'" class="error-button">
+                                    🏠 Go Home
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Add improved error button styles
+            const errorStyles = document.createElement('style');
+            errorStyles.textContent = `
+                .error-button {
+                    padding: 0.75rem 1.5rem;
+                    background: linear-gradient(135deg, var(--neon-cyan), #0088ff);
+                    border: none;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    font-size: 0.9rem;
+                }
+                
+                .error-button:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+                }
+            `;
+            document.head.appendChild(errorStyles);
+        });
+    </script>
+</body>
+</html>

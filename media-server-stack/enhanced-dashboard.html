@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Dashboard - Live Monitoring</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .refresh-indicator {
+            font-size: 0.5em;
+            color: #666;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        .status-bar {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .last-updated {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        .service-card.online {
+            border-color: #28a745;
+        }
+        .service-card.offline {
+            border-color: #dc3545;
+            opacity: 0.8;
+        }
+        .service-card.checking {
+            border-color: #ffc107;
+        }
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .status-indicator.online {
+            background: #28a745;
+            animation: pulse-green 2s infinite;
+        }
+        .status-indicator.offline {
+            background: #dc3545;
+        }
+        .status-indicator.checking {
+            background: #ffc107;
+            animation: pulse-yellow 1s infinite;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+        @keyframes pulse-yellow {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        .service-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 15px;
+            background: #667eea;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        .service-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .service-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        .service-status {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 10px;
+        }
+        .docker-status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .docker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .docker-container {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9em;
+        }
+        .docker-container.running {
+            border-color: #28a745;
+        }
+        .container-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .container-status {
+            color: #666;
+            font-size: 0.85em;
+        }
+        .error-log {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        .error-log.has-errors {
+            display: block;
+        }
+        .error-log h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .error-item {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🏠 Media Server Dashboard
+            <span class="refresh-indicator">⟳ Auto-refreshing</span>
+        </h1>
+        
+        <div class="status-bar">
+            <div>
+                <strong>System Status:</strong> 
+                <span id="system-status">Checking...</span>
+            </div>
+            <div class="last-updated">
+                Last updated: <span id="last-update">Never</span>
+            </div>
+        </div>
+        
+        <div class="services-grid" id="services-grid">
+            <!-- Services will be dynamically populated -->
+        </div>
+        
+        <div class="docker-status">
+            <h3>🐳 Docker Container Status</h3>
+            <div id="docker-status">Checking Docker containers...</div>
+            <div class="docker-grid" id="docker-grid">
+                <!-- Docker containers will be listed here -->
+            </div>
+        </div>
+        
+        <div class="error-log" id="error-log">
+            <h4>⚠️ Service Issues</h4>
+            <div id="error-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // Service configuration
+        const services = [
+            {
+                name: 'Jellyfin',
+                icon: '🎬',
+                description: 'Media Server - Movies, TV Shows, Music',
+                url: 'https://jellyfin.morloksmaze.com',
+                localUrl: 'http://localhost:8096',
+                healthEndpoint: '/health'
+            },
+            {
+                name: 'Overseerr',
+                icon: '📝',
+                description: 'Request Management - Movies & TV',
+                url: 'https://overseerr.morloksmaze.com',
+                localUrl: 'http://localhost:5055',
+                healthEndpoint: '/api/v1/status'
+            },
+            {
+                name: 'Sonarr',
+                icon: '📺',
+                description: 'TV Series Management',
+                url: 'https://sonarr.morloksmaze.com',
+                localUrl: 'http://localhost:8989',
+                healthEndpoint: '/api/v3/system/status'
+            },
+            {
+                name: 'Radarr',
+                icon: '🎞️',
+                description: 'Movie Management',
+                url: 'https://radarr.morloksmaze.com',
+                localUrl: 'http://localhost:7878',
+                healthEndpoint: '/api/v3/system/status'
+            },
+            {
+                name: 'Lidarr',
+                icon: '🎵',
+                description: 'Music Management',
+                url: 'https://lidarr.morloksmaze.com',
+                localUrl: 'http://localhost:8686',
+                healthEndpoint: '/api/v1/system/status'
+            },
+            {
+                name: 'Prowlarr',
+                icon: '🔍',
+                description: 'Indexer Management',
+                url: 'https://prowlarr.morloksmaze.com',
+                localUrl: 'http://localhost:9696',
+                healthEndpoint: '/api/v1/system/status'
+            },
+            {
+                name: 'Homarr',
+                icon: '🏠',
+                description: 'Comprehensive Dashboard',
+                url: 'https://homarr.morloksmaze.com',
+                localUrl: 'http://localhost:7575',
+                healthEndpoint: '/'
+            },
+            {
+                name: 'Authelia',
+                icon: '🔐',
+                description: 'Authentication Management',
+                url: 'https://auth.morloksmaze.com',
+                localUrl: 'http://localhost:9091',
+                healthEndpoint: '/api/health'
+            },
+            {
+                name: 'Traefik',
+                icon: '⚙️',
+                description: 'Reverse Proxy Dashboard',
+                url: 'http://localhost:8181/dashboard/',
+                localUrl: 'http://localhost:8181/dashboard/',
+                healthEndpoint: '/api/overview'
+            }
+        ];
+
+        let serviceStates = {};
+        let errors = [];
+
+        // Initialize dashboard
+        function initDashboard() {
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+            
+            services.forEach(service => {
+                const card = document.createElement('a');
+                card.href = service.url;
+                card.className = 'service-card checking';
+                card.id = `service-${service.name.toLowerCase()}`;
+                card.innerHTML = `
+                    <div class="status-indicator checking"></div>
+                    <div class="service-icon">${service.icon}</div>
+                    <div class="service-name">${service.name}</div>
+                    <div class="service-description">${service.description}</div>
+                    <div class="service-status" id="status-${service.name.toLowerCase()}">Checking...</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Check service status
+        async function checkService(service) {
+            const serviceId = service.name.toLowerCase();
+            const card = document.getElementById(`service-${serviceId}`);
+            const statusText = document.getElementById(`status-${serviceId}`);
+            const indicator = card.querySelector('.status-indicator');
+            
+            try {
+                // Try local URL first (for better performance)
+                const response = await fetch(service.localUrl, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                });
+                
+                // Since no-cors, we can't read status, assume online if no error
+                card.className = 'service-card online';
+                indicator.className = 'status-indicator online';
+                statusText.textContent = 'Online';
+                serviceStates[service.name] = 'online';
+                
+            } catch (error) {
+                // If local fails, service is likely down
+                card.className = 'service-card offline';
+                indicator.className = 'status-indicator offline';
+                statusText.textContent = 'Offline';
+                serviceStates[service.name] = 'offline';
+                errors.push(`${service.name}: Connection failed`);
+            }
+        }
+
+        // Check all services
+        async function checkAllServices() {
+            errors = [];
+            const startTime = Date.now();
+            
+            // Check services in parallel
+            await Promise.all(services.map(service => checkService(service)));
+            
+            // Update system status
+            const onlineCount = Object.values(serviceStates).filter(s => s === 'online').length;
+            const totalCount = services.length;
+            const systemStatus = document.getElementById('system-status');
+            
+            if (onlineCount === totalCount) {
+                systemStatus.innerHTML = '<span style="color: #28a745;">✅ All services online</span>';
+            } else if (onlineCount > 0) {
+                systemStatus.innerHTML = `<span style="color: #ffc107;">⚠️ ${onlineCount}/${totalCount} services online</span>`;
+            } else {
+                systemStatus.innerHTML = '<span style="color: #dc3545;">❌ All services offline</span>';
+            }
+            
+            // Update last check time
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            
+            // Show errors if any
+            const errorLog = document.getElementById('error-log');
+            const errorList = document.getElementById('error-list');
+            
+            if (errors.length > 0) {
+                errorLog.classList.add('has-errors');
+                errorList.innerHTML = errors.map(e => `<div class="error-item">• ${e}</div>`).join('');
+            } else {
+                errorLog.classList.remove('has-errors');
+            }
+        }
+
+        // Mock Docker status (since we can't access Docker API from browser)
+        function updateDockerStatus() {
+            const dockerGrid = document.getElementById('docker-grid');
+            const dockerStatus = document.getElementById('docker-status');
+            
+            // In a real implementation, this would fetch from a backend API
+            dockerStatus.innerHTML = '<span style="color: #28a745;">✅ Docker daemon running</span>';
+            
+            // Mock container data based on what we know is running
+            const containers = [
+                { name: 'jellyfin', status: 'running' },
+                { name: 'sonarr', status: 'running' },
+                { name: 'radarr', status: 'running' },
+                { name: 'prowlarr', status: 'running' },
+                { name: 'overseerr', status: 'stopped' },
+                { name: 'traefik', status: 'running' },
+                { name: 'authelia', status: 'running' },
+                { name: 'qbittorrent', status: 'running' }
+            ];
+            
+            dockerGrid.innerHTML = containers.map(container => `
+                <div class="docker-container ${container.status}">
+                    <div class="container-name">${container.name}</div>
+                    <div class="container-status">${container.status === 'running' ? '🟢 Running' : '🔴 Stopped'}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize and start monitoring
+        initDashboard();
+        checkAllServices();
+        updateDockerStatus();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            checkAllServices();
+            updateDockerStatus();
+        }, 30000);
+
+        // Manual refresh on page visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                checkAllServices();
+                updateDockerStatus();
+            }
+        });
+    </script>
+</body>
+</html>

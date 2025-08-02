@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-08-02T11:44:12Z",
+  "test_suite": "Core Container Integration Tests",
+  "total_tests": 45,
+  "passed_tests": 35,
+  "failed_tests": 10,
+  "success_rate": 77,
+  "log_file": "/Users/morlock/fun/newmedia/test-results/core-integration-20250802_074339.log"
+}

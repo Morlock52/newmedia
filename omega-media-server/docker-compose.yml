@@ -1,0 +1,118 @@
+version: '3.9'
+
+services:
+  omega:
+    image: omegaserver/omega:latest
+    container_name: omega-media-server
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    
+    environment:
+      # System Configuration
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      
+      # Feature Flags
+      - ENABLE_AI=true
+      - ENABLE_8K=true
+      - ENABLE_VPN=true
+      - ENABLE_PLEX=false  # Set to true if you have Plex Pass
+      
+      # Performance Settings
+      - TRANSCODE_THREADS=0  # 0 = auto-detect
+      - AI_WORKERS=4
+      - CACHE_SIZE=10G
+      
+      # Security Settings
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - DOMAIN=${DOMAIN:-localhost}
+      - SSL_ENABLE=true
+      - VPN_ENDPOINT=${VPN_ENDPOINT:-}
+      
+      # Database Settings
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-omega_secure_pass}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-omega_redis_pass}
+      
+      # AI/ML Settings
+      - AI_MODEL=advanced
+      - RECOMMENDATION_ENGINE=collaborative
+      - SUBTITLE_LANGUAGES=en,es,fr,de,ja,ko,zh
+      
+    volumes:
+      # Core volumes
+      - ${CONFIG_PATH:-./config}:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+      - ${TRANSCODE_PATH:-./transcode}:/transcode
+      
+      # Optional volumes for existing media
+      - ${MOVIES_PATH:-./media/movies}:/media/movies
+      - ${TV_PATH:-./media/tv}:/media/tv
+      - ${MUSIC_PATH:-./media/music}:/media/music
+      - ${PHOTOS_PATH:-./media/photos}:/media/photos
+      - ${BOOKS_PATH:-./media/books}:/media/books
+      
+      # System volumes
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backups:/backups
+      - ./logs:/var/log/omega
+      
+    devices:
+      # Hardware acceleration (uncomment as needed)
+      # - /dev/dri:/dev/dri  # Intel QuickSync
+      # - /dev/nvidia0:/dev/nvidia0  # NVIDIA GPU
+      # - /dev/nvidia-uvm:/dev/nvidia-uvm
+      # - /dev/nvidiactl:/dev/nvidiactl
+      
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 4G
+          
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/omega-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# Optional: External services for advanced setups
+  postgres:
+    image: postgres:15-alpine
+    container_name: omega-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=omega
+      - POSTGRES_USER=omega
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-omega_secure_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    profiles:
+      - external-db
+      
+  redis:
+    image: redis:7-alpine
+    container_name: omega-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-omega_redis_pass}
+    volumes:
+      - redis_data:/data
+    profiles:
+      - external-cache
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: omega-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16

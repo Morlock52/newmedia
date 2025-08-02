@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Diun - Docker Image Update Notifier
+  # Monitors all containers for available updates
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    restart: unless-stopped
+    command: serve
+    volumes:
+      - ./diun-config.yml:/etc/diun/diun.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - diun-data:/data
+    environment:
+      - TZ=${TZ:-UTC}
+      - LOG_LEVEL=info
+      - LOG_JSON=false
+    labels:
+      - "traefik.enable=false"
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Renovate Bot - Automated Dependency Updates
+  # Creates PRs for docker-compose.yml updates
+  renovate:
+    image: renovate/renovate:latest
+    container_name: renovate
+    restart: "no"  # Run as a cron job
+    environment:
+      - RENOVATE_TOKEN=${GITHUB_TOKEN}
+      - RENOVATE_REPOSITORIES=${GITHUB_REPOSITORY:-user/repo}
+      - RENOVATE_BASE_DIR=/tmp/renovate
+      - RENOVATE_CONFIG_FILE=/config/renovate.json
+      - LOG_LEVEL=info
+    volumes:
+      - ./renovate.json:/config/renovate.json:ro
+      - renovate-cache:/tmp/renovate
+    networks:
+      - media-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      - "diun.enable=false"
+
+  # Update Dashboard - Web UI for monitoring updates
+  update-dashboard:
+    image: nginx:alpine
+    container_name: update-dashboard
+    restart: unless-stopped
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.updates.rule=Host(`updates.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.updates.entrypoints=websecure"
+      - "traefik.http.routers.updates.tls.certresolver=letsencrypt"
+      - "traefik.http.services.updates.loadbalancer.server.port=80"
+      - "traefik.http.routers.updates.middlewares=auth@docker"
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backup service for pre-update snapshots
+  backup-agent:
+    image: offen/docker-volume-backup:latest
+    container_name: backup-agent
+    restart: unless-stopped
+    environment:
+      - BACKUP_CRON_EXPRESSION=0 2 * * *
+      - BACKUP_FILENAME=backup-%Y-%m-%d_%H-%M-%S.tar.gz
+      - BACKUP_ARCHIVE=/archive
+      - BACKUP_RETENTION_DAYS=7
+      - BACKUP_STOP_CONTAINER_LABEL=backup.stop
+      - NOTIFICATION_URLS=${BACKUP_NOTIFICATION_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backups:/archive
+      - media-data:/backup/media-data:ro
+      - config-data:/backup/config-data:ro
+    networks:
+      - media-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+volumes:
+  diun-data:
+    driver: local
+  renovate-cache:
+    driver: local
+
+networks:
+  media-network:
+    external: true

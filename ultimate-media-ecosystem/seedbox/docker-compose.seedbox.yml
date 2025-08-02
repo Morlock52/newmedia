@@ -1,0 +1,329 @@
+version: '3.8'
+
+# Seedbox-Specific Services Extension
+# Use with: docker-compose -f docker-compose.yml -f seedbox/docker-compose.seedbox.yml up -d
+
+services:
+  # Enhanced qBittorrent Configuration
+  qbittorrent:
+    environment:
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+      # Performance settings
+      - QBT_WEBUI_MAXCONNECTIONS=100
+      - QBT_WEBUI_CSRF_PROTECTION=false
+      - QBT_PREFERENCES_BITTORRENT_MAX_CONNEC=500
+      - QBT_PREFERENCES_BITTORRENT_MAX_CONNEC_PER_TORRENT=100
+      - QBT_PREFERENCES_BITTORRENT_MAX_UPLOADS=50
+      - QBT_PREFERENCES_BITTORRENT_MAX_UPLOADS_PER_TORRENT=10
+      - QBT_PREFERENCES_DOWNLOADS_SAVE_PATH=/downloads/complete
+      - QBT_PREFERENCES_DOWNLOADS_TEMP_PATH=/downloads/incomplete
+      - QBT_PREFERENCES_QUEUEING_MAX_ACTIVE_DOWNLOADS=10
+      - QBT_PREFERENCES_QUEUEING_MAX_ACTIVE_UPLOADS=50
+      - QBT_PREFERENCES_QUEUEING_MAX_ACTIVE_TORRENTS=60
+    volumes:
+      - qbittorrent_config:/config
+      - downloads_torrents:/downloads
+      - downloads_incomplete:/incomplete
+      - torrent_blackhole:/watch  # Watch folder for .torrent files
+      - ./seedbox/scripts/qbt-config.sh:/custom-cont-init.d/99-configure-qbt.sh:ro
+
+  # Deluge Alternative (Better for racing)
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DELUGE_LOGLEVEL=info
+    volumes:
+      - deluge_config:/config
+      - downloads_torrents:/downloads
+      - downloads_incomplete:/incomplete
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  # rTorrent + ruTorrent (Advanced users)
+  rutorrent:
+    image: lscr.io/linuxserver/rutorrent:latest
+    container_name: rutorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - rutorrent_config:/config
+      - downloads_torrents:/downloads
+      - downloads_incomplete:/incomplete
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  # Advanced Torrent Proxy
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - AUTO_UPDATE=true
+    volumes:
+      - jackett_config:/config
+      - torrent_blackhole:/downloads
+    networks:
+      - arr_network
+      - traefik_network
+    ports:
+      - "9117:9117"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jackett.rule=Host(`jackett.${DOMAIN}`)"
+      - "traefik.http.routers.jackett.entrypoints=websecure"
+      - "traefik.http.routers.jackett.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jackett.loadbalancer.server.port=9117"
+      - "traefik.http.routers.jackett.middlewares=authelia@docker"
+
+  # FlareSolverr - Cloudflare bypass
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+      - TZ=${TZ}
+    networks:
+      - arr_network
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
+  # Cross-Seed Enhanced Configuration
+  cross-seed:
+    image: crossseed/cross-seed:latest
+    container_name: cross-seed
+    user: "${PUID}:${PGID}"
+    volumes:
+      - crossseed_config:/config
+      - downloads_torrents:/torrents:ro
+      - crossseed_output:/cross-seeds
+      - qbittorrent_config:/qbittorrent:ro
+      - ./seedbox/configs/cross-seed/config.js:/config/config.js:ro
+    environment:
+      - CROSSSEED_PORT=2468
+      - DELAY=30
+      - INCLUDE_EPISODES=true
+      - INCLUDE_NON_VIDEOS=true
+      - MATCH_MODE=safe
+      - TORRENT_DIR=/torrents
+      - OUTPUT_DIR=/cross-seeds
+      - TORZNAB_URL=http://prowlarr:9696
+      - TORZNAB_API_KEY=${PROWLARR_API_KEY}
+      - QBITTORRENT_URL=http://gluetun:8080
+      - NOTIFICATION_WEBHOOK_URL=${DISCORD_WEBHOOK}
+    networks:
+      - seedbox_network
+      - arr_network
+    ports:
+      - "2468:2468"
+    restart: unless-stopped
+
+  # Autobrr Enhanced Configuration
+  autobrr:
+    environment:
+      - AUTOBRR__HOST=0.0.0.0
+      - AUTOBRR__PORT=7474
+      - AUTOBRR__LOG_LEVEL=INFO
+      - AUTOBRR__SESSION_SECRET=${AUTOBRR_SESSION_SECRET}
+      - AUTOBRR__CHECK_FOR_UPDATES=true
+    volumes:
+      - autobrr_config:/config
+      - autobrr_data:/data
+      - ./seedbox/configs/autobrr:/config/autobrr:ro
+    networks:
+      - seedbox_network
+      - arr_network
+      - download_network
+      - traefik_network
+
+  # Ratio Ghost - Ratio cheating protection
+  ratio-ghost:
+    image: ghcr.io/seedboxer/ratio-ghost:latest
+    container_name: ratio-ghost
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - GHOST_MODE=stealth
+      - UPLOAD_MULTIPLIER=1.1
+      - MIN_RATIO=1.0
+      - MAX_RATIO=5.0
+    volumes:
+      - ratioghost_config:/config
+      - downloads_torrents:/torrents
+    networks:
+      - seedbox_network
+    restart: unless-stopped
+
+  # Torrent Control - Advanced management
+  flood:
+    image: jesec/flood:latest
+    container_name: flood
+    user: "${PUID}:${PGID}"
+    environment:
+      - HOME=/config
+    volumes:
+      - flood_config:/config
+      - downloads_torrents:/downloads
+    networks:
+      - seedbox_network
+      - traefik_network
+    ports:
+      - "3003:3000"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flood.rule=Host(`flood.${DOMAIN}`)"
+      - "traefik.http.routers.flood.entrypoints=websecure"
+      - "traefik.http.routers.flood.tls.certresolver=letsencrypt"
+      - "traefik.http.services.flood.loadbalancer.server.port=3000"
+      - "traefik.http.routers.flood.middlewares=authelia@docker"
+
+  # Seedbox Statistics
+  qbit-stats:
+    image: ghcr.io/hotio/qbitstats:latest
+    container_name: qbit-stats
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - QBITTORRENT_URL=http://gluetun:8080
+      - QBITTORRENT_USERNAME=admin
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD}
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_DATABASE=seedbox
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD}
+    volumes:
+      - qbitstats_config:/config
+    networks:
+      - seedbox_network
+      - monitoring_network
+    restart: unless-stopped
+
+  # InfluxDB for metrics
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=seedbox
+      - DOCKER_INFLUXDB_INIT_BUCKET=metrics
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    networks:
+      - monitoring_network
+    ports:
+      - "8086:8086"
+    restart: unless-stopped
+
+  # Telegraf for metric collection
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    environment:
+      - INFLUX_TOKEN=${INFLUXDB_TOKEN}
+    volumes:
+      - ./seedbox/configs/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+    networks:
+      - monitoring_network
+      - seedbox_network
+    restart: unless-stopped
+
+  # Unpackerr - Automatic extraction
+  unpackerr:
+    image: golift/unpackerr:latest
+    container_name: unpackerr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UN_SONARR_0_URL=http://sonarr:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_RADARR_0_URL=http://radarr:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_LIDARR_0_URL=http://lidarr:8686
+      - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
+      - UN_FOLDER_0_PATH=/downloads
+      - UN_FOLDER_0_EXTRACT_PATH=/downloads/extracted
+      - UN_WEBSERVER_METRICS=true
+      - UN_WEBSERVER_LOG_FILE=/logs/unpackerr.log
+    volumes:
+      - downloads_torrents:/downloads
+      - unpackerr_logs:/logs
+    networks:
+      - seedbox_network
+      - arr_network
+    restart: unless-stopped
+
+  # Orpheus Auto-Upload
+  orpheus-auto:
+    image: ghcr.io/seedboxer/orpheus-auto:latest
+    container_name: orpheus-auto
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - ORPHEUS_USERNAME=${ORPHEUS_USERNAME}
+      - ORPHEUS_PASSWORD=${ORPHEUS_PASSWORD}
+      - WATCH_DIR=/watch
+      - OUTPUT_DIR=/uploads
+      - AUTO_UPLOAD=true
+      - TRANSCODE_FLAC=true
+      - SPECTROGRAMS=true
+    volumes:
+      - orpheus_config:/config
+      - orpheus_watch:/watch
+      - orpheus_uploads:/uploads
+      - media_music:/music:ro
+    networks:
+      - seedbox_network
+    restart: unless-stopped
+
+volumes:
+  # Seedbox specific volumes
+  deluge_config:
+  rutorrent_config:
+  jackett_config:
+  autobrr_data:
+  flood_config:
+  qbitstats_config:
+  influxdb_data:
+  influxdb_config:
+  unpackerr_logs:
+  orpheus_config:
+  orpheus_watch:
+  orpheus_uploads:
+  ratioghost_config:
+  torrent_blackhole:
+
+networks:
+  seedbox_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.11.0/24

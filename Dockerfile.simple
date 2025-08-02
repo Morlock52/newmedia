@@ -1,0 +1,38 @@
+# Simplified single-container approach
+FROM lscr.io/linuxserver/jellyfin:latest
+
+# Install additional tools
+USER root
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    python3 \
+    python3-pip \
+    supervisor \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install qBittorrent, Sonarr, Radarr binaries
+RUN wget -O /tmp/qbittorrent.deb "https://github.com/qbittorrent/qBittorrent/releases/download/release-4.6.2/qbittorrent-nox_4.6.2-1_amd64.deb" \
+    && dpkg -i /tmp/qbittorrent.deb || apt-get install -f -y \
+    && rm /tmp/qbittorrent.deb
+
+# Create directory structure
+RUN mkdir -p /app/{config,data,logs} \
+    && mkdir -p /app/data/{media,torrents} \
+    && mkdir -p /app/data/media/{movies,tv,music} \
+    && mkdir -p /app/data/torrents/{movies,tv,music}
+
+# Copy configuration
+COPY simple-supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY simple-start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Expose ports
+EXPOSE 8096 8080 8989 7878 9696 5055 8181 7575
+
+# Set working directory
+WORKDIR /app
+
+# Start services
+CMD ["/app/start.sh"]

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Quick Links</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .status {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+        .status-item {
+            background: #f8f9fa;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 5px solid #28a745;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-top: 4px solid;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .jellyfin { border-top-color: #00A4DC; }
+        .plex { border-top-color: #E5A00D; }
+        .management { border-top-color: #6f42c1; }
+        .card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .btn {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn.jellyfin-btn { background: #00A4DC; }
+        .btn.jellyfin-btn:hover { background: #0088b5; }
+        .btn.plex-btn { background: #E5A00D; }
+        .btn.plex-btn:hover { background: #cc8f0b; }
+        .btn.secondary { background: #6c757d; }
+        .btn.secondary:hover { background: #545b62; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .setup-progress {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            background: #28a745;
+            height: 10px;
+            border-radius: 5px;
+            width: 85%;
+            margin: 10px 0;
+        }
+        .next-steps {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .next-steps h4 {
+            color: #856404;
+            margin: 0 0 15px 0;
+        }
+        .next-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            margin: 8px 0;
+            color: #856404;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .status {
+                flex-direction: column;
+            }
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Media Server Dashboard</h1>
+        <p class="subtitle">Your personal Netflix & Spotify alternative</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <strong>✅ Jellyfin</strong><br>
+                <small>Running & Ready</small>
+            </div>
+            <div class="status-item">
+                <strong>✅ Plex</strong><br>
+                <small>Running & Ready</small>
+            </div>
+            <div class="status-item">
+                <strong>💾 Storage</strong><br>
+                <small>21TB (85% used)</small>
+            </div>
+        </div>
+
+        <div class="setup-progress">
+            <h4>Setup Progress: 85% Complete</h4>
+            <div style="background: #e9ecef; border-radius: 5px; height: 10px;">
+                <div class="progress-bar"></div>
+            </div>
+            <small>Ready for final configuration</small>
+        </div>
+
+        <div class="grid">
+            <div class="card jellyfin">
+                <h3>🧡 Jellyfin Server</h3>
+                <p>Free, open-source media server. Complete the setup wizard to access your media library.</p>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number">666</span>
+                        <div class="stat-label">Movies</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">269</span>
+                        <div class="stat-label">TV Series</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">106</span>
+                        <div class="stat-label">Music Artists</div>
+                    </div>
+                </div>
+
+                <a href="http://localhost:8096" class="btn jellyfin-btn" target="_blank">Open Jellyfin</a>
+                <a href="http://localhost:8096/web/index.html#!/startup/user.html" class="btn secondary" target="_blank">Setup Wizard</a>
+            </div>
+
+            <div class="card plex">
+                <h3>🟡 Plex Media Server</h3>
+                <p>Premium media server with mobile apps and advanced features. Sign in with your Plex account.</p>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number">666</span>
+                        <div class="stat-label">Movies</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">269</span>
+                        <div class="stat-label">TV Series</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">106</span>
+                        <div class="stat-label">Music Artists</div>
+                    </div>
+                </div>
+
+                <a href="http://localhost:32400/web" class="btn plex-btn" target="_blank">Open Plex</a>
+                <a href="http://localhost:32400/web/index.html#!/setup" class="btn secondary" target="_blank">Initial Setup</a>
+            </div>
+
+            <div class="card management">
+                <h3>⚙️ Management Tools</h3>
+                <p>Docker container management and system monitoring tools.</p>
+                
+                <a href="http://localhost:9000" class="btn" target="_blank">Portainer</a>
+                <a href="http://localhost:3000" class="btn" target="_blank">Grafana</a>
+                <a href="http://localhost:7575" class="btn" target="_blank">Homarr</a>
+                <a href="http://localhost:3001" class="btn" target="_blank">Uptime Kuma</a>
+            </div>
+        </div>
+
+        <div class="next-steps">
+            <h4>🚀 Next Steps to Complete Setup:</h4>
+            <ol>
+                <li><strong>Jellyfin</strong>: Click "Open Jellyfin" → Complete setup wizard → Add media libraries</li>
+                <li><strong>Plex</strong>: Click "Open Plex" → Sign in with Plex account → Add media libraries</li>
+                <li><strong>Wait</strong>: Allow 30-60 minutes for initial media scan</li>
+                <li><strong>Test</strong>: Try playing movies, TV shows, and music on both platforms</li>
+                <li><strong>Optimize</strong>: Enable hardware transcoding for better performance</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+            <p><strong>Media Library Paths (for setup):</strong></p>
+            <p>Movies: <code>/media/Movies</code> | TV Shows: <code>/media/TV</code> | Music: <code>/media/Music</code></p>
+            <p><small>Generated: <script>document.write(new Date().toLocaleString())</script></small></p>
+        </div>
+    </div>
+</body>
+</html>

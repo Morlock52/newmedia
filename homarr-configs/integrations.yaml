@@ -1,0 +1,253 @@
+# Homarr API Integrations Configuration
+# This file contains the API connections for live data display
+
+integrations:
+  # Media Servers
+  jellyfin:
+    enabled: true
+    url: "http://localhost:8096"
+    apiKey: "${JELLYFIN_API_KEY}"
+    widgets:
+      - currently_watching
+      - library_stats
+      - recent_additions
+    refreshInterval: 30
+
+  plex:
+    enabled: true
+    url: "http://localhost:32400"
+    token: "${PLEX_TOKEN}"
+    widgets:
+      - currently_watching
+      - library_stats
+      - recent_additions
+    refreshInterval: 30
+
+  # Download Clients
+  qbittorrent:
+    enabled: true
+    url: "http://localhost:8080"
+    username: "admin"
+    password: "${QBITTORRENT_PASSWORD}"
+    widgets:
+      - download_queue
+      - transfer_stats
+    refreshInterval: 5
+
+  transmission:
+    enabled: true
+    url: "http://localhost:9091"
+    username: "${TRANSMISSION_USER}"
+    password: "${TRANSMISSION_PASSWORD}"
+    widgets:
+      - download_queue
+      - transfer_stats
+    refreshInterval: 5
+
+  sabnzbd:
+    enabled: true
+    url: "http://localhost:8081"
+    apiKey: "${SABNZBD_API_KEY}"
+    widgets:
+      - download_queue
+      - transfer_stats
+    refreshInterval: 5
+
+  # *ARR Services
+  sonarr:
+    enabled: true
+    url: "http://localhost:8989"
+    apiKey: "${SONARR_API_KEY}"
+    widgets:
+      - upcoming_episodes
+      - series_stats
+      - missing_episodes
+    refreshInterval: 60
+
+  radarr:
+    enabled: true
+    url: "http://localhost:7878"
+    apiKey: "${RADARR_API_KEY}"
+    widgets:
+      - upcoming_movies
+      - movie_stats
+      - missing_movies
+    refreshInterval: 60
+
+  # System Monitoring
+  prometheus:
+    enabled: true
+    url: "http://localhost:9090"
+    widgets:
+      - system_metrics
+      - container_stats
+    refreshInterval: 15
+
+  grafana:
+    enabled: true
+    url: "http://localhost:3000"
+    username: "${GRAFANA_USER}"
+    password: "${GRAFANA_PASSWORD}"
+    dashboards:
+      - system_overview
+      - media_server_stats
+    refreshInterval: 30
+
+  # Container Management
+  docker:
+    enabled: true
+    socket: "/var/run/docker.sock"
+    widgets:
+      - container_status
+      - resource_usage
+    refreshInterval: 10
+
+  # Network Monitoring
+  pihole:
+    enabled: true
+    url: "http://localhost:8053"
+    apiKey: "${PIHOLE_API_KEY}"
+    widgets:
+      - blocked_queries
+      - top_blocked_domains
+    refreshInterval: 30
+
+  # Storage Monitoring
+  scrutiny:
+    enabled: true
+    url: "http://localhost:8082"
+    widgets:
+      - disk_health
+      - storage_temperature
+    refreshInterval: 300
+
+# Widget Configurations
+widgets:
+  currently_watching:
+    type: "media_stream"
+    title: "Currently Watching"
+    showUser: true
+    showDevice: true
+    showProgress: true
+    maxItems: 5
+
+  library_stats:
+    type: "media_count"
+    title: "Library Statistics"
+    showMovies: true
+    showShows: true
+    showEpisodes: true
+    showMusic: true
+
+  download_queue:
+    type: "download_list"
+    title: "Active Downloads"
+    showProgress: true
+    showSpeed: true
+    showETA: true
+    maxItems: 10
+
+  transfer_stats:
+    type: "bandwidth"
+    title: "Transfer Statistics"
+    showDownload: true
+    showUpload: true
+    showTotal: true
+    timeRange: "24h"
+
+  system_metrics:
+    type: "system_info"
+    title: "System Performance"
+    showCPU: true
+    showRAM: true
+    showDisk: true
+    showNetwork: true
+    showTemperature: true
+
+  container_status:
+    type: "docker_containers"
+    title: "Container Status"
+    showRunning: true
+    showStopped: true
+    showHealth: true
+    groupByStack: true
+
+  upcoming_episodes:
+    type: "calendar"
+    title: "Upcoming Episodes"
+    daysAhead: 7
+    showPoster: true
+    showAirtime: true
+
+  upcoming_movies:
+    type: "calendar"
+    title: "Upcoming Movies"
+    daysAhead: 30
+    showPoster: true
+    showReleaseDate: true
+
+  recent_additions:
+    type: "recent_media"
+    title: "Recently Added"
+    maxItems: 10
+    showPoster: true
+    showAddedDate: true
+    timeRange: "7d"
+
+# Theme Customization
+theme:
+  cyberpunk:
+    colors:
+      primary: "#00ffff"
+      secondary: "#ff00ff"
+      accent: "#ff0080"
+      background: "#0a0a0f"
+      surface: "rgba(20, 20, 30, 0.8)"
+      text: "#ffffff"
+      success: "#00ff88"
+      warning: "#ffaa00"
+      error: "#ff0080"
+    
+    effects:
+      glassmorphism: true
+      neonGlow: true
+      animations: true
+      backgroundGrid: true
+      pulseEffects: true
+    
+    fonts:
+      heading: "Orbitron"
+      body: "Roboto"
+      monospace: "Fira Code"
+
+# Dashboard Layout
+layout:
+  columns: 8
+  gap: 16
+  padding: 24
+  responsiveBreakpoints:
+    mobile: 768
+    tablet: 1024
+    desktop: 1440
+
+# Performance Settings
+performance:
+  refreshIntervals:
+    fast: 5        # seconds
+    medium: 30     # seconds
+    slow: 300      # seconds
+  
+  caching:
+    enabled: true
+    duration: 60   # seconds
+    
+  animations:
+    duration: 300  # milliseconds
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)"
+
+# Security Settings
+security:
+  allowIframes: true
+  corsEnabled: true
+  apiKeyRotation: "monthly"
+  encryptionEnabled: true

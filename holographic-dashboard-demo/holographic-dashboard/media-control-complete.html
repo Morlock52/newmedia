@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Media Server Control Center</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(255, 255, 0, 0.05) 0%, transparent 50%);
+        }
+        
+        .header {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .quick-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .quick-stat {
+            text-align: center;
+        }
+        
+        .quick-stat-value {
+            font-size: 1.5rem;
+            color: #00ffff;
+            font-weight: 700;
+        }
+        
+        .quick-stat-label {
+            font-size: 0.8rem;
+            color: #b0b0c0;
+            text-transform: uppercase;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Category Sections */
+        .category-section {
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .category-header {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+        
+        .category-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .category-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .category-info {
+            flex: 1;
+        }
+        
+        .category-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .category-description {
+            color: #b0b0c0;
+            font-size: 0.9rem;
+        }
+        
+        .category-stats {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .category-count {
+            text-align: center;
+        }
+        
+        .count-value {
+            font-size: 1.5rem;
+            color: #00ffff;
+            font-weight: 700;
+        }
+        
+        .count-label {
+            font-size: 0.8rem;
+            color: #b0b0c0;
+        }
+        
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .category-section.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+        
+        .category-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .category-section.expanded .category-content {
+            max-height: 2000px;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+        
+        /* Service Cards */
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+        
+        .service-card.unavailable {
+            opacity: 0.6;
+            border-color: rgba(255, 0, 0, 0.2);
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .service-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .service-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .status-online {
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .status-offline {
+            background: #ff6666;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+        
+        .service-port {
+            font-size: 0.8rem;
+            color: #b0b0c0;
+            margin-bottom: 0.5rem;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #00a8ff, #0088ff);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 136, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Search and Filter */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #b0b0c0;
+        }
+        
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 0.25rem;
+        }
+        
+        .view-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: #b0b0c0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .view-btn.active {
+            background: rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+        }
+        
+        /* Floating Action Buttons */
+        .fab-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        
+        .fab {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(0, 255, 255, 0.5);
+        }
+        
+        .fab-small {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            display: none;
+        }
+        
+        .quick-actions.show {
+            display: block;
+        }
+        
+        .quick-action-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #00ffff;
+        }
+        
+        /* Loading state */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 20, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #00ffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <h1>Media Server Control Center</h1>
+                <p style="color: #b0b0c0; font-size: 0.9rem;">Complete service management dashboard</p>
+            </div>
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="quick-stat-value" id="total-services">0</div>
+                    <div class="quick-stat-label">Services</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value" id="online-services">0</div>
+                    <div class="quick-stat-label">Online</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value" id="cpu-usage">0%</div>
+                    <div class="quick-stat-label">CPU</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value" id="ram-usage">0 GB</div>
+                    <div class="quick-stat-label">RAM</div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Search and Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="Search services..." id="searchInput">
+            </div>
+            <div class="view-toggle">
+                <button class="view-btn active" onclick="setView('expanded')">Expanded</button>
+                <button class="view-btn" onclick="setView('compact')">Compact</button>
+                <button class="view-btn" onclick="setView('list')">List</button>
+            </div>
+        </div>
+        
+        <!-- Service Categories -->
+        <div id="categories-container">
+            <!-- Categories will be populated here -->
+        </div>
+    </div>
+    
+    <!-- Floating Action Buttons -->
+    <div class="fab-container">
+        <button class="fab fab-small" onclick="toggleQuickActions()" title="Quick Actions">⚡</button>
+        <button class="fab" onclick="refreshAll()" title="Refresh All">↻</button>
+    </div>
+    
+    <!-- Quick Actions Menu -->
+    <div class="quick-actions" id="quickActions">
+        <h3 style="margin-bottom: 1rem;">Quick Actions</h3>
+        <button class="quick-action-btn" onclick="startAllServices()">▶️ Start All Services</button>
+        <button class="quick-action-btn" onclick="stopAllServices()">⏹️ Stop All Services</button>
+        <button class="quick-action-btn" onclick="updateAllServices()">🔄 Update All Services</button>
+        <button class="quick-action-btn" onclick="backupConfig()">💾 Backup Configuration</button>
+        <button class="quick-action-btn" onclick="viewLogs()">📋 View System Logs</button>
+        <button class="quick-action-btn" onclick="window.open('config-manager-fixed.html', '_blank')">⚙️ Configuration Manager</button>
+        <button class="quick-action-btn" onclick="window.open('smart-env-editor.html', '_blank')">🤖 Smart .env Editor</button>
+        <button class="quick-action-btn" onclick="window.open('env-viewer.html', '_blank')">📄 View .env File</button>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <script>
+        // Complete service definitions organized by category
+        const serviceCategories = [
+            {
+                id: 'media-servers',
+                name: 'Media Servers',
+                icon: '🎬',
+                description: 'Primary media streaming and playback services',
+                services: [
+                    { name: 'Jellyfin', icon: '🎬', port: 8096, description: 'Open source media server' },
+                    { name: 'Plex', icon: '📺', port: 32400, description: 'Media server (alternative)' },
+                    { name: 'Emby', icon: '🎭', port: 8097, description: 'Media server (alternative)' },
+                    { name: 'Navidrome', icon: '🎵', port: 4533, description: 'Music streaming server' },
+                    { name: 'Airsonic', icon: '🎶', port: 4040, description: 'Music streaming (alternative)' }
+                ]
+            },
+            {
+                id: 'media-management',
+                name: 'Media Management',
+                icon: '📚',
+                description: 'Automated media collection and organization',
+                services: [
+                    { name: 'Sonarr', icon: '📺', port: 8989, description: 'TV show management' },
+                    { name: 'Radarr', icon: '🎞️', port: 7878, description: 'Movie management' },
+                    { name: 'Lidarr', icon: '🎵', port: 8686, description: 'Music management' },
+                    { name: 'Readarr', icon: '📚', port: 8787, description: 'Book management' },
+                    { name: 'Bazarr', icon: '💬', port: 6767, description: 'Subtitle management' },
+                    { name: 'Prowlarr', icon: '🔍', port: 9696, description: 'Indexer management' }
+                ]
+            },
+            {
+                id: 'download-clients',
+                name: 'Download Clients',
+                icon: '⬇️',
+                description: 'Download managers and torrent clients',
+                services: [
+                    { name: 'qBittorrent', icon: '⬇️', port: 8090, description: 'Torrent client' },
+                    { name: 'Transmission', icon: '📡', port: 9091, description: 'Lightweight torrent client' },
+                    { name: 'Deluge', icon: '🌊', port: 8112, description: 'Torrent client (alternative)' },
+                    { name: 'SABnzbd', icon: '📰', port: 8080, description: 'Usenet downloader' },
+                    { name: 'NZBGet', icon: '📥', port: 6789, description: 'Usenet (alternative)' }
+                ]
+            },
+            {
+                id: 'request-discovery',
+                name: 'Request & Discovery',
+                icon: '🎭',
+                description: 'Media request and discovery tools',
+                services: [
+                    { name: 'Jellyseerr', icon: '🎭', port: 5055, description: 'Media requests for Jellyfin' },
+                    { name: 'Overseerr', icon: '🎬', port: 5056, description: 'Media requests for Plex' },
+                    { name: 'Ombi', icon: '📬', port: 3579, description: 'Media requests (alternative)' },
+                    { name: 'Requestrr', icon: '🤖', port: 4545, description: 'Discord bot for requests' }
+                ]
+            },
+            {
+                id: 'media-tools',
+                name: 'Media Processing & Tools',
+                icon: '🛠️',
+                description: 'Media processing, conversion, and organization tools',
+                services: [
+                    { name: 'Tdarr', icon: '🔄', port: 8265, description: 'Media transcoding' },
+                    { name: 'FileFlows', icon: '📁', port: 5001, description: 'File processing workflows' },
+                    { name: 'Handbrake', icon: '🎬', port: 5800, description: 'Video converter' },
+                    { name: 'MakeMKV', icon: '💿', port: 5801, description: 'DVD/Blu-ray ripper' },
+                    { name: 'Komga', icon: '📖', port: 8085, description: 'Comic/manga server' },
+                    { name: 'Kavita', icon: '📚', port: 5002, description: 'Reading server' }
+                ]
+            },
+            {
+                id: 'photos-cloud',
+                name: 'Photos & Cloud Storage',
+                icon: '📸',
+                description: 'Photo management and cloud storage solutions',
+                services: [
+                    { name: 'Immich', icon: '📸', port: 2283, description: 'Photo and video backup' },
+                    { name: 'PhotoPrism', icon: '🖼️', port: 2342, description: 'AI-powered photo app' },
+                    { name: 'Nextcloud', icon: '☁️', port: 8084, description: 'Private cloud storage' },
+                    { name: 'Syncthing', icon: '🔄', port: 8384, description: 'File synchronization' },
+                    { name: 'Filebrowser', icon: '📂', port: 8085, description: 'Web file manager' }
+                ]
+            },
+            {
+                id: 'monitoring-management',
+                name: 'Monitoring & Management',
+                icon: '📊',
+                description: 'System monitoring, analytics, and management tools',
+                services: [
+                    { name: 'Grafana', icon: '📊', port: 3000, description: 'Analytics dashboards' },
+                    { name: 'Prometheus', icon: '🔥', port: 9090, description: 'Metrics collection' },
+                    { name: 'Portainer', icon: '🐳', port: 9000, description: 'Docker management' },
+                    { name: 'Tautulli', icon: '📈', port: 8181, description: 'Plex statistics' },
+                    { name: 'Varken', icon: '📉', port: 8989, description: 'Media statistics' },
+                    { name: 'Organizr', icon: '🏠', port: 8082, description: 'Homepage organizer' },
+                    { name: 'Heimdall', icon: '🛡️', port: 8083, description: 'Application dashboard' }
+                ]
+            },
+            {
+                id: 'security-networking',
+                name: 'Security & Networking',
+                icon: '🔐',
+                description: 'Security, authentication, and networking services',
+                services: [
+                    { name: 'Authelia', icon: '🔐', port: 9092, description: 'Authentication portal' },
+                    { name: 'Traefik', icon: '🚦', port: 8088, description: 'Reverse proxy' },
+                    { name: 'Nginx Proxy Manager', icon: '🌐', port: 81, description: 'Proxy management' },
+                    { name: 'WireGuard', icon: '🔒', port: 51820, description: 'VPN server' },
+                    { name: 'AdGuard Home', icon: '🛡️', port: 3380, description: 'Ad blocking DNS' },
+                    { name: 'Pi-hole', icon: '🕳️', port: 8089, description: 'Network ad blocking' }
+                ]
+            },
+            {
+                id: 'backup-sync',
+                name: 'Backup & Sync',
+                icon: '💾',
+                description: 'Backup, synchronization, and recovery tools',
+                services: [
+                    { name: 'Duplicati', icon: '💾', port: 8200, description: 'Backup solution' },
+                    { name: 'Restic', icon: '🗄️', port: 8201, description: 'Backup program' },
+                    { name: 'Syncthing', icon: '🔄', port: 8384, description: 'Continuous file sync' },
+                    { name: 'Rclone', icon: '☁️', port: 5572, description: 'Cloud storage sync' }
+                ]
+            },
+            {
+                id: 'misc-services',
+                name: 'Additional Services',
+                icon: '🔧',
+                description: 'Other useful services and tools',
+                services: [
+                    { name: 'Homer', icon: '🏠', port: 8086, description: 'Static homepage' },
+                    { name: 'Dashy', icon: '📱', port: 4000, description: 'Dashboard app' },
+                    { name: 'Uptime Kuma', icon: '🟢', port: 3001, description: 'Uptime monitoring' },
+                    { name: 'Watchtower', icon: '🗼', port: 8087, description: 'Container updates' },
+                    { name: 'Dozzle', icon: '📜', port: 8091, description: 'Container logs viewer' },
+                    { name: 'Glances', icon: '👁️', port: 61208, description: 'System monitoring' }
+                ]
+            }
+        ];
+        
+        let currentView = 'expanded';
+        let allServices = [];
+        
+        // Initialize
+        function init() {
+            loadCategories();
+            updateStats();
+            
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                filterServices(e.target.value);
+            });
+            
+            // Auto-refresh every 30 seconds
+            setInterval(updateAllStatuses, 30000);
+        }
+        
+        // Load all categories and services
+        function loadCategories() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+            allServices = [];
+            
+            serviceCategories.forEach(category => {
+                const categoryElement = createCategoryElement(category);
+                container.appendChild(categoryElement);
+                
+                // Collect all services for stats
+                allServices = allServices.concat(category.services.map(s => ({
+                    ...s,
+                    category: category.name
+                })));
+            });
+            
+            // Update total services count
+            document.getElementById('total-services').textContent = allServices.length;
+            
+            // Check initial statuses
+            updateAllStatuses();
+        }
+        
+        // Create category element
+        function createCategoryElement(category) {
+            const section = document.createElement('div');
+            section.className = 'category-section';
+            section.id = `category-${category.id}`;
+            
+            // Category header
+            const header = document.createElement('div');
+            header.className = 'category-header';
+            header.onclick = () => toggleCategory(category.id);
+            
+            header.innerHTML = `
+                <div class="category-title">
+                    <div class="category-icon">${category.icon}</div>
+                    <div class="category-info">
+                        <div class="category-name">${category.name}</div>
+                        <div class="category-description">${category.description}</div>
+                    </div>
+                </div>
+                <div class="category-stats">
+                    <div class="category-count">
+                        <div class="count-value">${category.services.length}</div>
+                        <div class="count-label">Services</div>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+            `;
+            
+            // Category content
+            const content = document.createElement('div');
+            content.className = 'category-content';
+            
+            const grid = document.createElement('div');
+            grid.className = 'services-grid';
+            grid.id = `grid-${category.id}`;
+            
+            category.services.forEach(service => {
+                const card = createServiceCard(service);
+                grid.appendChild(card);
+            });
+            
+            content.appendChild(grid);
+            section.appendChild(header);
+            section.appendChild(content);
+            
+            return section;
+        }
+        
+        // Create service card
+        function createServiceCard(service) {
+            const card = document.createElement('div');
+            card.className = 'service-card';
+            card.id = `service-${service.name.toLowerCase().replace(/\s+/g, '-')}`;
+            
+            card.innerHTML = `
+                <div class="service-header">
+                    <div class="service-name">
+                        <span>${service.icon}</span>
+                        <span>${service.name}</span>
+                    </div>
+                    <div class="service-status status-offline" id="status-${service.name}"></div>
+                </div>
+                <div class="service-port">Port: ${service.port}</div>
+                <div style="color: #b0b0c0; font-size: 0.85rem; margin-bottom: 0.75rem;">
+                    ${service.description}
+                </div>
+                <div class="service-actions">
+                    <a href="http://localhost:${service.port}" 
+                       target="_blank" 
+                       class="btn btn-primary">
+                        Open
+                    </a>
+                    <button class="btn btn-secondary" onclick="showServiceMenu('${service.name}')">
+                        •••
+                    </button>
+                </div>
+            `;
+            
+            // Check service status
+            checkServiceStatus(service);
+            
+            return card;
+        }
+        
+        // Check service status
+        async function checkServiceStatus(service) {
+            const statusElement = document.getElementById(`status-${service.name}`);
+            
+            try {
+                await fetch(`http://localhost:${service.port}`, {
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                statusElement.className = 'service-status status-online';
+                return true;
+            } catch {
+                statusElement.className = 'service-status status-offline';
+                return false;
+            }
+        }
+        
+        // Update all statuses
+        async function updateAllStatuses() {
+            let onlineCount = 0;
+            
+            for (const service of allServices) {
+                const isOnline = await checkServiceStatus(service);
+                if (isOnline) onlineCount++;
+            }
+            
+            document.getElementById('online-services').textContent = onlineCount;
+            updateStats();
+        }
+        
+        // Update system stats
+        function updateStats() {
+            // These would normally come from actual system monitoring
+            document.getElementById('cpu-usage').textContent = Math.floor(Math.random() * 40 + 20) + '%';
+            document.getElementById('ram-usage').textContent = (Math.random() * 4 + 2).toFixed(1) + ' GB';
+        }
+        
+        // Toggle category expansion
+        function toggleCategory(categoryId) {
+            const section = document.getElementById(`category-${categoryId}`);
+            section.classList.toggle('expanded');
+        }
+        
+        // Filter services by search
+        function filterServices(query) {
+            const lowerQuery = query.toLowerCase();
+            
+            serviceCategories.forEach(category => {
+                const grid = document.getElementById(`grid-${category.id}`);
+                const cards = grid.querySelectorAll('.service-card');
+                let hasVisibleServices = false;
+                
+                cards.forEach(card => {
+                    const serviceName = card.querySelector('.service-name').textContent.toLowerCase();
+                    const description = card.querySelector('div[style*="color: #b0b0c0"]').textContent.toLowerCase();
+                    
+                    if (serviceName.includes(lowerQuery) || description.includes(lowerQuery)) {
+                        card.style.display = '';
+                        hasVisibleServices = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Hide/show entire category if no services match
+                const section = document.getElementById(`category-${category.id}`);
+                section.style.display = hasVisibleServices ? '' : 'none';
+                
+                // Auto-expand categories with search results
+                if (hasVisibleServices && query) {
+                    section.classList.add('expanded');
+                }
+            });
+        }
+        
+        // Set view mode
+        function setView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Apply view-specific styles
+            const grids = document.querySelectorAll('.services-grid');
+            grids.forEach(grid => {
+                switch(view) {
+                    case 'compact':
+                        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+                        break;
+                    case 'list':
+                        grid.style.gridTemplateColumns = '1fr';
+                        break;
+                    default:
+                        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+                }
+            });
+        }
+        
+        // Refresh all services
+        function refreshAll() {
+            const btn = event.target;
+            btn.style.animation = 'spin 1s linear';
+            setTimeout(() => {
+                btn.style.animation = '';
+            }, 1000);
+            updateAllStatuses();
+        }
+        
+        // Toggle quick actions menu
+        function toggleQuickActions() {
+            const menu = document.getElementById('quickActions');
+            menu.classList.toggle('show');
+        }
+        
+        // Quick action functions
+        function startAllServices() {
+            alert('Starting all services...\nThis would run: docker-compose up -d');
+            toggleQuickActions();
+        }
+        
+        function stopAllServices() {
+            if (confirm('Stop all services?')) {
+                alert('Stopping all services...\nThis would run: docker-compose down');
+            }
+            toggleQuickActions();
+        }
+        
+        function updateAllServices() {
+            alert('Updating all services...\nThis would run: docker-compose pull && docker-compose up -d');
+            toggleQuickActions();
+        }
+        
+        function backupConfig() {
+            alert('Creating configuration backup...\nThis would backup all config directories');
+            toggleQuickActions();
+        }
+        
+        function viewLogs() {
+            window.open('http://localhost:8091', '_blank'); // Dozzle logs viewer
+            toggleQuickActions();
+        }
+        
+        // Show service menu (placeholder)
+        function showServiceMenu(serviceName) {
+            alert(`Service Options for ${serviceName}:\n\n• Restart Service\n• View Logs\n• Edit Configuration\n• Check for Updates\n• Remove Service`);
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', init);
+        
+        // Expand first category by default
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelector('.category-section').classList.add('expanded');
+            }, 100);
+        });
+    </script>
+</body>
+</html>

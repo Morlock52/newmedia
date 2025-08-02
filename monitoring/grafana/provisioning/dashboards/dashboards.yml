@@ -1,0 +1,27 @@
+# Grafana Dashboard Provisioning
+# Automatically load dashboards from filesystem
+
+apiVersion: 1
+
+providers:
+  # Media Server Dashboards
+  - name: 'media-server-dashboards'
+    orgId: 1
+    folder: 'Media Server'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+
+  # Default Dashboards (from container)
+  - name: 'default-dashboards'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards

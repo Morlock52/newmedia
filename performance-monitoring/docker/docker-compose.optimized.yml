@@ -1,0 +1,413 @@
+version: "3.9"
+
+# Ultra-Optimized Docker Compose Configuration
+# Implements all performance optimization strategies
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+x-healthcheck-optimized: &healthcheck-optimized
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 40s
+
+x-logging-optimized: &logging-optimized
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-resource-limits-small: &resource-limits-small
+  deploy:
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 256M
+      reservations:
+        cpus: '0.1'
+        memory: 128M
+
+x-resource-limits-medium: &resource-limits-medium
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512M
+      reservations:
+        cpus: '0.25'
+        memory: 256M
+
+x-resource-limits-large: &resource-limits-large
+  deploy:
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 1G
+      reservations:
+        cpus: '0.5'
+        memory: 512M
+
+networks:
+  # High-performance network with jumbo frames
+  media_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "9000"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+  # Internal network for database connections
+  db_network:
+    internal: true
+    driver: bridge
+
+  # Cache network for Redis/Memcached
+  cache_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+
+volumes:
+  # Database volume with performance options
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind,noatime,nodiratime
+      device: ${DATA_PATH:-./data}/postgres
+
+  # Redis volume with tmpfs for speed
+  redis_data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1g,uid=1000,gid=1000
+
+  # Application cache with memory backing
+  app_cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=2g,uid=1000,gid=1000,mode=0755
+
+  # Media storage with optimized mount options
+  media_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind,cached
+      device: ${MEDIA_PATH:-./media}
+
+services:
+  # =========================
+  # Optimized Reverse Proxy
+  # =========================
+  traefik:
+    image: traefik:v3.0-alpine
+    <<: *restart-policy
+    <<: *resource-limits-medium
+    container_name: traefik_optimized
+    command:
+      # Core configuration
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Performance optimizations
+      - --serversTransport.maxIdleConnsPerHost=200
+      - --serversTransport.forwardingTimeouts.responseHeaderTimeout=60s
+      - --serversTransport.forwardingTimeouts.idleConnTimeout=90s
+      - --entrypoints.web.transport.respondingTimeouts.readTimeout=60s
+      - --entrypoints.web.transport.respondingTimeouts.writeTimeout=60s
+      - --entrypoints.web.transport.respondingTimeouts.idleTimeout=180s
+      # Enable compression
+      - --entrypoints.web.http.middlewares=compress@docker
+      - --entrypoints.websecure.http.middlewares=compress@docker
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.compress.compress=true"
+      - "traefik.http.middlewares.compress.compress.excludedContentTypes=image/png,image/jpeg,font/woff2"
+    environment:
+      <<: *common-variables
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/certs:ro
+    networks:
+      - media_network
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "traefik", "healthcheck"]
+    logging: *logging-optimized
+    # Performance sysctls
+    sysctls:
+      - net.core.somaxconn=65535
+      - net.ipv4.tcp_syncookies=1
+      - net.ipv4.tcp_tw_reuse=1
+      - net.ipv4.tcp_fin_timeout=30
+
+  # =========================
+  # Optimized Database
+  # =========================
+  postgres:
+    image: postgres:15-alpine
+    <<: *restart-policy
+    <<: *resource-limits-large
+    container_name: postgres_optimized
+    environment:
+      <<: *common-variables
+      POSTGRES_DB: ${POSTGRES_DB:-mediadb}
+      POSTGRES_USER: ${POSTGRES_USER:-media}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --data-checksums"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - default_statistics_target=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - work_mem=4MB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - max_worker_processes=4
+      - -c
+      - max_parallel_workers_per_gather=2
+      - -c
+      - max_parallel_workers=4
+      - -c
+      - max_parallel_maintenance_workers=2
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:delegated
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 268435456  # 256MB
+    networks:
+      - db_network
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    logging: *logging-optimized
+
+  # =========================
+  # Optimized Cache Layer
+  # =========================
+  redis:
+    image: redis:7-alpine
+    <<: *restart-policy
+    <<: *resource-limits-medium
+    container_name: redis_optimized
+    command:
+      - redis-server
+      - --save 900 1
+      - --save 300 10
+      - --save 60 10000
+      - --maxmemory 256mb
+      - --maxmemory-policy allkeys-lru
+      - --tcp-backlog 511
+      - --tcp-keepalive 60
+      - --timeout 0
+      - --databases 16
+      - --hz 10
+      - --loglevel notice
+      - --rdbcompression yes
+      - --rdbchecksum yes
+      - --stop-writes-on-bgsave-error yes
+      - --appendonly no
+      - --protected-mode yes
+      - --bind 0.0.0.0
+      - --requirepass ${REDIS_PASSWORD}
+    environment:
+      <<: *common-variables
+    volumes:
+      - redis_data:/data:delegated
+    networks:
+      - cache_network
+      - db_network
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+    logging: *logging-optimized
+    sysctls:
+      - net.core.somaxconn=1024
+
+  # =========================
+  # Optimized Application
+  # =========================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized-nodejs
+      cache_from:
+        - ${REGISTRY:-local}/app:cache
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    <<: *restart-policy
+    <<: *resource-limits-large
+    container_name: app_optimized
+    environment:
+      <<: *common-variables
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=768 --optimize-for-size"
+      UV_THREADPOOL_SIZE: 16
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+      # Connection pooling
+      - "traefik.http.services.app.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.app.loadbalancer.sticky.cookie.name=app_session"
+    volumes:
+      - app_cache:/app/cache:delegated
+      - ./src:/app/src:cached
+      - ./public:/app/public:ro
+    networks:
+      - media_network
+      - db_network
+      - cache_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+    logging: *logging-optimized
+    # Performance optimizations
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=600
+      - net.ipv4.tcp_keepalive_intvl=60
+      - net.ipv4.tcp_keepalive_probes=3
+
+  # =========================
+  # Optimized Media Server
+  # =========================
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    <<: *restart-policy
+    <<: *resource-limits-large
+    container_name: jellyfin_optimized
+    environment:
+      <<: *common-variables
+      # Hardware acceleration
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`${JELLYFIN_DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+    volumes:
+      - ./config/jellyfin:/config:delegated
+      - media_data:/media:ro
+      - app_cache:/cache:delegated
+      - type: tmpfs
+        target: /transcode
+        tmpfs:
+          size: 4294967296  # 4GB
+    networks:
+      - media_network
+    devices:
+      # Intel QuickSync
+      - /dev/dri:/dev/dri
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+    logging: *logging-optimized
+
+  # =========================
+  # Performance Monitoring
+  # =========================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    <<: *restart-policy
+    <<: *resource-limits-small
+    container_name: cadvisor_optimized
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - media_network
+    command:
+      - --housekeeping_interval=30s
+      - --docker_only=true
+      - --disable_metrics=disk,tcp,udp,percpu,sched,process
+      - --store_container_labels=false
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+    logging: *logging-optimized
+
+  # =========================
+  # Metrics Aggregation
+  # =========================
+  prometheus:
+    image: prom/prometheus:latest
+    <<: *restart-policy
+    <<: *resource-limits-medium
+    container_name: prometheus_optimized
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=2GB
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+    volumes:
+      - ./config/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus:delegated
+    networks:
+      - media_network
+    healthcheck:
+      <<: *healthcheck-optimized
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+    logging: *logging-optimized

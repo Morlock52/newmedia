@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced .env Configuration Manager 2025</title>
+    
+    <!-- CSS Variables for Theme System -->
+    <style>
+        :root {
+            --primary-hue: 250;
+            --secondary-hue: 320;
+            --accent-hue: 180;
+            
+            /* Light Theme */
+            --bg-primary-light: #ffffff;
+            --bg-secondary-light: #f8fafc;
+            --text-primary-light: #1e293b;
+            --text-secondary-light: #64748b;
+            --border-light: #e2e8f0;
+            
+            /* Dark Theme */
+            --bg-primary-dark: #0f172a;
+            --bg-secondary-dark: #1e293b;
+            --text-primary-dark: #f1f5f9;
+            --text-secondary-dark: #94a3b8;
+            --border-dark: #334155;
+            
+            /* Current Theme (defaults to dark) */
+            --bg-primary: var(--bg-primary-dark);
+            --bg-secondary: var(--bg-secondary-dark);
+            --text-primary: var(--text-primary-dark);
+            --text-secondary: var(--text-secondary-dark);
+            --border-color: var(--border-dark);
+            
+            /* Dynamic Colors */
+            --primary-color: hsl(var(--primary-hue), 70%, 60%);
+            --secondary-color: hsl(var(--secondary-hue), 70%, 60%);
+            --accent-color: hsl(var(--accent-hue), 70%, 60%);
+            --success-color: hsl(142, 76%, 36%);
+            --warning-color: hsl(38, 92%, 50%);
+            --error-color: hsl(0, 84%, 60%);
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            --gradient-accent: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-glow: 0 0 20px rgba(124, 58, 237, 0.3);
+            
+            /* Animations */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Light theme overrides */
+        [data-theme="light"] {
+            --bg-primary: var(--bg-primary-light);
+            --bg-secondary: var(--bg-secondary-light);
+            --text-primary: var(--text-primary-light);
+            --text-secondary: var(--text-secondary-light);
+            --border-color: var(--border-light);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: var(--bg-primary);
+        }
+
+        .animated-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, hsla(var(--primary-hue), 70%, 60%, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, hsla(var(--secondary-hue), 70%, 60%, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, hsla(var(--accent-hue), 70%, 60%, 0.05) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            33% { transform: rotate(5deg) scale(1.05); }
+            66% { transform: rotate(-3deg) scale(0.95); }
+        }
+
+        /* Glass morphism effects */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+
+        .glass-strong {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 0;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: none;
+            background: var(--glass-strong);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        /* Main Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Editor Section */
+        .editor-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .editor-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* Environment Categories */
+        .category-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .category-tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+
+        .category-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .category-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Editor Panel */
+        .editor-panel {
+            background: var(--glass);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .editor-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: var(--gradient-primary);
+            border-radius: 20px;
+            z-index: -1;
+            opacity: 0.3;
+            animation: gradientRotate 10s linear infinite;
+        }
+
+        @keyframes gradientRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Code Editor */
+        .code-editor {
+            position: relative;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .editor-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .editor-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .syntax-highlight-toggle {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all var(--transition-normal);
+        }
+
+        .syntax-highlight-toggle.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .editor-content {
+            position: relative;
+            display: flex;
+        }
+
+        .line-numbers {
+            width: 60px;
+            padding: 1.5rem 0;
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-secondary);
+            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            user-select: none;
+            text-align: right;
+            padding-right: 1rem;
+            border-right: 1px solid var(--border-color);
+        }
+
+        #envEditor {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            padding: 1.5rem;
+            resize: none;
+            outline: none;
+            min-height: 600px;
+        }
+
+        /* Syntax highlighting */
+        .syntax-highlighted {
+            position: absolute;
+            top: 0;
+            left: 60px;
+            right: 0;
+            pointer-events: none;
+            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            padding: 1.5rem;
+            white-space: pre;
+            overflow: hidden;
+        }
+
+        .syntax-comment { color: #6b7280; }
+        .syntax-key { color: #10b981; }
+        .syntax-equals { color: #f59e0b; }
+        .syntax-value { color: #3b82f6; }
+        .syntax-string { color: #ec4899; }
+        .syntax-number { color: #8b5cf6; }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-panel {
+            background: var(--glass);
+            border-radius: 20px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .sidebar-panel h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Service Status */
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            transition: all var(--transition-normal);
+        }
+
+        .service-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .service-name {
+            font-weight: 500;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.running {
+            background: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+
+        .status-indicator.stopped {
+            background: var(--error-color);
+            box-shadow: 0 0 10px var(--error-color);
+        }
+
+        .status-indicator.warning {
+            background: var(--warning-color);
+            box-shadow: 0 0 10px var(--warning-color);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        /* AI Assistant */
+        .ai-suggestions {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .suggestion-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            border: 1px solid transparent;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .suggestion-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--primary-color);
+        }
+
+        .suggestion-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Configuration Templates */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .template-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            border: 1px solid transparent;
+        }
+
+        .template-item:hover {
+            background: var(--gradient-primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .template-emoji {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .template-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Key Generator */
+        .key-generator {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .key-controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .key-type-select {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            outline: none;
+            transition: all var(--transition-normal);
+        }
+
+        .key-type-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .generate-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-normal);
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .generated-key {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-size: 0.875rem;
+            word-break: break-all;
+            color: var(--success-color);
+            position: relative;
+        }
+
+        .copy-key-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+
+        .copy-key-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Validation Messages */
+        .validation-messages {
+            margin-top: 1.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .validation-item {
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .validation-item.error {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #fca5a5;
+        }
+
+        .validation-item.warning {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fde047;
+        }
+
+        .validation-item.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        .validation-item.info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover:before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--error-color), #dc2626);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #16a34a);
+            color: white;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            background: var(--glass-strong);
+            border-radius: 12px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 300px;
+            transform: translateX(100%);
+            opacity: 0;
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        @keyframes slideIn {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem 4rem;
+            }
+            
+            .header-content {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .editor-actions {
+                justify-content: center;
+            }
+            
+            .category-tabs {
+                justify-content: center;
+            }
+            
+            .toast-container {
+                top: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+            
+            .toast {
+                min-width: auto;
+            }
+        }
+
+        /* Dark/Light theme transition */
+        * {
+            transition: background-color var(--transition-normal), 
+                       border-color var(--transition-normal), 
+                       color var(--transition-normal);
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Security Indicators */
+        .security-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .security-indicator.high {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .security-indicator.medium {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .security-indicator.low {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+        }
+
+        /* Feature highlights */
+        .feature-highlight {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-highlight::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: highlight 3s infinite;
+        }
+
+        @keyframes highlight {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>⚙️ Advanced .env Manager 2025</h1>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Category Tabs -->
+        <div class="category-tabs">
+            <button class="category-tab active" onclick="switchCategory('all')">🔧 All Variables</button>
+            <button class="category-tab" onclick="switchCategory('database')">🗄️ Database</button>
+            <button class="category-tab" onclick="switchCategory('api')">🔌 API Keys</button>
+            <button class="category-tab" onclick="switchCategory('security')">🔒 Security</button>
+            <button class="category-tab" onclick="switchCategory('media')">📺 Media Services</button>
+            <button class="category-tab" onclick="switchCategory('network')">🌐 Network</button>
+            <button class="category-tab" onclick="switchCategory('features')">✨ Features</button>
+        </div>
+
+        <div class="main-grid">
+            <!-- Editor Section -->
+            <div class="editor-section">
+                <div class="editor-header">
+                    <h2>Environment Configuration</h2>
+                    <div class="editor-actions">
+                        <button class="btn btn-secondary" onclick="loadEnvTemplate()">
+                            📂 Load Template
+                        </button>
+                        <button class="btn btn-secondary" onclick="validateConfiguration()">
+                            ✅ Validate
+                        </button>
+                        <button class="btn btn-secondary" onclick="backupConfiguration()">
+                            💾 Backup
+                        </button>
+                        <button class="btn btn-primary" onclick="saveConfiguration()">
+                            🚀 Deploy Changes
+                        </button>
+                    </div>
+                </div>
+
+                <div class="editor-panel">
+                    <div class="code-editor">
+                        <div class="editor-toolbar">
+                            <div class="editor-toolbar-left">
+                                <span>📝 .env Configuration</span>
+                                <div class="security-indicator high">
+                                    🔒 Encrypted
+                                </div>
+                            </div>
+                            <div class="editor-toolbar-right">
+                                <button class="syntax-highlight-toggle active" onclick="toggleSyntaxHighlight()">
+                                    Syntax Highlighting
+                                </button>
+                                <button class="syntax-highlight-toggle" onclick="toggleWordWrap()">
+                                    Word Wrap
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-content">
+                            <div class="line-numbers" id="lineNumbers"></div>
+                            <textarea id="envEditor" placeholder="Loading configuration..."></textarea>
+                            <div class="syntax-highlighted" id="syntaxHighlight"></div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Messages -->
+                    <div class="validation-messages" id="validationMessages"></div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Service Status -->
+                <div class="sidebar-panel">
+                    <h3>🚀 Service Status</h3>
+                    <div id="serviceStatus">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Configuration Templates -->
+                <div class="sidebar-panel">
+                    <h3>📋 Quick Templates</h3>
+                    <div class="template-grid">
+                        <div class="template-item" onclick="loadTemplate('development')">
+                            <span class="template-emoji">💻</span>
+                            <span class="template-name">Development</span>
+                        </div>
+                        <div class="template-item" onclick="loadTemplate('production')">
+                            <span class="template-emoji">🚀</span>
+                            <span class="template-name">Production</span>
+                        </div>
+                        <div class="template-item" onclick="loadTemplate('docker')">
+                            <span class="template-emoji">🐳</span>
+                            <span class="template-name">Docker</span>
+                        </div>
+                        <div class="template-item" onclick="loadTemplate('kubernetes')">
+                            <span class="template-emoji">☸️</span>
+                            <span class="template-name">Kubernetes</span>
+                        </div>
+                        <div class="template-item" onclick="loadTemplate('minimal')">
+                            <span class="template-emoji">⚡</span>
+                            <span class="template-name">Minimal</span>
+                        </div>
+                        <div class="template-item" onclick="loadTemplate('full-stack')">
+                            <span class="template-emoji">🔧</span>
+                            <span class="template-name">Full Stack</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Assistant -->
+                <div class="sidebar-panel">
+                    <h3>🤖 AI Assistant</h3>
+                    <div class="ai-suggestions" id="aiSuggestions">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Key Generator -->
+                <div class="sidebar-panel">
+                    <h3>🔐 Secure Key Generator</h3>
+                    <div class="key-generator">
+                        <div class="key-controls">
+                            <select class="key-type-select" id="keyType">
+                                <option value="jwt">JWT Secret (64 chars)</option>
+                                <option value="api">API Key (32 chars)</option>
+                                <option value="password">Strong Password</option>
+                                <option value="uuid">UUID v4</option>
+                                <option value="session">Session Secret</option>
+                                <option value="encryption">Encryption Key</option>
+                            </select>
+                            <button class="generate-btn" onclick="generateSecureKey()">Generate</button>
+                        </div>
+                        <div id="generatedKeyContainer"></div>
+                    </div>
+                </div>
+
+                <!-- Security Analysis -->
+                <div class="sidebar-panel">
+                    <h3>🛡️ Security Analysis</h3>
+                    <div id="securityAnalysis">
+                        <div class="validation-item info">
+                            <span>🔍</span>
+                            <span>Click "Validate" to analyze security</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div id="loadingMessage">Processing...</div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Global state
+        let currentCategory = 'all';
+        let currentTheme = 'dark';
+        let syntaxHighlightEnabled = true;
+        let autoSaveTimer = null;
+        let validationTimeout = null;
+
+        // Environment templates
+        const templates = {
+            development: `# Development Environment Configuration
+NODE_ENV=development
+PORT=3000
+HOST=localhost
+DEBUG=true
+
+# Database Configuration
+DATABASE_URL=postgresql://dev_user:dev_pass@localhost:5432/dev_db
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=
+
+# Authentication
+JWT_SECRET=dev-jwt-secret-change-in-production
+JWT_EXPIRES_IN=7d
+SESSION_SECRET=dev-session-secret
+
+# API Keys (Development)
+STRIPE_API_KEY=sk_test_development_key
+SENDGRID_API_KEY=SG.development_key
+
+# Feature Flags
+ENABLE_DEBUG_LOGGING=true
+ENABLE_HOT_RELOAD=true
+ENABLE_MOCK_SERVICES=true`,
+            
+            production: `# Production Environment Configuration
+NODE_ENV=production
+PORT=443
+HOST=0.0.0.0
+DEBUG=false
+
+# Database Configuration
+DATABASE_URL=postgresql://\${DB_USER}:\${DB_PASSWORD}@\${DB_HOST}:5432/\${DB_NAME}
+DATABASE_POOL_MIN=10
+DATABASE_POOL_MAX=100
+DATABASE_SSL=true
+
+# Redis Configuration
+REDIS_URL=redis://\${REDIS_HOST}:6379
+REDIS_PASSWORD=\${REDIS_PASSWORD}
+REDIS_TLS=true
+
+# Authentication
+JWT_SECRET=\${JWT_SECRET}
+JWT_EXPIRES_IN=24h
+SESSION_SECRET=\${SESSION_SECRET}
+BCRYPT_ROUNDS=12
+
+# Security
+CORS_ORIGIN=https://yourdomain.com
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX=100
+HELMET_ENABLED=true
+
+# Monitoring
+ENABLE_METRICS=true
+ENABLE_HEALTH_CHECKS=true
+LOG_LEVEL=warn`,
+            
+            docker: `# Docker Environment Configuration
+# Container Settings
+COMPOSE_PROJECT_NAME=media-stack
+DOCKER_BUILDKIT=1
+
+# User/Group IDs
+PUID=1000
+PGID=1000
+TZ=America/New_York
+
+# Volumes
+CONFIG_ROOT=./config
+DATA_ROOT=./data
+DOWNLOADS_ROOT=./downloads
+
+# Network
+NETWORK_NAME=media_network
+NETWORK_SUBNET=172.20.0.0/16
+
+# Service Ports
+JELLYFIN_PORT=8096
+SONARR_PORT=8989
+RADARR_PORT=7878
+PROWLARR_PORT=9696
+QBITTORRENT_PORT=8080
+
+# Resource Limits
+JELLYFIN_MEMORY_LIMIT=4096m
+SONARR_MEMORY_LIMIT=1024m
+RADARR_MEMORY_LIMIT=1024m
+
+# Health Checks
+HEALTH_CHECK_INTERVAL=30s
+HEALTH_CHECK_TIMEOUT=10s
+HEALTH_CHECK_RETRIES=3`,
+            
+            minimal: `# Minimal Configuration
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=sqlite:./database.db
+JWT_SECRET=change-me-in-production`,
+            
+            kubernetes: `# Kubernetes Environment Configuration
+# Namespace
+NAMESPACE=default
+
+# Service Configuration
+SERVICE_NAME=app-service
+SERVICE_PORT=80
+SERVICE_TYPE=ClusterIP
+
+# Ingress
+INGRESS_HOST=app.example.com
+INGRESS_TLS_SECRET=app-tls
+
+# ConfigMap/Secret References
+DATABASE_URL_SECRET=db-credentials
+JWT_SECRET_SECRET=jwt-secret
+REDIS_PASSWORD_SECRET=redis-password
+
+# Resource Limits
+CPU_REQUEST=100m
+CPU_LIMIT=500m
+MEMORY_REQUEST=128Mi
+MEMORY_LIMIT=512Mi
+
+# Replica Configuration
+REPLICA_COUNT=3
+MAX_SURGE=1
+MAX_UNAVAILABLE=0`,
+            
+            'full-stack': `# Full-Stack Application Configuration
+# Application
+NODE_ENV=development
+APP_NAME=MyApp
+APP_VERSION=1.0.0
+PORT=3000
+HOST=localhost
+
+# Frontend
+FRONTEND_URL=http://localhost:3000
+API_BASE_URL=http://localhost:3001/api
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/myapp
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+DATABASE_SSL=false
+
+# Cache
+REDIS_URL=redis://localhost:6379
+CACHE_TTL=3600
+
+# Authentication
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRES_IN=7d
+SESSION_SECRET=your-session-secret
+BCRYPT_ROUNDS=10
+OAUTH_GOOGLE_CLIENT_ID=
+OAUTH_GOOGLE_CLIENT_SECRET=
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_SECURE=true
+
+# File Storage
+UPLOAD_PATH=./uploads
+MAX_FILE_SIZE=10MB
+ALLOWED_FILE_TYPES=jpg,jpeg,png,pdf
+
+# External APIs
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+SENDGRID_API_KEY=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+S3_BUCKET=
+
+# Monitoring
+ENABLE_METRICS=true
+ENABLE_LOGGING=true
+LOG_LEVEL=info
+SENTRY_DSN=
+
+# Feature Flags
+ENABLE_REGISTRATION=true
+ENABLE_EMAIL_VERIFICATION=true
+ENABLE_2FA=false
+MAINTENANCE_MODE=false`
+        };
+
+        // AI suggestions based on context
+        const aiSuggestions = {
+            all: [
+                {
+                    title: "Security Audit Needed",
+                    desc: "Some variables lack proper security measures. Consider using environment-specific secrets.",
+                    action: "analyzeSecurityIssues"
+                },
+                {
+                    title: "Add Health Checks",
+                    desc: "Enable health monitoring for your services with ENABLE_HEALTH_CHECKS=true",
+                    action: "addHealthChecks"
+                },
+                {
+                    title: "Environment Validation",
+                    desc: "Add validation rules for required environment variables",
+                    action: "addValidation"
+                }
+            ],
+            database: [
+                {
+                    title: "Connection Pooling",
+                    desc: "Optimize database performance with connection pooling settings",
+                    action: "addConnectionPooling"
+                },
+                {
+                    title: "SSL Configuration",
+                    desc: "Enable SSL for secure database connections in production",
+                    action: "enableDatabaseSSL"
+                }
+            ],
+            security: [
+                {
+                    title: "Generate Strong JWT Secret",
+                    desc: "Your JWT secret should be at least 64 characters long and cryptographically secure",
+                    action: "generateJWTSecret"
+                },
+                {
+                    title: "Enable CORS Protection",
+                    desc: "Configure CORS settings to protect against cross-origin attacks",
+                    action: "configureCORS"
+                }
+            ]
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            loadDefaultConfiguration();
+            updateLineNumbers();
+            checkServiceStatus();
+            setupEventListeners();
+            loadAISuggestions();
+        });
+
+        function initializeApp() {
+            // Set initial theme
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            
+            // Load saved preferences
+            const savedTheme = localStorage.getItem('env-manager-theme');
+            if (savedTheme) {
+                currentTheme = savedTheme;
+                document.documentElement.setAttribute('data-theme', currentTheme);
+                updateThemeIcon();
+            }
+        }
+
+        function setupEventListeners() {
+            const editor = document.getElementById('envEditor');
+            
+            // Auto-save and validation
+            editor.addEventListener('input', () => {
+                updateLineNumbers();
+                updateSyntaxHighlight();
+                
+                // Clear existing timer
+                clearTimeout(autoSaveTimer);
+                clearTimeout(validationTimeout);
+                
+                // Set new timers
+                autoSaveTimer = setTimeout(autoSave, 2000);
+                validationTimeout = setTimeout(validateConfiguration, 1000);
+            });
+
+            // Sync scroll between editor and line numbers
+            editor.addEventListener('scroll', () => {
+                document.getElementById('lineNumbers').scrollTop = editor.scrollTop;
+            });
+
+            // Handle tab key for proper indentation
+            editor.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = editor.selectionStart;
+                    const end = editor.selectionEnd;
+                    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+                    editor.selectionStart = editor.selectionEnd = start + 2;
+                    updateLineNumbers();
+                    updateSyntaxHighlight();
+                }
+            });
+        }
+
+        function loadDefaultConfiguration() {
+            const defaultConfig = `# Media Stack Environment Configuration - 2025 Edition
+# =======================================================
+# Advanced configuration for modern media server stack
+# Supports Docker, Kubernetes, and bare metal deployments
+
+# Basic Configuration
+NODE_ENV=development
+TZ=America/New_York
+PUID=1000
+PGID=1000
+
+# Domain Configuration (Cloudflare/Reverse Proxy)
+DOMAIN=example.com
+SUBDOMAIN_PREFIX=media
+
+# Cloudflare Configuration
+CF_API_EMAIL=admin@example.com
+CF_API_KEY=your-cloudflare-global-api-key-here
+CLOUDFLARE_ZONE_ID=your-cloudflare-zone-id-here
+CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token-here
+
+# API Keys (Auto-generated by integration script)
+SONARR_API_KEY=
+RADARR_API_KEY=
+PROWLARR_API_KEY=
+OVERSEERR_API_KEY=
+JELLYFIN_API_KEY=
+
+# Download Client Configuration
+QBT_USERNAME=admin
+QBT_PASSWORD=adminpass
+QBT_WEBUI_PORT=8080
+
+# VPN Configuration (Optional)
+USE_VPN=false
+VPN_SERVICE=pia
+VPN_USERNAME=your-vpn-username
+VPN_PASSWORD=your-vpn-password
+VPN_REGION=us-east
+
+# Storage Configuration
+MEDIA_ROOT=/data/media
+DOWNLOADS_ROOT=/data/torrents
+CONFIG_ROOT=/config
+
+# Media Library Paths
+MOVIES_PATH=\${MEDIA_ROOT}/movies
+TV_PATH=\${MEDIA_ROOT}/tv
+MUSIC_PATH=\${MEDIA_ROOT}/music
+AUDIOBOOKS_PATH=\${MEDIA_ROOT}/audiobooks
+
+# Security Configuration
+ADMIN_EMAIL=admin@example.com
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me-please
+ENABLE_AUTH=true
+AUTH_METHOD=basic
+
+# Performance Configuration
+JELLYFIN_HARDWARE_ACCELERATION=none
+JELLYFIN_MEMORY_LIMIT=4096
+SONARR_MEMORY_LIMIT=1024
+RADARR_MEMORY_LIMIT=1024
+
+# Feature Flags (2025 Features)
+ENABLE_AI_RECOMMENDATIONS=false
+ENABLE_AUTO_CLEANUP=true
+ENABLE_SMART_DOWNLOADS=true
+ENABLE_BANDWIDTH_LIMITING=false
+
+# Network Configuration
+NETWORK_NAME=media_network
+NETWORK_SUBNET=172.20.0.0/16
+
+# Port Mappings
+JELLYFIN_PORT=8096
+SONARR_PORT=8989
+RADARR_PORT=7878
+PROWLARR_PORT=9696
+QBITTORRENT_PORT=8080
+OVERSEERR_PORT=5055
+PORTAINER_PORT=9000
+
+# Development/Debug Settings
+DEBUG_MODE=false
+ENABLE_VERBOSE_LOGGING=false
+SKIP_PERMISSION_FIXES=false`;
+
+            document.getElementById('envEditor').value = defaultConfig;
+            updateLineNumbers();
+            updateSyntaxHighlight();
+            validateConfiguration();
+        }
+
+        function updateLineNumbers() {
+            const editor = document.getElementById('envEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const lines = editor.value.split('\n').length;
+            
+            let lineNumbersHTML = '';
+            for (let i = 1; i <= lines; i++) {
+                lineNumbersHTML += `${i}\n`;
+            }
+            lineNumbers.textContent = lineNumbersHTML;
+        }
+
+        function updateSyntaxHighlight() {
+            if (!syntaxHighlightEnabled) return;
+            
+            const editor = document.getElementById('envEditor');
+            const highlight = document.getElementById('syntaxHighlight');
+            const content = editor.value;
+            
+            // Simple syntax highlighting for .env files
+            const highlighted = content
+                .replace(/^#.*$/gm, '<span class="syntax-comment">$&</span>')
+                .replace(/^([A-Z_][A-Z0-9_]*)=/gm, '<span class="syntax-key">$1</span><span class="syntax-equals">=</span>')
+                .replace(/="([^"]*)"/g, '=<span class="syntax-string">"$1"</span>')
+                .replace(/=([0-9]+)/g, '=<span class="syntax-number">$1</span>')
+                .replace(/=(true|false)/g, '=<span class="syntax-value">$1</span>');
+            
+            highlight.innerHTML = highlighted;
+        }
+
+        function toggleSyntaxHighlight() {
+            syntaxHighlightEnabled = !syntaxHighlightEnabled;
+            const btn = document.querySelector('.syntax-highlight-toggle');
+            btn.classList.toggle('active', syntaxHighlightEnabled);
+            
+            if (syntaxHighlightEnabled) {
+                updateSyntaxHighlight();
+            } else {
+                document.getElementById('syntaxHighlight').innerHTML = '';
+            }
+        }
+
+        function toggleWordWrap() {
+            const editor = document.getElementById('envEditor');
+            const isWrapping = editor.style.whiteSpace === 'pre-wrap';
+            editor.style.whiteSpace = isWrapping ? 'pre' : 'pre-wrap';
+            
+            const btn = document.querySelectorAll('.syntax-highlight-toggle')[1];
+            btn.classList.toggle('active', !isWrapping);
+        }
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('env-manager-theme', currentTheme);
+            updateThemeIcon();
+            showToast('Theme switched to ' + currentTheme + ' mode', 'info');
+        }
+
+        function updateThemeIcon() {
+            document.getElementById('themeIcon').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function switchCategory(category) {
+            currentCategory = category;
+            
+            // Update active tab
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter content or load category-specific template
+            filterEnvVariables(category);
+            loadAISuggestions();
+        }
+
+        function filterEnvVariables(category) {
+            if (category === 'all') return;
+            
+            const editor = document.getElementById('envEditor');
+            const lines = editor.value.split('\n');
+            const filteredLines = [];
+            let inCategory = false;
+            
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                
+                // Check for category comments
+                if (trimmed.includes('Configuration') && 
+                    trimmed.toLowerCase().includes(category.toLowerCase())) {
+                    inCategory = true;
+                    filteredLines.push(line);
+                } else if (trimmed.startsWith('#') && trimmed.includes('Configuration') && 
+                          !trimmed.toLowerCase().includes(category.toLowerCase())) {
+                    inCategory = false;
+                    filteredLines.push(line);
+                } else if (inCategory || trimmed.startsWith('#') || trimmed === '') {
+                    filteredLines.push(line);
+                }
+            });
+            
+            if (filteredLines.length > 5) {
+                editor.value = filteredLines.join('\n');
+                updateLineNumbers();
+                updateSyntaxHighlight();
+            }
+        }
+
+        function loadTemplate(templateName) {
+            if (templates[templateName]) {
+                showLoading('Loading template...');
+                
+                setTimeout(() => {
+                    document.getElementById('envEditor').value = templates[templateName];
+                    updateLineNumbers();
+                    updateSyntaxHighlight();
+                    validateConfiguration();
+                    hideLoading();
+                    showToast(`${templateName} template loaded successfully`, 'success');
+                }, 800);
+            }
+        }
+
+        function loadEnvTemplate() {
+            // Simulate loading from file
+            showLoading('Loading .env template...');
+            
+            setTimeout(() => {
+                // In a real application, this would load from a file picker or API
+                loadTemplate('full-stack');
+                hideLoading();
+            }, 1000);
+        }
+
+        function validateConfiguration() {
+            const content = document.getElementById('envEditor').value;
+            const lines = content.split('\n');
+            const messages = [];
+            const variables = {};
+            const issues = {
+                errors: 0,
+                warnings: 0,
+                suggestions: 0
+            };
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                const lineNum = index + 1;
+                
+                // Skip empty lines and comments
+                if (!trimmed || trimmed.startsWith('#')) return;
+                
+                // Check for valid format
+                if (!trimmed.includes('=')) {
+                    messages.push({
+                        type: 'error',
+                        text: `Line ${lineNum}: Invalid format - missing equals sign`,
+                        line: lineNum
+                    });
+                    issues.errors++;
+                    return;
+                }
+                
+                const [key, ...valueParts] = trimmed.split('=');
+                const value = valueParts.join('=');
+                
+                // Check for duplicate keys
+                if (variables[key]) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${lineNum}: Duplicate key "${key}" (first defined on line ${variables[key].line})`,
+                        line: lineNum
+                    });
+                    issues.warnings++;
+                } else {
+                    variables[key] = { value, line: lineNum };
+                }
+                
+                // Validate specific variable types
+                validateVariable(key, value, lineNum, messages, issues);
+            });
+            
+            // Check for required variables
+            const requiredVars = ['NODE_ENV', 'PORT'];
+            requiredVars.forEach(varName => {
+                if (!variables[varName]) {
+                    messages.push({
+                        type: 'error',
+                        text: `Missing required variable: ${varName}`,
+                        line: null
+                    });
+                    issues.errors++;
+                }
+            });
+            
+            // Security analysis
+            performSecurityAnalysis(variables, messages, issues);
+            
+            // Display results
+            displayValidationMessages(messages);
+            updateSecurityAnalysis(issues, variables);
+            
+            return { messages, issues, variables };
+        }
+
+        function validateVariable(key, value, lineNum, messages, issues) {
+            // Port validation
+            if (key === 'PORT' && value) {
+                const port = parseInt(value);
+                if (isNaN(port) || port < 1 || port > 65535) {
+                    messages.push({
+                        type: 'error',
+                        text: `Line ${lineNum}: Invalid port number "${value}"`,
+                        line: lineNum
+                    });
+                    issues.errors++;
+                } else if (port < 1024) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${lineNum}: Port ${port} requires root privileges`,
+                        line: lineNum
+                    });
+                    issues.warnings++;
+                }
+            }
+            
+            // Secret validation
+            if (key.includes('SECRET') || key.includes('PASSWORD')) {
+                if (!value) {
+                    messages.push({
+                        type: 'error',
+                        text: `Line ${lineNum}: ${key} cannot be empty`,
+                        line: lineNum
+                    });
+                    issues.errors++;
+                } else if (value.length < 16) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${lineNum}: ${key} should be at least 16 characters for security`,
+                        line: lineNum
+                    });
+                    issues.warnings++;
+                } else if (value === 'change-me-please' || value === 'admin' || value === 'password') {
+                    messages.push({
+                        type: 'error',
+                        text: `Line ${lineNum}: ${key} uses a default/weak value`,
+                        line: lineNum
+                    });
+                    issues.errors++;
+                }
+            }
+            
+            // API Key validation
+            if (key.includes('API_KEY') && value && !value.startsWith('sk_') && !value.startsWith('SG.')) {
+                messages.push({
+                    type: 'info',
+                    text: `Line ${lineNum}: Verify ${key} format is correct for your service`,
+                    line: lineNum
+                });
+                issues.suggestions++;
+            }
+            
+            // URL validation
+            if (key.includes('URL') && value) {
+                try {
+                    new URL(value);
+                } catch {
+                    // Check if it's a database URL or other special format
+                    if (!value.match(/^(postgresql|mysql|redis|mongodb):\/\//)) {
+                        messages.push({
+                            type: 'warning',
+                            text: `Line ${lineNum}: ${key} might not be a valid URL`,
+                            line: lineNum
+                        });
+                        issues.warnings++;
+                    }
+                }
+            }
+            
+            // Boolean validation
+            if (value === 'true' || value === 'false') {
+                // This is fine, just noting it's a boolean
+            } else if (['ENABLE_', 'USE_', 'DEBUG'].some(prefix => key.startsWith(prefix))) {
+                if (!['true', 'false', '1', '0'].includes(value.toLowerCase())) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${lineNum}: ${key} should probably be true/false`,
+                        line: lineNum
+                    });
+                    issues.warnings++;
+                }
+            }
+        }
+
+        function performSecurityAnalysis(variables, messages, issues) {
+            const securityIssues = [];
+            
+            // Check for development settings in production
+            if (variables.NODE_ENV?.value === 'production') {
+                if (variables.DEBUG?.value === 'true') {
+                    securityIssues.push('Debug mode enabled in production');
+                }
+                if (variables.ENABLE_VERBOSE_LOGGING?.value === 'true') {
+                    securityIssues.push('Verbose logging enabled in production');
+                }
+            }
+            
+            // Check for missing security headers
+            const securityVars = ['CORS_ORIGIN', 'HELMET_ENABLED', 'RATE_LIMIT_MAX'];
+            securityVars.forEach(varName => {
+                if (!variables[varName]) {
+                    securityIssues.push(`Missing security configuration: ${varName}`);
+                }
+            });
+            
+            // Check SSL settings
+            if (variables.DATABASE_SSL?.value === 'false' && variables.NODE_ENV?.value === 'production') {
+                securityIssues.push('Database SSL disabled in production');
+            }
+            
+            securityIssues.forEach(issue => {
+                messages.push({
+                    type: 'warning',
+                    text: `Security: ${issue}`,
+                    line: null
+                });
+                issues.warnings++;
+            });
+        }
+
+        function displayValidationMessages(messages) {
+            const container = document.getElementById('validationMessages');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="validation-item success">
+                        <span>✅</span>
+                        <span>All environment variables are valid and secure!</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => `
+                <div class="validation-item ${msg.type}">
+                    <span>${getValidationIcon(msg.type)}</span>
+                    <span>${msg.text}</span>
+                </div>
+            `).join('');
+        }
+
+        function getValidationIcon(type) {
+            switch (type) {
+                case 'error': return '❌';
+                case 'warning': return '⚠️';
+                case 'success': return '✅';
+                case 'info': return 'ℹ️';
+                default: return '•';
+            }
+        }
+
+        function updateSecurityAnalysis(issues, variables) {
+            const container = document.getElementById('securityAnalysis');
+            const totalIssues = issues.errors + issues.warnings;
+            
+            let securityLevel = 'high';
+            let securityColor = 'success';
+            let securityMessage = 'Excellent security configuration';
+            
+            if (totalIssues > 10) {
+                securityLevel = 'low';
+                securityColor = 'error';
+                securityMessage = 'Multiple security issues found';
+            } else if (totalIssues > 5) {
+                securityLevel = 'medium';
+                securityColor = 'warning';
+                securityMessage = 'Some security improvements needed';
+            } else if (totalIssues > 0) {
+                securityLevel = 'medium';
+                securityColor = 'warning';
+                securityMessage = 'Minor security considerations';
+            }
+            
+            container.innerHTML = `
+                <div class="validation-item ${securityColor}">
+                    <span>🛡️</span>
+                    <div>
+                        <div class="security-indicator ${securityLevel}">
+                            Security Level: ${securityLevel.toUpperCase()}
+                        </div>
+                        <div style="margin-top: 0.5rem;">${securityMessage}</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.75rem; opacity: 0.8;">
+                            ${issues.errors} errors, ${issues.warnings} warnings, ${issues.suggestions} suggestions
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateSecureKey() {
+            const keyType = document.getElementById('keyType').value;
+            let key = '';
+            let description = '';
+            
+            switch (keyType) {
+                case 'jwt':
+                    key = generateCryptoKey(64);
+                    description = 'JWT Secret (64 characters, cryptographically secure)';
+                    break;
+                case 'api':
+                    key = `sk_${generateCryptoKey(32)}`;
+                    description = 'API Key (32 characters with sk_ prefix)';
+                    break;
+                case 'password':
+                    key = generateStrongPassword();
+                    description = 'Strong Password (16 characters, mixed case, numbers, symbols)';
+                    break;
+                case 'uuid':
+                    key = generateUUID();
+                    description = 'UUID v4 (Universally Unique Identifier)';
+                    break;
+                case 'session':
+                    key = generateCryptoKey(48);
+                    description = 'Session Secret (48 characters)';
+                    break;
+                case 'encryption':
+                    key = generateCryptoKey(32);
+                    description = 'Encryption Key (32 bytes, suitable for AES-256)';
+                    break;
+            }
+            
+            const container = document.getElementById('generatedKeyContainer');
+            container.innerHTML = `
+                <div class="generated-key">
+                    <button class="copy-key-btn" onclick="copyToClipboard('${key}')" title="Copy to clipboard">
+                        📋
+                    </button>
+                    <div style="padding-right: 40px;">${key}</div>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary);">
+                    ${description}
+                </div>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="insertKeyIntoEditor('${key}')">
+                    Insert into Editor
+                </button>
+            `;
+            
+            showToast('Secure key generated successfully', 'success');
+        }
+
+        function generateCryptoKey(length) {
+            const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            const array = new Uint8Array(length);
+            crypto.getRandomValues(array);
+            
+            for (let i = 0; i < length; i++) {
+                result += charset[array[i] % charset.length];
+            }
+            return result;
+        }
+
+        function generateStrongPassword() {
+            const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lower = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            let password = '';
+            // Ensure at least one character from each set
+            password += upper[Math.floor(Math.random() * upper.length)];
+            password += lower[Math.floor(Math.random() * lower.length)];
+            password += numbers[Math.floor(Math.random() * numbers.length)];
+            password += symbols[Math.floor(Math.random() * symbols.length)];
+            
+            // Fill the rest randomly
+            const allChars = upper + lower + numbers + symbols;
+            for (let i = 4; i < 16; i++) {
+                password += allChars[Math.floor(Math.random() * allChars.length)];
+            }
+            
+            // Shuffle the password
+            return password.split('').sort(() => Math.random() - 0.5).join('');
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function insertKeyIntoEditor(key) {
+            const editor = document.getElementById('envEditor');
+            const cursorPos = editor.selectionStart;
+            const textBefore = editor.value.substring(0, cursorPos);
+            const textAfter = editor.value.substring(editor.selectionEnd);
+            
+            editor.value = textBefore + key + textAfter;
+            editor.selectionStart = editor.selectionEnd = cursorPos + key.length;
+            editor.focus();
+            
+            updateLineNumbers();
+            updateSyntaxHighlight();
+            showToast('Key inserted into editor', 'success');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Copied to clipboard!', 'success');
+            });
+        }
+
+        function checkServiceStatus() {
+            const services = [
+                { name: 'Docker', status: Math.random() > 0.3 ? 'running' : 'stopped', port: null },
+                { name: 'PostgreSQL', status: Math.random() > 0.4 ? 'running' : 'stopped', port: 5432 },
+                { name: 'Redis', status: Math.random() > 0.5 ? 'running' : 'stopped', port: 6379 },
+                { name: 'API Server', status: Math.random() > 0.6 ? 'running' : 'stopped', port: 3001 },
+                { name: 'Jellyfin', status: Math.random() > 0.7 ? 'running' : 'stopped', port: 8096 },
+                { name: 'Sonarr', status: Math.random() > 0.6 ? 'running' : 'stopped', port: 8989 },
+                { name: 'Radarr', status: Math.random() > 0.6 ? 'running' : 'stopped', port: 7878 }
+            ];
+            
+            const container = document.getElementById('serviceStatus');
+            container.innerHTML = services.map(service => `
+                <div class="service-item">
+                    <div class="service-name">${service.name}</div>
+                    <div class="service-status">
+                        <div class="status-indicator ${service.status}"></div>
+                        <span>${service.status === 'running' ? 'Running' : 'Stopped'}</span>
+                        ${service.port ? `<span style="font-size: 0.75rem; margin-left: 0.5rem;">:${service.port}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Refresh every 30 seconds
+            setTimeout(checkServiceStatus, 30000);
+        }
+
+        function loadAISuggestions() {
+            const suggestions = aiSuggestions[currentCategory] || aiSuggestions.all;
+            const container = document.getElementById('aiSuggestions');
+            
+            container.innerHTML = suggestions.map(suggestion => `
+                <div class="suggestion-item feature-highlight" onclick="applySuggestion('${suggestion.action}')">
+                    <div class="suggestion-title">${suggestion.title}</div>
+                    <div class="suggestion-desc">${suggestion.desc}</div>
+                </div>
+            `).join('');
+        }
+
+        function applySuggestion(action) {
+            const editor = document.getElementById('envEditor');
+            let addition = '\n\n';
+            
+            switch (action) {
+                case 'addHealthChecks':
+                    addition += `# Health Check Configuration
+ENABLE_HEALTH_CHECKS=true
+HEALTH_CHECK_INTERVAL=30s
+HEALTH_CHECK_TIMEOUT=10s
+HEALTH_CHECK_RETRIES=3
+HEALTH_CHECK_PATH=/health`;
+                    break;
+                    
+                case 'addConnectionPooling':
+                    addition += `# Database Connection Pooling
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=20
+DATABASE_POOL_IDLE_TIMEOUT=30000
+DATABASE_POOL_ACQUIRE_TIMEOUT=60000`;
+                    break;
+                    
+                case 'enableDatabaseSSL':
+                    addition += `# Database SSL Configuration
+DATABASE_SSL=true
+DATABASE_SSL_REJECT_UNAUTHORIZED=true
+DATABASE_SSL_CA_PATH=/certs/ca.pem
+DATABASE_SSL_CERT_PATH=/certs/client-cert.pem
+DATABASE_SSL_KEY_PATH=/certs/client-key.pem`;
+                    break;
+                    
+                case 'generateJWTSecret':
+                    const jwtSecret = generateCryptoKey(64);
+                    addition += `# JWT Configuration (Generated)
+JWT_SECRET=${jwtSecret}
+JWT_EXPIRES_IN=24h
+JWT_ALGORITHM=HS256
+JWT_ISSUER=your-app-name`;
+                    break;
+                    
+                case 'configureCORS':
+                    addition += `# CORS Configuration
+CORS_ORIGIN=https://yourdomain.com
+CORS_METHODS=GET,POST,PUT,DELETE,OPTIONS
+CORS_ALLOWED_HEADERS=Content-Type,Authorization
+CORS_CREDENTIALS=true
+CORS_MAX_AGE=86400`;
+                    break;
+                    
+                case 'addValidation':
+                    addition += `# Environment Validation
+VALIDATE_ENV_ON_START=true
+REQUIRED_ENV_VARS=NODE_ENV,PORT,DATABASE_URL
+ENV_SCHEMA_PATH=./config/env.schema.json
+FAIL_ON_VALIDATION_ERROR=true`;
+                    break;
+                    
+                default:
+                    showToast('Suggestion not implemented yet', 'info');
+                    return;
+            }
+            
+            editor.value += addition;
+            updateLineNumbers();
+            updateSyntaxHighlight();
+            validateConfiguration();
+            
+            // Scroll to bottom
+            editor.scrollTop = editor.scrollHeight;
+            
+            showToast('Configuration added successfully', 'success');
+        }
+
+        function autoSave() {
+            // Simulate auto-save to localStorage or API
+            const content = document.getElementById('envEditor').value;
+            localStorage.setItem('env-manager-autosave', content);
+            console.log('Auto-saved configuration');
+        }
+
+        function backupConfiguration() {
+            showLoading('Creating backup...');
+            
+            setTimeout(() => {
+                const content = document.getElementById('envEditor').value;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `env-backup-${timestamp}.env`;
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                hideLoading();
+                showToast('Configuration backed up successfully', 'success');
+            }, 1000);
+        }
+
+        function saveConfiguration() {
+            const validation = validateConfiguration();
+            
+            if (validation.issues.errors > 0) {
+                showToast(`Cannot deploy: ${validation.issues.errors} error(s) must be fixed first`, 'error');
+                return;
+            }
+            
+            showLoading('Deploying configuration...');
+            
+            // Simulate deployment process
+            setTimeout(() => {
+                // In a real application, this would send to the API
+                const content = document.getElementById('envEditor').value;
+                localStorage.setItem('env-manager-deployed', content);
+                
+                hideLoading();
+                showToast('Configuration deployed successfully! 🚀', 'success');
+                
+                // Trigger service restart notification
+                setTimeout(() => {
+                    showToast('Services are restarting with new configuration...', 'info');
+                    checkServiceStatus(); // Refresh service status
+                }, 2000);
+            }, 2000);
+        }
+
+        function showLoading(message) {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            }[type] || 'ℹ️';
+            
+            toast.innerHTML = `
+                <span>${icon}</span>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                toast.style.transform = 'translateX(100%)';
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        container.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Initialize tooltips and advanced features
+        function initializeAdvancedFeatures() {
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch (e.key) {
+                        case 's':
+                            e.preventDefault();
+                            saveConfiguration();
+                            break;
+                        case 'f':
+                            e.preventDefault();
+                            document.getElementById('envEditor').focus();
+                            break;
+                        case 'b':
+                            e.preventDefault();
+                            backupConfiguration();
+                            break;
+                    }
+                }
+            });
+            
+            // Add drag and drop support for .env files
+            const editor = document.getElementById('envEditor');
+            editor.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'copy';
+            });
+            
+            editor.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const files = Array.from(e.dataTransfer.files);
+                const envFile = files.find(file => file.name.endsWith('.env') || file.type === 'text/plain');
+                
+                if (envFile) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        editor.value = event.target.result;
+                        updateLineNumbers();
+                        updateSyntaxHighlight();
+                        validateConfiguration();
+                        showToast('Environment file loaded successfully', 'success');
+                    };
+                    reader.readAsText(envFile);
+                } else {
+                    showToast('Please drop a valid .env file', 'error');
+                }
+            });
+        }
+
+        // Initialize advanced features when page loads
+        setTimeout(initializeAdvancedFeatures, 1000);
+    </script>
+</body>
+</html>

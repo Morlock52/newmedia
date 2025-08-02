@@ -1,0 +1,497 @@
+services:
+  # Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # Cloudflare Tunnel Integration - Disable SSL since tunnel handles it
+      # - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      # - --certificatesresolvers.letsencrypt.acme.email=${EMAIL}
+      # - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.middlewares=default-headers@docker
+  webui:
+    build:
+      context: ./webui
+    container_name: media-stack-webui
+    ports:
+      - "3000:3000"
+    environment:
+      - STACK_DIR=/app/compose
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app/compose
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-web.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-web.entrypoints=web"
+      - "traefik.http.routers.traefik-web.service=api@internal"
+      - "traefik.http.routers.traefik-web.middlewares=authelia"
+      - "traefik.http.routers.api.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.api.entrypoints=traefik"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.middlewares=authelia"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      # - "traefik.http.routers.traefik-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+      - "traefik.http.middlewares.auth.basicauth.usersfile=/run/secrets/traefik_dashboard_auth"
+    secrets:
+      - traefik_dashboard_auth
+
+  # VPN Gateway
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    cap_drop:
+      - ALL
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 8080:8080  # qBittorrent UI
+      - 6881:6881  # qBittorrent listening
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-pia}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-on}
+      - VPN_PORT_FORWARDING_PORT=${VPN_PORT_FORWARDING_PORT:-6881}
+      - FIREWALL_KILL_SWITCH=on
+      - WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key
+      - SERVER_REGIONS=${PIA_REGION:-us_east}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES:-10.0.0.0/8}
+      - HEALTH_VPN_DURATION_INITIAL=30s
+      - HEALTH_VPN_DURATION_ADDITION=5s
+      - LOG_LEVEL=info
+      - DOT=on
+      - FIREWALL_DEBUG=off
+    secrets:
+      - wg_private_key
+    volumes:
+      - gluetun_data:/gluetun
+    networks:
+      - download_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Download Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - media_data:/data/torrents
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Core Media Server
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAIN}
+    volumes:
+      - jellyfin_config:/config
+      - media_data:/data/media:ro
+      - /dev/shm:/data/transcode
+    # Hardware acceleration devices (uncomment if available)
+    # devices:
+    #   - /dev/dri:/dev/dri
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/System/Ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin-web.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin-web.entrypoints=web"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.jellyfin-secure.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin-secure.entrypoints=websecure"
+      # - "traefik.http.routers.jellyfin-secure.middlewares=security-headers"
+      - "traefik.http.routers.jellyfin-secure.tls=true"
+      # - "traefik.http.routers.jellyfin-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # TV Series Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - sonarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr-web.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr-web.entrypoints=web"
+      # - "traefik.http.routers.sonarr-web.middlewares=authelia"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.sonarr-secure.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr-secure.entrypoints=websecure"
+      # - "traefik.http.routers.sonarr-secure.middlewares=security-headers"
+      - "traefik.http.routers.sonarr-secure.tls=true"
+      # - "traefik.http.routers.sonarr-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - radarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr-web.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr-web.entrypoints=web"
+      # - "traefik.http.routers.radarr-web.middlewares=authelia"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.radarr-secure.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr-secure.entrypoints=websecure"
+      # - "traefik.http.routers.radarr-secure.middlewares=security-headers"
+      - "traefik.http.routers.radarr-secure.tls=true"
+      # - "traefik.http.routers.radarr-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # Indexer Management
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr_config:/config
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr-web.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr-web.entrypoints=web"
+      # - "traefik.http.routers.prowlarr-web.middlewares=authelia"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.prowlarr-secure.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr-secure.entrypoints=websecure"
+      # - "traefik.http.routers.prowlarr-secure.middlewares=security-headers"
+      - "traefik.http.routers.prowlarr-secure.tls=true"
+      # - "traefik.http.routers.prowlarr-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # Request Management
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - overseerr_config:/config
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - sonarr
+      - radarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr-web.rule=Host(`overseerr.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr-web.entrypoints=web"
+      # - "traefik.http.routers.overseerr-web.middlewares=authelia"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.overseerr-secure.rule=Host(`overseerr.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr-secure.entrypoints=websecure"
+      # - "traefik.http.routers.overseerr-secure.middlewares=security-headers"
+      # - "traefik.http.routers.overseerr-secure.tls=true"
+      # - "traefik.http.routers.overseerr-secure.tls.certresolver=letsencrypt"
+
+  # Subtitle Management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - bazarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6767/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - sonarr
+      - radarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr-web.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr-web.entrypoints=web"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.bazarr-secure.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.bazarr-secure.tls=true"
+      # - "traefik.http.routers.bazarr-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # Dashboard Management
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - BASE_URL=https://homarr.${DOMAIN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - homarr_configs:/app/data/configs
+      - homarr_icons:/app/public/icons
+      - homarr_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7575/api/configs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homarr-web.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-web.entrypoints=web"
+      - "traefik.http.services.homarr.loadbalancer.server.port=7575"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.homarr-secure.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.homarr-secure.tls=true"
+      # - "traefik.http.routers.homarr-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
+
+  # Security headers middleware for Cloudflare Tunnel
+  security-headers:
+    image: nginx:alpine
+    container_name: security-headers
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Scheme=https"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+
+  # Test web service
+  test-web:
+    image: nginx:alpine
+    container_name: test-web
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.test-web.rule=Host(`test.${DOMAIN}`)"
+      - "traefik.http.routers.test-web.entrypoints=web"
+      - "traefik.http.routers.test-web.middlewares=authelia"
+      - "traefik.http.services.test.loadbalancer.server.port=80"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.test-secure.rule=Host(`test.${DOMAIN}`)"
+      - "traefik.http.routers.test-secure.entrypoints=websecure"
+      - "traefik.http.routers.test-secure.middlewares=authelia"
+      - "traefik.http.routers.test-secure.tls=true"
+
+
+  # Cloudflare Tunnel for external access
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  traefik_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.40.0.0/24
+          gateway: 172.40.0.1
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.41.0.0/24
+          gateway: 172.41.0.1
+  download_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.42.0.0/24
+          gateway: 172.42.0.1
+
+secrets:
+  traefik_dashboard_auth:
+    file: ../secrets/traefik_dashboard_auth.txt
+  wg_private_key:
+    file: ../secrets/wg_private_key.txt
+  authelia_jwt_secret:
+    file: ../secrets/authelia_jwt_secret.txt
+  authelia_session_secret:
+    file: ../secrets/authelia_session_secret.txt
+  authelia_encryption_key:
+    file: ../secrets/authelia_encryption_key.txt
+  authelia_smtp_password:
+    file: ../secrets/authelia_smtp_password.txt
+
+volumes:
+  traefik_data:
+  gluetun_data:
+  jellyfin_config:
+  sonarr_config:
+  radarr_config:
+  prowlarr_config:
+  overseerr_config:
+  bazarr_config:
+  homarr_configs:
+  homarr_icons:
+  homarr_data:
+  qbittorrent_config:
+  media_data:

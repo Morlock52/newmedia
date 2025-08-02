@@ -1,0 +1,37 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/widgets
+
+- logo:
+    icon: /images/logo.png
+
+- search:
+    provider: google
+    target: _blank
+
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: full
+      timeStyle: short
+      locale: en
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+    expanded: true
+    uptime: true
+
+- unifi_console:
+    url: https://unifi.ui.com
+    username: user@email.com
+    password: password
+
+- openmeteo:
+    label: New York
+    latitude: 40.7589
+    longitude: -73.9851
+    timezone: America/New_York
+    units: imperial
+    cache: 5

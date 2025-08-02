@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Holographic Configuration Panel - 2025 Edition</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Variables */
+        :root {
+            /* Holographic Color Palette */
+            --holo-cyan: #00FFFF;
+            --holo-magenta: #FF00FF;
+            --holo-yellow: #FFFF00;
+            --holo-mint: #0FF1CE;
+            --holo-pink: #FF10F0;
+            --holo-blue: #10F0FF;
+            --holo-purple: #8B00FF;
+            --holo-orange: #FF6B00;
+            
+            /* Dark Theme */
+            --bg-primary: #0A0A14;
+            --bg-secondary: #12121C;
+            --bg-tertiary: #1A1A24;
+            
+            /* Glass Effects */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            
+            /* Text Colors */
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0C0;
+            --text-tertiary: #7070B0;
+            
+            /* Status Colors */
+            --success: #00FF7F;
+            --warning: #FFD700;
+            --error: #FF4444;
+            --info: #00BFFF;
+        }
+
+        /* Global Reset */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Background Animation */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(0, 255, 255, 0.05) 0%,
+                rgba(255, 0, 255, 0.05) 50%,
+                rgba(0, 0, 0, 0.8) 100%
+            );
+            animation: pulse-bg 6s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes pulse-bg {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.7; }
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            background: linear-gradient(135deg, 
+                rgba(0, 255, 255, 0.05) 0%, 
+                rgba(255, 0, 255, 0.05) 50%,
+                rgba(255, 255, 0, 0.05) 100%
+            );
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: linear-gradient(90deg,
+                var(--holo-cyan) 0%,
+                var(--holo-magenta) 25%,
+                var(--holo-yellow) 50%,
+                var(--holo-mint) 75%,
+                var(--holo-cyan) 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s linear infinite;
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .back-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-blue));
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            min-height: calc(100vh - 120px);
+        }
+
+        /* Configuration Panel */
+        .config-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 2rem;
+            box-shadow: var(--glass-shadow);
+            height: fit-content;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--holo-cyan);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--holo-cyan), var(--holo-blue));
+            border-radius: 2px;
+        }
+
+        /* Form Fields */
+        .field-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .field-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .required {
+            color: var(--error);
+        }
+
+        .help-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--holo-blue);
+            color: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .field-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online .status-dot { background: var(--success); }
+        .status-offline .status-dot { background: var(--error); }
+        .status-unknown .status-dot { background: var(--warning); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .preview-panel, .actions-panel, .profiles-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 1.5rem;
+            box-shadow: var(--glass-shadow);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--holo-magenta);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Preview */
+        .env-preview {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--holo-cyan);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+        }
+
+        /* Action Buttons */
+        .btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-blue));
+            color: var(--bg-primary);
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--holo-magenta), var(--holo-pink));
+            color: var(--text-primary);
+            box-shadow: 0 4px 15px rgba(255, 0, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 255, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #32CD32);
+            color: var(--bg-primary);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #FFA500);
+            color: var(--bg-primary);
+        }
+
+        /* Profile Selector */
+        .profile-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .profile-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--holo-cyan);
+        }
+
+        .profile-item.active {
+            border-color: var(--holo-cyan);
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .profile-name {
+            font-weight: 600;
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .profile-btn {
+            padding: 0.25rem 0.5rem;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+        }
+
+        .profile-btn:hover {
+            background: var(--holo-cyan);
+            color: var(--bg-primary);
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            max-width: 200px;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--glass-border);
+            border-top: 2px solid var(--holo-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, var(--success), #32CD32);
+            border: 1px solid var(--success);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, var(--error), #FF6B6B);
+            border: 1px solid var(--error);
+        }
+
+        .notification.warning {
+            background: linear-gradient(135deg, var(--warning), #FFA500);
+            border: 1px solid var(--warning);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, var(--info), #40E0D0);
+            border: 1px solid var(--info);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <h1 class="title">Configuration Panel</h1>
+                <div class="subtitle">Media Services Environment Setup</div>
+            </div>
+            <a href="working-dashboard.html" class="back-btn">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Configuration Panel -->
+        <div class="config-panel">
+            <form id="config-form">
+                <!-- Media Servers Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        🎬 Media Servers
+                    </h2>
+                    
+                    <!-- Jellyfin -->
+                    <div class="field-group">
+                        <h3 style="color: var(--holo-blue); margin-bottom: 1rem;">Jellyfin Configuration</h3>
+                        <div class="field-row">
+                            <div>
+                                <label class="field-label">
+                                    Server URL <span class="required">*</span>
+                                    <span class="help-icon" data-tooltip="URL where Jellyfin will be accessible">?</span>
+                                    <span class="status-indicator status-unknown">
+                                        <span class="status-dot"></span>
+                                        Checking...
+                                    </span>
+                                </label>
+                                <input type="url" class="field-input" name="jellyfin_url" placeholder="http://localhost:8096" value="http://localhost:8096">
+                            </div>
+                            <div>
+                                <label class="field-label">
+                                    API Key
+                                    <span class="help-icon" data-tooltip="Jellyfin API key for dashboard integration">?</span>
+                                </label>
+                                <input type="text" class="field-input" name="jellyfin_api_key" placeholder="Enter API key">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plex -->
+                    <div class="field-group">
+                        <h3 style="color: var(--holo-blue); margin-bottom: 1rem;">Plex Configuration</h3>
+                        <div class="field-row">
+                            <div>
+                                <label class="field-label">
+                                    Server URL
+                                    <span class="help-icon" data-tooltip="URL where Plex will be accessible">?</span>
+                                    <span class="status-indicator status-offline">
+                                        <span class="status-dot"></span>
+                                        Offline
+                                    </span>
+                                </label>
+                                <input type="url" class="field-input" name="plex_url" placeholder="http://localhost:32400" value="http://localhost:32400">
+                            </div>
+                            <div>
+                                <label class="field-label">
+                                    Token
+                                    <span class="help-icon" data-tooltip="Plex authentication token">?</span>
+                                </label>
+                                <input type="text" class="field-input" name="plex_token" placeholder="Enter Plex token">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Arr Stack Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        📡 Arr Stack
+                    </h2>
+                    
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Sonarr URL <span class="required">*</span>
+                                <span class="help-icon" data-tooltip="TV series management">?</span>
+                                <span class="status-indicator status-online">
+                                    <span class="status-dot"></span>
+                                    Online
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="sonarr_url" placeholder="http://localhost:8989" value="http://localhost:8989">
+                        </div>
+                        <div>
+                            <label class="field-label">Sonarr API Key</label>
+                            <input type="text" class="field-input" name="sonarr_api_key" placeholder="Enter API key">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Radarr URL <span class="required">*</span>
+                                <span class="help-icon" data-tooltip="Movie management">?</span>
+                                <span class="status-indicator status-online">
+                                    <span class="status-dot"></span>
+                                    Online
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="radarr_url" placeholder="http://localhost:7878" value="http://localhost:7878">
+                        </div>
+                        <div>
+                            <label class="field-label">Radarr API Key</label>
+                            <input type="text" class="field-input" name="radarr_api_key" placeholder="Enter API key">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Lidarr URL
+                                <span class="help-icon" data-tooltip="Music management">?</span>
+                                <span class="status-indicator status-offline">
+                                    <span class="status-dot"></span>
+                                    Offline
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="lidarr_url" placeholder="http://localhost:8686" value="http://localhost:8686">
+                        </div>
+                        <div>
+                            <label class="field-label">Lidarr API Key</label>
+                            <input type="text" class="field-input" name="lidarr_api_key" placeholder="Enter API key">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Prowlarr URL
+                                <span class="help-icon" data-tooltip="Indexer management">?</span>
+                                <span class="status-indicator status-online">
+                                    <span class="status-dot"></span>
+                                    Online
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="prowlarr_url" placeholder="http://localhost:9696" value="http://localhost:9696">
+                        </div>
+                        <div>
+                            <label class="field-label">Prowlarr API Key</label>
+                            <input type="text" class="field-input" name="prowlarr_api_key" placeholder="Enter API key">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Clients Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        ⬇️ Download Clients
+                    </h2>
+                    
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                qBittorrent URL
+                                <span class="help-icon" data-tooltip="Primary torrent client">?</span>
+                                <span class="status-indicator status-online">
+                                    <span class="status-dot"></span>
+                                    Online
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="qbittorrent_url" placeholder="http://localhost:8080" value="http://localhost:8080">
+                        </div>
+                        <div>
+                            <label class="field-label">Username</label>
+                            <input type="text" class="field-input" name="qbittorrent_username" placeholder="admin" value="admin">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">Password</label>
+                            <input type="password" class="field-input" name="qbittorrent_password" placeholder="Enter password">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Transmission URL
+                                <span class="help-icon" data-tooltip="Alternative torrent client">?</span>
+                                <span class="status-indicator status-offline">
+                                    <span class="status-dot"></span>
+                                    Offline
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="transmission_url" placeholder="http://localhost:9091" value="http://localhost:9091">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        📊 Monitoring
+                    </h2>
+                    
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Tautulli URL
+                                <span class="help-icon" data-tooltip="Plex monitoring and statistics">?</span>
+                                <span class="status-indicator status-unknown">
+                                    <span class="status-dot"></span>
+                                    Checking...
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="tautulli_url" placeholder="http://localhost:8181" value="http://localhost:8181">
+                        </div>
+                        <div>
+                            <label class="field-label">Tautulli API Key</label>
+                            <input type="text" class="field-input" name="tautulli_api_key" placeholder="Enter API key">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Grafana URL
+                                <span class="help-icon" data-tooltip="Advanced metrics dashboard">?</span>
+                                <span class="status-indicator status-offline">
+                                    <span class="status-dot"></span>
+                                    Offline
+                                </span>
+                            </label>
+                            <input type="url" class="field-input" name="grafana_url" placeholder="http://localhost:3000" value="http://localhost:3000">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Prometheus URL
+                                <span class="help-icon" data-tooltip="Metrics collection">?</span>
+                            </label>
+                            <input type="url" class="field-input" name="prometheus_url" placeholder="http://localhost:9090" value="http://localhost:9090">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        🔔 Notifications
+                    </h2>
+                    
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Discord Webhook URL
+                                <span class="help-icon" data-tooltip="Discord channel for notifications">?</span>
+                            </label>
+                            <input type="url" class="field-input" name="discord_webhook" placeholder="https://discord.com/api/webhooks/...">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Telegram Bot Token
+                                <span class="help-icon" data-tooltip="Telegram bot for notifications">?</span>
+                            </label>
+                            <input type="text" class="field-input" name="telegram_token" placeholder="Enter bot token">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">Telegram Chat ID</label>
+                            <input type="text" class="field-input" name="telegram_chat_id" placeholder="Enter chat ID">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Email SMTP Server
+                                <span class="help-icon" data-tooltip="SMTP server for email notifications">?</span>
+                            </label>
+                            <input type="text" class="field-input" name="smtp_server" placeholder="smtp.gmail.com">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Settings Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        ⚙️ System Settings
+                    </h2>
+                    
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Media Root Path <span class="required">*</span>
+                                <span class="help-icon" data-tooltip="Root directory for all media files">?</span>
+                            </label>
+                            <input type="text" class="field-input" name="media_root" placeholder="/media" value="/media">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Downloads Path <span class="required">*</span>
+                                <span class="help-icon" data-tooltip="Directory for downloads">?</span>
+                            </label>
+                            <input type="text" class="field-input" name="downloads_path" placeholder="/downloads" value="/downloads">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                PUID
+                                <span class="help-icon" data-tooltip="User ID for file permissions">?</span>
+                            </label>
+                            <input type="number" class="field-input" name="puid" placeholder="1000" value="1000">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                PGID
+                                <span class="help-icon" data-tooltip="Group ID for file permissions">?</span>
+                            </label>
+                            <input type="number" class="field-input" name="pgid" placeholder="1000" value="1000">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div>
+                            <label class="field-label">
+                                Timezone
+                                <span class="help-icon" data-tooltip="System timezone">?</span>
+                            </label>
+                            <input type="text" class="field-input" name="timezone" placeholder="America/New_York" value="America/New_York">
+                        </div>
+                        <div>
+                            <label class="field-label">
+                                Log Level
+                                <span class="help-icon" data-tooltip="Application logging level">?</span>
+                            </label>
+                            <select class="field-input" name="log_level">
+                                <option value="INFO">INFO</option>
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <h3 class="panel-title">📄 .env Preview</h3>
+                <div class="env-preview" id="env-preview">
+                    <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+                    <div id="env-content"># Media Services Configuration
+# Generated by Holographic Dashboard
+
+# Media Servers
+JELLYFIN_URL=http://localhost:8096
+JELLYFIN_API_KEY=
+
+# Arr Stack  
+SONARR_URL=http://localhost:8989
+SONARR_API_KEY=
+RADARR_URL=http://localhost:7878
+RADARR_API_KEY=
+
+# System Settings
+MEDIA_ROOT=/media
+DOWNLOADS_PATH=/downloads
+PUID=1000
+PGID=1000
+TZ=America/New_York
+LOG_LEVEL=INFO</div>
+                </div>
+            </div>
+
+            <!-- Actions Panel -->
+            <div class="actions-panel">
+                <h3 class="panel-title">🚀 Actions</h3>
+                <button class="btn btn-primary" onclick="generateEnv()">
+                    📄 Generate .env File
+                </button>
+                <button class="btn btn-secondary" onclick="generateDockerCompose()">
+                    🐳 Generate Docker Compose
+                </button>
+                <button class="btn btn-success" onclick="testConnections()">
+                    🔍 Test All Connections
+                </button>
+                <button class="btn btn-warning" onclick="validateConfig()">
+                    ✅ Validate Configuration
+                </button>
+            </div>
+
+            <!-- Profiles Panel -->
+            <div class="profiles-panel">
+                <h3 class="panel-title">📋 Configuration Profiles</h3>
+                <div id="profiles-list">
+                    <div class="profile-item active" data-profile="default">
+                        <div>
+                            <div class="profile-name">Default Setup</div>
+                            <div style="font-size: 0.8rem; color: var(--text-tertiary);">Basic configuration</div>
+                        </div>
+                        <div class="profile-actions">
+                            <button class="profile-btn" onclick="loadProfile('default')">Load</button>
+                            <button class="profile-btn" onclick="saveProfile()">Save</button>
+                        </div>
+                    </div>
+                    <div class="profile-item" data-profile="advanced">
+                        <div>
+                            <div class="profile-name">Advanced Setup</div>
+                            <div style="font-size: 0.8rem; color: var(--text-tertiary);">Full monitoring stack</div>
+                        </div>
+                        <div class="profile-actions">
+                            <button class="profile-btn" onclick="loadProfile('advanced')">Load</button>
+                            <button class="profile-btn" onclick="deleteProfile('advanced')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createNewProfile()" style="margin-top: 1rem;">
+                    ➕ New Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Configuration data
+        let config = {};
+        let profiles = {
+            'default': {
+                name: 'Default Setup',
+                description: 'Basic configuration',
+                config: {
+                    jellyfin_url: 'http://localhost:8096',
+                    sonarr_url: 'http://localhost:8989',
+                    radarr_url: 'http://localhost:7878',
+                    media_root: '/media',
+                    downloads_path: '/downloads',
+                    puid: '1000',
+                    pgid: '1000',
+                    timezone: 'America/New_York',
+                    log_level: 'INFO'
+                }
+            },
+            'advanced': {
+                name: 'Advanced Setup',
+                description: 'Full monitoring stack',
+                config: {
+                    jellyfin_url: 'http://localhost:8096',
+                    plex_url: 'http://localhost:32400',
+                    sonarr_url: 'http://localhost:8989',
+                    radarr_url: 'http://localhost:7878',
+                    lidarr_url: 'http://localhost:8686',
+                    prowlarr_url: 'http://localhost:9696',
+                    qbittorrent_url: 'http://localhost:8080',
+                    tautulli_url: 'http://localhost:8181',
+                    grafana_url: 'http://localhost:3000',
+                    prometheus_url: 'http://localhost:9090',
+                    media_root: '/media',
+                    downloads_path: '/downloads',
+                    puid: '1000',
+                    pgid: '1000',
+                    timezone: 'America/New_York',
+                    log_level: 'DEBUG'
+                }
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updatePreview();
+            loadProfile('default');
+            checkServiceStatus();
+        });
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Form change listener
+            document.getElementById('config-form').addEventListener('input', updatePreview);
+            
+            // Tooltip listeners
+            document.querySelectorAll('.help-icon').forEach(icon => {
+                icon.addEventListener('mouseenter', showTooltip);
+                icon.addEventListener('mouseleave', hideTooltip);
+            });
+            
+            // Profile item clicks
+            document.querySelectorAll('.profile-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const profile = this.dataset.profile;
+                    selectProfile(profile);
+                    loadProfile(profile);
+                });
+            });
+        }
+
+        // Update .env preview
+        function updatePreview() {
+            const form = document.getElementById('config-form');
+            const formData = new FormData(form);
+            config = {};
+            
+            for (let [key, value] of formData.entries()) {
+                config[key] = value;
+            }
+            
+            let envContent = '# Media Services Configuration\n';
+            envContent += '# Generated by Holographic Dashboard\n\n';
+            
+            // Media Servers
+            envContent += '# === MEDIA SERVERS ===\n';
+            if (config.jellyfin_url) envContent += `JELLYFIN_URL=${config.jellyfin_url}\n`;
+            if (config.jellyfin_api_key) envContent += `JELLYFIN_API_KEY=${config.jellyfin_api_key}\n`;
+            if (config.plex_url) envContent += `PLEX_URL=${config.plex_url}\n`;
+            if (config.plex_token) envContent += `PLEX_TOKEN=${config.plex_token}\n`;
+            
+            // Arr Stack
+            envContent += '\n# === ARR STACK ===\n';
+            if (config.sonarr_url) envContent += `SONARR_URL=${config.sonarr_url}\n`;
+            if (config.sonarr_api_key) envContent += `SONARR_API_KEY=${config.sonarr_api_key}\n`;
+            if (config.radarr_url) envContent += `RADARR_URL=${config.radarr_url}\n`;
+            if (config.radarr_api_key) envContent += `RADARR_API_KEY=${config.radarr_api_key}\n`;
+            if (config.lidarr_url) envContent += `LIDARR_URL=${config.lidarr_url}\n`;
+            if (config.lidarr_api_key) envContent += `LIDARR_API_KEY=${config.lidarr_api_key}\n`;
+            if (config.prowlarr_url) envContent += `PROWLARR_URL=${config.prowlarr_url}\n`;
+            if (config.prowlarr_api_key) envContent += `PROWLARR_API_KEY=${config.prowlarr_api_key}\n`;
+            
+            // Download Clients
+            envContent += '\n# === DOWNLOAD CLIENTS ===\n';
+            if (config.qbittorrent_url) envContent += `QBITTORRENT_URL=${config.qbittorrent_url}\n`;
+            if (config.qbittorrent_username) envContent += `QBITTORRENT_USERNAME=${config.qbittorrent_username}\n`;
+            if (config.qbittorrent_password) envContent += `QBITTORRENT_PASSWORD=${config.qbittorrent_password}\n`;
+            if (config.transmission_url) envContent += `TRANSMISSION_URL=${config.transmission_url}\n`;
+            
+            // Monitoring
+            envContent += '\n# === MONITORING ===\n';
+            if (config.tautulli_url) envContent += `TAUTULLI_URL=${config.tautulli_url}\n`;
+            if (config.tautulli_api_key) envContent += `TAUTULLI_API_KEY=${config.tautulli_api_key}\n`;
+            if (config.grafana_url) envContent += `GRAFANA_URL=${config.grafana_url}\n`;
+            if (config.prometheus_url) envContent += `PROMETHEUS_URL=${config.prometheus_url}\n`;
+            
+            // Notifications
+            envContent += '\n# === NOTIFICATIONS ===\n';
+            if (config.discord_webhook) envContent += `DISCORD_WEBHOOK=${config.discord_webhook}\n`;
+            if (config.telegram_token) envContent += `TELEGRAM_TOKEN=${config.telegram_token}\n`;
+            if (config.telegram_chat_id) envContent += `TELEGRAM_CHAT_ID=${config.telegram_chat_id}\n`;
+            if (config.smtp_server) envContent += `SMTP_SERVER=${config.smtp_server}\n`;
+            
+            // System Settings
+            envContent += '\n# === SYSTEM SETTINGS ===\n';
+            if (config.media_root) envContent += `MEDIA_ROOT=${config.media_root}\n`;
+            if (config.downloads_path) envContent += `DOWNLOADS_PATH=${config.downloads_path}\n`;
+            if (config.puid) envContent += `PUID=${config.puid}\n`;
+            if (config.pgid) envContent += `PGID=${config.pgid}\n`;
+            if (config.timezone) envContent += `TZ=${config.timezone}\n`;
+            if (config.log_level) envContent += `LOG_LEVEL=${config.log_level}\n`;
+            
+            document.getElementById('env-content').textContent = envContent;
+        }
+
+        // Profile management
+        function selectProfile(profileName) {
+            document.querySelectorAll('.profile-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-profile="${profileName}"]`).classList.add('active');
+        }
+
+        function loadProfile(profileName) {
+            if (!profiles[profileName]) return;
+            
+            const profile = profiles[profileName];
+            const form = document.getElementById('config-form');
+            
+            // Clear form first
+            form.reset();
+            
+            // Load profile values
+            Object.entries(profile.config).forEach(([key, value]) => {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) {
+                    input.value = value;
+                }
+            });
+            
+            updatePreview();
+            showNotification(`Loaded profile: ${profile.name}`, 'success');
+        }
+
+        function saveProfile() {
+            const profileName = prompt('Enter profile name:');
+            if (!profileName) return;
+            
+            profiles[profileName] = {
+                name: profileName,
+                description: 'Custom configuration',
+                config: { ...config }
+            };
+            
+            updateProfilesList();
+            showNotification(`Saved profile: ${profileName}`, 'success');
+        }
+
+        function createNewProfile() {
+            const profileName = prompt('Enter new profile name:');
+            if (!profileName) return;
+            
+            profiles[profileName] = {
+                name: profileName,
+                description: 'New configuration',
+                config: {}
+            };
+            
+            updateProfilesList();
+            selectProfile(profileName);
+            showNotification(`Created new profile: ${profileName}`, 'success');
+        }
+
+        function deleteProfile(profileName) {
+            if (profileName === 'default') {
+                showNotification('Cannot delete default profile', 'error');
+                return;
+            }
+            
+            if (confirm(`Delete profile "${profileName}"?`)) {
+                delete profiles[profileName];
+                updateProfilesList();
+                selectProfile('default');
+                loadProfile('default');
+                showNotification(`Deleted profile: ${profileName}`, 'warning');
+            }
+        }
+
+        function updateProfilesList() {
+            const container = document.getElementById('profiles-list');
+            container.innerHTML = '';
+            
+            Object.entries(profiles).forEach(([key, profile]) => {
+                const div = document.createElement('div');
+                div.className = 'profile-item';
+                div.dataset.profile = key;
+                div.innerHTML = `
+                    <div>
+                        <div class="profile-name">${profile.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-tertiary);">${profile.description}</div>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="profile-btn" onclick="loadProfile('${key}')">Load</button>
+                        ${key !== 'default' ? `<button class="profile-btn" onclick="deleteProfile('${key}')">Delete</button>` : '<button class="profile-btn" onclick="saveProfile()">Save</button>'}
+                    </div>
+                `;
+                
+                div.addEventListener('click', function() {
+                    selectProfile(key);
+                    loadProfile(key);
+                });
+                
+                container.appendChild(div);
+            });
+        }
+
+        // Actions
+        function generateEnv() {
+            updatePreview();
+            const content = document.getElementById('env-content').textContent;
+            downloadFile('.env', content);
+            showNotification('Generated .env file successfully!', 'success');
+        }
+
+        function generateDockerCompose() {
+            const dockerCompose = `version: '3.8'
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    environment:
+      - TZ=\${TZ:-America/New_York}
+      - PUID=\${PUID:-1000}
+      - PGID=\${PGID:-1000}
+    volumes:
+      - ./config/jellyfin:/config
+      - \${MEDIA_ROOT:-/media}:/media
+    restart: unless-stopped
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    environment:
+      - TZ=\${TZ:-America/New_York}
+      - PUID=\${PUID:-1000}
+      - PGID=\${PGID:-1000}
+    volumes:
+      - ./config/sonarr:/config
+      - \${MEDIA_ROOT:-/media}/tv:/tv
+      - \${DOWNLOADS_PATH:-/downloads}:/downloads
+    restart: unless-stopped
+
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - "7878:7878"
+    environment:
+      - TZ=\${TZ:-America/New_York}
+      - PUID=\${PUID:-1000}
+      - PGID=\${PGID:-1000}
+    volumes:
+      - ./config/radarr:/config
+      - \${MEDIA_ROOT:-/media}/movies:/movies
+      - \${DOWNLOADS_PATH:-/downloads}:/downloads
+    restart: unless-stopped
+
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=\${TZ:-America/New_York}
+      - PUID=\${PUID:-1000}
+      - PGID=\${PGID:-1000}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - \${DOWNLOADS_PATH:-/downloads}:/downloads
+    restart: unless-stopped
+
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    ports:
+      - "9696:9696"
+    environment:
+      - TZ=\${TZ:-America/New_York}
+      - PUID=\${PUID:-1000}
+      - PGID=\${PGID:-1000}
+    volumes:
+      - ./config/prowlarr:/config
+    restart: unless-stopped
+`;
+            
+            downloadFile('docker-compose.yml', dockerCompose);
+            showNotification('Generated Docker Compose file successfully!', 'success');
+        }
+
+        function testConnections() {
+            const testBtn = event.target;
+            testBtn.classList.add('loading');
+            testBtn.textContent = 'Testing...';
+            
+            // Simulate connection testing
+            setTimeout(() => {
+                testBtn.classList.remove('loading');
+                testBtn.textContent = '🔍 Test All Connections';
+                showNotification('Connection tests completed! Check status indicators.', 'info');
+                
+                // Update status indicators randomly for demo
+                document.querySelectorAll('.status-indicator').forEach(indicator => {
+                    const statuses = ['online', 'offline', 'unknown'];
+                    const status = statuses[Math.floor(Math.random() * statuses.length)];
+                    indicator.className = `status-indicator status-${status}`;
+                    
+                    const dot = indicator.querySelector('.status-dot');
+                    const text = indicator.querySelector('span:not(.status-dot)');
+                    
+                    switch(status) {
+                        case 'online':
+                            text.textContent = 'Online';
+                            break;
+                        case 'offline':
+                            text.textContent = 'Offline';
+                            break;
+                        case 'unknown':
+                            text.textContent = 'Checking...';
+                            break;
+                    }
+                });
+            }, 3000);
+        }
+
+        function validateConfig() {
+            const errors = [];
+            const warnings = [];
+            
+            // Check required fields
+            if (!config.jellyfin_url && !config.plex_url) {
+                errors.push('At least one media server URL is required');
+            }
+            
+            if (!config.sonarr_url) {
+                errors.push('Sonarr URL is required');
+            }
+            
+            if (!config.radarr_url) {
+                errors.push('Radarr URL is required');
+            }
+            
+            if (!config.media_root) {
+                errors.push('Media root path is required');
+            }
+            
+            if (!config.downloads_path) {
+                errors.push('Downloads path is required');
+            }
+            
+            // Check warnings
+            if (!config.jellyfin_api_key && config.jellyfin_url) {
+                warnings.push('Jellyfin API key recommended for full integration');
+            }
+            
+            if (!config.sonarr_api_key && config.sonarr_url) {
+                warnings.push('Sonarr API key recommended for automation');
+            }
+            
+            // Show results
+            if (errors.length > 0) {
+                showNotification(`Validation failed: ${errors[0]}`, 'error');
+            } else if (warnings.length > 0) {
+                showNotification(`Validation passed with warnings: ${warnings[0]}`, 'warning');
+            } else {
+                showNotification('Configuration validation passed!', 'success');
+            }
+        }
+
+        // Utility functions
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function copyToClipboard() {
+            const content = document.getElementById('env-content').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                showNotification('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        function showTooltip(event) {
+            const tooltip = document.getElementById('tooltip');
+            const text = event.target.dataset.tooltip;
+            
+            tooltip.textContent = text;
+            tooltip.classList.add('show');
+            
+            const rect = event.target.getBoundingClientRect();
+            tooltip.style.left = rect.left + 'px';
+            tooltip.style.top = (rect.bottom + 10) + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        function checkServiceStatus() {
+            // Simulate checking service status
+            // In a real implementation, this would make API calls to each service
+            console.log('Checking service status...');
+        }
+
+        // Background animation
+        function createBackgroundAnimation() {
+            const canvas = document.createElement('canvas');
+            canvas.style.position = 'fixed';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.zIndex = '-2';
+            canvas.style.opacity = '0.1';
+            document.body.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            let animationId;
+            
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw animated grid
+                const time = Date.now() * 0.001;
+                const gridSize = 50;
+                
+                ctx.strokeStyle = `rgba(0, 255, 255, ${0.1 + Math.sin(time) * 0.05})`;
+                ctx.lineWidth = 1;
+                
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            resizeCanvas();
+            animate();
+            
+            window.addEventListener('resize', resizeCanvas);
+        }
+        
+        // Start background animation
+        createBackgroundAnimation();
+    </script>
+</body>
+</html>

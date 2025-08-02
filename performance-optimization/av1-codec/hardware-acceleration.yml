@@ -1,0 +1,338 @@
+version: '3.9'
+
+# AV1 Hardware Acceleration Configuration for Media Server
+# Optimized for NVIDIA, Intel QSV, and AMD VCN
+
+x-gpu-resources: &gpu-resources
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu, video, compute, utility]
+
+services:
+  # FFmpeg AV1 Encoder Service
+  av1_encoder:
+    image: jrottenberg/ffmpeg:5.1-nvidia
+    container_name: av1_encoder
+    build:
+      context: ./dockerfiles
+      dockerfile: Dockerfile.av1-encoder
+      args:
+        - FFMPEG_VERSION=5.1
+        - NVIDIA_DRIVER_VERSION=525.60.11
+        - CUDA_VERSION=12.0
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+      - CUDA_VISIBLE_DEVICES=0,1
+      - LIBVA_DRIVER_NAME=iHD  # Intel Media Driver
+      - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+      - AV1_ENCODER_PRESET=p4  # Performance preset
+      - AV1_QUALITY_LEVEL=30   # Quality level (0-63)
+      - AV1_SPEED=6           # Encoding speed (0-10)
+      - ENABLE_NVENC_AV1=true
+      - ENABLE_QSV_AV1=true
+      - ENABLE_VCN_AV1=true
+    volumes:
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ./transcoding/queue:/queue
+      - ./transcoding/output:/output
+      - ./config/av1-profiles:/config/profiles:ro
+      - /dev/dri:/dev/dri  # Intel GPU access
+      - /dev/kfd:/dev/kfd  # AMD GPU access
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+    <<: *gpu-resources
+    networks:
+      - media_network
+      - gpu_network
+    restart: unless-stopped
+    command: |
+      bash -c "
+      # Start AV1 encoding service
+      while true; do
+        for file in /queue/*.{mp4,mkv,avi,mov}; do
+          if [ -f \"$$file\" ]; then
+            filename=$$(basename \"$$file\")
+            output=\"/output/$${filename%.*}_av1.mkv\"
+            
+            # Detect available hardware encoder
+            if nvidia-smi > /dev/null 2>&1; then
+              # NVIDIA GPU encoding
+              ffmpeg -hwaccel cuda -hwaccel_output_format cuda \
+                -i \"$$file\" \
+                -c:v av1_nvenc \
+                -preset p4 \
+                -tune hq \
+                -rc vbr \
+                -cq 30 \
+                -bf 0 \
+                -spatial_aq 1 \
+                -temporal_aq 1 \
+                -rc-lookahead 32 \
+                -surfaces 64 \
+                -gpu 0 \
+                -c:a libopus -b:a 256k \
+                -map_metadata 0 \
+                -movflags +faststart \
+                \"$$output\"
+            elif [ -e /dev/dri/renderD128 ]; then
+              # Intel QSV encoding
+              ffmpeg -hwaccel qsv -hwaccel_output_format qsv \
+                -i \"$$file\" \
+                -c:v av1_qsv \
+                -preset medium \
+                -global_quality 30 \
+                -look_ahead 1 \
+                -look_ahead_depth 40 \
+                -c:a libopus -b:a 256k \
+                -map_metadata 0 \
+                -movflags +faststart \
+                \"$$output\"
+            else
+              # Software encoding fallback
+              ffmpeg -i \"$$file\" \
+                -c:v libsvtav1 \
+                -preset 6 \
+                -crf 30 \
+                -svtav1-params tune=0:enable-overlays=1:scd=1:scm=0 \
+                -c:a libopus -b:a 256k \
+                -map_metadata 0 \
+                -movflags +faststart \
+                \"$$output\"
+            fi
+            
+            # Move processed file
+            mv \"$$file\" \"/queue/processed/$$filename\"
+          fi
+        done
+        sleep 10
+      done
+      "
+
+  # Hardware Transcoding Node with GPU support
+  transcode_node_gpu:
+    image: haveagitgat/tdarr_node:latest
+    container_name: transcode_node_gpu
+    environment:
+      - nodeID=GPU_Node_1
+      - nodeIP=0.0.0.0
+      - nodePort=8267
+      - serverIP=tdarr_gpu
+      - serverPort=8266
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - ./config/tdarr/configs:/app/configs
+      - ./config/tdarr/logs:/app/logs
+      - ${MEDIA_PATH:-./media-data}:/media
+      - /tmp/tdarr_transcode:/temp
+      - /dev/shm:/dev/shm
+    devices:
+      - /dev/dri:/dev/dri
+    <<: *gpu-resources
+    networks:
+      - gpu_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '16.0'
+          memory: 32G
+        reservations:
+          cpus: '8.0'
+          memory: 16G
+
+  # Jellyfin with AV1 Hardware Decoding
+  jellyfin_av1:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin_av1
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=https://media.example.com
+      # Hardware acceleration settings
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+      # Enable AV1 decoding
+      - JELLYFIN_FFmpeg__hwaccel=cuda
+      - JELLYFIN_FFmpeg__hwaccel_output_format=cuda
+      - JELLYFIN_FFmpeg__analyzeduration=200000000
+      - JELLYFIN_FFmpeg__probesize=1000000000
+      # Hardware encoder selection
+      - JELLYFIN_ENCODING_HWACCEL_TYPE=nvidia
+      - JELLYFIN_ENABLE_HARDWARE_ENCODING=true
+      - JELLYFIN_HARDWARE_ACCELERATION_TYPE=nvenc
+      - JELLYFIN_ENABLE_TONEMAPPING=true
+      - JELLYFIN_TONEMAPPING_MODE=hable
+      - JELLYFIN_ENABLE_VPP_TONEMAPPING=true
+    volumes:
+      - ./config/jellyfin:/config
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+      - /tmp/jellyfin-transcode:/transcode
+      - /dev/shm:/dev/shm
+      # GPU device mounts
+      - /usr/lib/x86_64-linux-gnu/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1:ro
+      - /usr/lib/x86_64-linux-gnu/libnvcuvid.so.1:/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1:ro
+    devices:
+      - /dev/dri:/dev/dri
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+    <<: *gpu-resources
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+      - "7359:7359/udp"
+      - "1900:1900/udp"
+    networks:
+      - media_network
+      - gpu_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '12.0'
+          memory: 24G
+        reservations:
+          cpus: '6.0'
+          memory: 12G
+
+  # GPU Monitoring and Optimization Service
+  gpu_optimizer:
+    image: python:3.11-slim
+    container_name: gpu_optimizer
+    build:
+      context: ./gpu-optimizer
+      dockerfile: Dockerfile
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+      - PROMETHEUS_URL=http://prometheus_optimized:9090
+      - OPTIMIZATION_INTERVAL=30
+      - GPU_POWER_LIMIT=350  # Watts
+      - GPU_TEMP_TARGET=75   # Celsius
+      - GPU_MEMORY_CLOCK=7000  # MHz
+      - GPU_GRAPHICS_CLOCK=1980  # MHz
+    volumes:
+      - ./gpu-optimizer:/app
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1:ro
+    <<: *gpu-resources
+    networks:
+      - gpu_network
+      - media_network
+    restart: unless-stopped
+    privileged: true  # Required for GPU settings
+    command: |
+      python -c "
+      import subprocess
+      import time
+      import psutil
+      import os
+      
+      def optimize_gpu():
+          # Set GPU power limit
+          subprocess.run(['nvidia-smi', '-pl', os.environ['GPU_POWER_LIMIT']])
+          
+          # Set GPU clocks
+          subprocess.run(['nvidia-smi', '-pm', '1'])  # Enable persistence mode
+          subprocess.run(['nvidia-smi', '-lgc', os.environ['GPU_GRAPHICS_CLOCK']])
+          subprocess.run(['nvidia-smi', '-lmc', os.environ['GPU_MEMORY_CLOCK']])
+          
+          # Monitor and adjust
+          while True:
+              # Get GPU stats
+              result = subprocess.run(['nvidia-smi', '--query-gpu=temperature.gpu,utilization.gpu,memory.used,power.draw', 
+                                     '--format=csv,noheader,nounits'], capture_output=True, text=True)
+              
+              if result.returncode == 0:
+                  stats = result.stdout.strip().split(', ')
+                  temp = float(stats[0])
+                  util = float(stats[1])
+                  mem_used = float(stats[2])
+                  power = float(stats[3])
+                  
+                  print(f'GPU Stats - Temp: {temp}°C, Util: {util}%, Memory: {mem_used}MB, Power: {power}W')
+                  
+                  # Thermal throttling protection
+                  if temp > float(os.environ['GPU_TEMP_TARGET']):
+                      current_power = int(os.environ['GPU_POWER_LIMIT'])
+                      new_power = max(250, current_power - 10)
+                      subprocess.run(['nvidia-smi', '-pl', str(new_power)])
+                      os.environ['GPU_POWER_LIMIT'] = str(new_power)
+                      print(f'Reduced power limit to {new_power}W due to temperature')
+                  
+              time.sleep(int(os.environ['OPTIMIZATION_INTERVAL']))
+      
+      if __name__ == '__main__':
+          optimize_gpu()
+      "
+
+  # Intel GPU Metrics Exporter
+  intel_gpu_exporter:
+    image: ghcr.io/nevermo2013/intel-gpu-exporter:latest
+    container_name: intel_gpu_exporter
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - PORT=9101
+    ports:
+      - "9101:9101"
+    networks:
+      - media_network
+    restart: unless-stopped
+    volumes:
+      - /sys:/sys:ro
+
+  # NVIDIA GPU Metrics Exporter
+  nvidia_gpu_exporter:
+    image: nvidia/dcgm-exporter:latest
+    container_name: nvidia_gpu_exporter
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DCGM_EXPORTER_LISTEN=:9400
+      - DCGM_EXPORTER_KUBERNETES=false
+    <<: *gpu-resources
+    ports:
+      - "9400:9400"
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # Multi-GPU Load Balancer
+  gpu_load_balancer:
+    image: haproxy:2.8-alpine
+    container_name: gpu_load_balancer
+    volumes:
+      - ./config/haproxy/gpu-balance.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8267:8267"  # Transcoding nodes
+      - "8268:8268"  # Stats
+    networks:
+      - gpu_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+networks:
+  media_network:
+    external: true
+  gpu_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000

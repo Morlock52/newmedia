@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Init Test</title>
+    <style>
+        body {
+            background: #0A0A14;
+            color: #00FFFF;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .log {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0,255,255,0.1);
+            border-left: 2px solid #00FFFF;
+        }
+        .error {
+            color: #FF0066;
+            border-color: #FF0066;
+        }
+        .success {
+            color: #00FF00;
+            border-color: #00FF00;
+        }
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A0A14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Initialization Test</h1>
+    <div id="logs"></div>
+    
+    <div id="loading-screen">
+        <div>Loading...</div>
+    </div>
+    
+    <div id="webgl-container" style="width: 100px; height: 100px; background: #333;"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        const logs = document.getElementById('logs');
+        let logCount = 0;
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `${++logCount}. ${msg}`;
+            logs.appendChild(div);
+            console.log(msg);
+        }
+        
+        // Test THREE.js
+        log('Testing THREE.js...');
+        if (typeof THREE !== 'undefined') {
+            log('✓ THREE.js loaded', 'success');
+            log(`THREE.js version: ${THREE.REVISION}`);
+        } else {
+            log('✗ THREE.js not loaded', 'error');
+        }
+        
+        // Test WebGL
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            log('✓ WebGL supported', 'success');
+        } else {
+            log('✗ WebGL not supported', 'error');
+        }
+        
+        // Define minimal shims
+        THREE.OrbitControls = class {
+            constructor() { log('OrbitControls shimmed'); }
+            update() {}
+            dispose() {}
+        };
+        
+        THREE.EffectComposer = class {
+            constructor() { log('EffectComposer shimmed'); }
+            addPass() {}
+            render() {}
+            setSize() {}
+        };
+        
+        THREE.RenderPass = class {
+            constructor() { log('RenderPass shimmed'); }
+        };
+        
+        THREE.UnrealBloomPass = class {
+            constructor() { log('UnrealBloomPass shimmed'); }
+        };
+        
+        THREE.ShaderPass = class {
+            constructor() { log('ShaderPass shimmed'); }
+        };
+        
+        // Define window.Stats
+        window.Stats = function() {
+            return {
+                showPanel: () => {},
+                begin: () => {},
+                end: () => {},
+                dom: document.createElement('div')
+            };
+        };
+        
+        // Try minimal scene creation
+        log('Creating minimal scene...');
+        try {
+            const scene = new THREE.Scene();
+            log('✓ Scene created', 'success');
+            
+            const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            log('✓ Camera created', 'success');
+            
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(100, 100);
+            document.getElementById('webgl-container').appendChild(renderer.domElement);
+            log('✓ Renderer created and attached', 'success');
+            
+            renderer.render(scene, camera);
+            log('✓ First render successful', 'success');
+        } catch (e) {
+            log(`✗ Scene creation failed: ${e.message}`, 'error');
+        }
+        
+        // Test critical CONFIG
+        log('Loading CONFIG...');
+        const configScript = document.createElement('script');
+        configScript.src = 'js/config.js';
+        configScript.onload = () => {
+            log('✓ CONFIG loaded', 'success');
+            if (window.CONFIG) {
+                log(`✓ CONFIG available with ${Object.keys(window.CONFIG).length} keys`, 'success');
+            }
+            
+            // Test minimal dashboard class
+            log('Testing minimal dashboard...');
+            
+            class MinimalDashboard {
+                constructor() {
+                    log('MinimalDashboard constructor called');
+                    this.init();
+                }
+                
+                init() {
+                    log('MinimalDashboard.init() called');
+                    this.updateLoadingProgress(50, 'Testing...');
+                    
+                    // Hide loading screen after delay
+                    setTimeout(() => {
+                        this.updateLoadingProgress(100, 'Complete!');
+                        const loadingScreen = document.getElementById('loading-screen');
+                        if (loadingScreen) {
+                            loadingScreen.classList.add('hidden');
+                            log('✓ Loading screen hidden', 'success');
+                        }
+                    }, 1000);
+                }
+                
+                updateLoadingProgress(percent, message) {
+                    log(`Progress: ${percent}% - ${message}`);
+                }
+            }
+            
+            // Create dashboard
+            try {
+                window.dashboard = new MinimalDashboard();
+                log('✓ Minimal dashboard created', 'success');
+            } catch (e) {
+                log(`✗ Dashboard creation failed: ${e.message}`, 'error');
+            }
+        };
+        
+        configScript.onerror = () => {
+            log('✗ CONFIG failed to load', 'error');
+        };
+        
+        document.body.appendChild(configScript);
+    </script>
+</body>
+</html>

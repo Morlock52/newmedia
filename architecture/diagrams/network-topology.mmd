@@ -1,0 +1,144 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#1f2937', 'primaryTextColor': '#fff', 'primaryBorderColor': '#374151', 'lineColor': '#6b7280', 'secondaryColor': '#374151', 'tertiaryColor': '#1f2937'}}}%%
+
+graph TB
+    subgraph "External Network"
+        INET[Internet<br/>0.0.0.0/0]
+        CDN[Cloudflare CDN<br/>DDoS Protection]
+    end
+    
+    subgraph "DMZ Network - 10.10.4.0/24"
+        FW[pfSense Firewall<br/>10.10.4.1]
+        WAF[Web Application Firewall<br/>10.10.4.2]
+        VPN_GW[VPN Gateway<br/>10.10.4.3]
+    end
+    
+    subgraph "Proxy Network - 10.10.0.0/24"
+        TRAEFIK[Traefik<br/>10.10.0.2]
+        AUTHELIA[Authelia<br/>10.10.0.3]
+        HAPROXY[HAProxy LB<br/>10.10.0.4]
+        CROWDSEC[CrowdSec<br/>10.10.0.5]
+    end
+    
+    subgraph "Media Network - 10.10.1.0/24"
+        subgraph "Streaming Services"
+            JELLYFIN[Jellyfin<br/>10.10.1.10]
+            NAVIDROME[Navidrome<br/>10.10.1.11]
+            AUDIOBOOKSHELF[AudioBookshelf<br/>10.10.1.12]
+            IMMICH[Immich<br/>10.10.1.13]
+            KAVITA[Kavita<br/>10.10.1.14]
+        end
+        
+        subgraph "Content Management"
+            SONARR[Sonarr<br/>10.10.1.20]
+            RADARR[Radarr<br/>10.10.1.21]
+            LIDARR[Lidarr<br/>10.10.1.22]
+            READARR[Readarr<br/>10.10.1.23]
+            PROWLARR[Prowlarr<br/>10.10.1.24]
+        end
+        
+        subgraph "Download Clients"
+            QBITTORRENT[qBittorrent<br/>10.10.1.30]
+            SABNZBD[SABnzbd<br/>10.10.1.31]
+            JDOWNLOADER[JDownloader2<br/>10.10.1.32]
+        end
+    end
+    
+    subgraph "Admin Network - 10.10.2.0/24"
+        subgraph "Monitoring"
+            PROMETHEUS[Prometheus<br/>10.10.2.10]
+            GRAFANA[Grafana<br/>10.10.2.11]
+            LOKI[Loki<br/>10.10.2.12]
+            PROMTAIL[Promtail<br/>10.10.2.13]
+        end
+        
+        subgraph "Management"
+            PORTAINER[Portainer<br/>10.10.2.20]
+            WATCHTOWER[Watchtower<br/>10.10.2.21]
+            DUPLICATI[Duplicati<br/>10.10.2.22]
+        end
+    end
+    
+    subgraph "Data Network - 10.10.3.0/24"
+        subgraph "Databases"
+            POSTGRES[PostgreSQL<br/>10.10.3.10]
+            POSTGRES_IMMICH[PostgreSQL-Immich<br/>10.10.3.11]
+            REDIS[Redis<br/>10.10.3.12]
+            REDIS_IMMICH[Redis-Immich<br/>10.10.3.13]
+        end
+        
+        subgraph "Search"
+            ELASTICSEARCH[Elasticsearch<br/>10.10.3.20]
+            MEILISEARCH[Meilisearch<br/>10.10.3.21]
+        end
+        
+        subgraph "Storage"
+            NAS[NAS Array<br/>10.10.3.100]
+            CACHE[SSD Cache<br/>10.10.3.101]
+        end
+    end
+    
+    %% Network Connections
+    INET --> CDN
+    CDN --> FW
+    FW --> WAF
+    WAF --> TRAEFIK
+    
+    VPN_GW -.-> TRAEFIK
+    
+    TRAEFIK --> AUTHELIA
+    TRAEFIK --> HAPROXY
+    AUTHELIA --> HAPROXY
+    
+    HAPROXY --> JELLYFIN
+    HAPROXY --> NAVIDROME
+    HAPROXY --> AUDIOBOOKSHELF
+    HAPROXY --> IMMICH
+    HAPROXY --> KAVITA
+    
+    SONARR --> QBITTORRENT
+    RADARR --> QBITTORRENT
+    LIDARR --> QBITTORRENT
+    READARR --> QBITTORRENT
+    
+    PROWLARR --> SONARR
+    PROWLARR --> RADARR
+    PROWLARR --> LIDARR
+    PROWLARR --> READARR
+    
+    JELLYFIN --> NAS
+    NAVIDROME --> NAS
+    AUDIOBOOKSHELF --> NAS
+    IMMICH --> NAS
+    KAVITA --> NAS
+    
+    IMMICH --> POSTGRES_IMMICH
+    IMMICH --> REDIS_IMMICH
+    
+    PROMETHEUS --> GRAFANA
+    LOKI --> GRAFANA
+    PROMTAIL --> LOKI
+    
+    %% Firewall Rules
+    FW -.->|Port 80/443| TRAEFIK
+    FW -.->|Port 51820| VPN_GW
+    FW -.->|Block All Others| INET
+    
+    %% Network Segmentation
+    TRAEFIK -.->|VLAN Tagged| JELLYFIN
+    TRAEFIK -.->|VLAN Tagged| PROMETHEUS
+    TRAEFIK -.->|VLAN Tagged| POSTGRES
+    
+    %% Styling
+    classDef external fill:#ef4444,stroke:#dc2626,stroke-width:3px
+    classDef dmz fill:#f59e0b,stroke:#d97706,stroke-width:2px
+    classDef proxy fill:#06b6d4,stroke:#0891b2,stroke-width:2px
+    classDef media fill:#3b82f6,stroke:#2563eb,stroke-width:2px
+    classDef admin fill:#10b981,stroke:#059669,stroke-width:2px
+    classDef data fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px
+    
+    class INET,CDN external
+    class FW,WAF,VPN_GW dmz
+    class TRAEFIK,AUTHELIA,HAPROXY,CROWDSEC proxy
+    class JELLYFIN,NAVIDROME,AUDIOBOOKSHELF,IMMICH,KAVITA,SONARR,RADARR,LIDARR,READARR,PROWLARR,QBITTORRENT,SABNZBD,JDOWNLOADER media
+    class PROMETHEUS,GRAFANA,LOKI,PROMTAIL,PORTAINER,WATCHTOWER,DUPLICATI admin
+    class POSTGRES,POSTGRES_IMMICH,REDIS,REDIS_IMMICH,ELASTICSEARCH,MEILISEARCH,NAS,CACHE data

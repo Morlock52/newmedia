@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 .env File Viewer & Editor</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        }
+
+        .header {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #00ffff;
+            margin-bottom: 1rem;
+        }
+
+        .env-content {
+            background: #000;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.6;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .env-line {
+            margin: 0;
+        }
+
+        .env-comment {
+            color: #666;
+        }
+
+        .env-section {
+            color: #00ffff;
+            font-weight: 600;
+        }
+
+        .env-key {
+            color: #ff00ff;
+        }
+
+        .env-value {
+            color: #ffff00;
+        }
+
+        .current-values {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .value-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .value-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .value-key {
+            font-family: 'JetBrains Mono', monospace;
+            color: #00ffff;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .value-content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #b0b0c0;
+            word-break: break-all;
+        }
+
+        .empty {
+            color: #666;
+            font-style: italic;
+        }
+
+        .instructions {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions h3 {
+            color: #00ffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions p {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .instructions code {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <navigation-header 
+        title=".env Configuration Viewer"
+        breadcrumbs="Home,Configuration,Environment"
+        current-page="Environment"
+        back-url="main-app.html">
+    </navigation-header>
+
+    <div class="container">
+        <div class="instructions">
+            <h3>📝 How to Edit Your .env File</h3>
+            <p>1. Open your terminal and navigate to: <code>cd /Users/morlock/fun/newmedia</code></p>
+            <p>2. Edit the file using: <code>nano .env</code> or <code>vim .env</code></p>
+            <p>3. Save your changes and restart the services: <code>docker-compose restart</code></p>
+            <p>4. Or use the Smart .env Editor from the main dashboard for AI-powered assistance!</p>
+        </div>
+
+        <div class="info-panel">
+            <h2 class="info-title">📄 Current .env File Content</h2>
+            <div class="env-content" id="envContent">Loading...</div>
+        </div>
+
+        <div class="current-values">
+            <h2 class="info-title">🔍 Parsed Environment Variables</h2>
+            <div class="value-grid" id="valueGrid">
+                <!-- Values will be populated here -->
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="main-app.html" class="btn">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        // Sample .env content (in real implementation, this would come from the API)
+        const envFileContent = `# Media Server Environment Configuration
+# Copy this file to .env and fill in your values
+
+# ===========================================
+# GENERAL SETTINGS
+# ===========================================
+
+# User and group IDs (find with: id $USER)
+PUID=1000
+PGID=1000
+
+# Timezone (find with: timedatectl | grep "Time zone")
+TZ=America/New_York
+
+# Your domain name
+DOMAIN=example.com
+
+# ===========================================
+# PATHS
+# ===========================================
+
+# Media storage path (absolute path)
+MEDIA_PATH=/path/to/your/media
+
+# Downloads path (absolute path)
+DOWNLOADS_PATH=/path/to/your/downloads
+
+# ===========================================
+# AUTHENTICATION
+# ===========================================
+
+# Authelia secrets (generate with: openssl rand -hex 32)
+AUTHELIA_JWT_SECRET=65ac068a62356750b3dff73d0fc783b3b89fd322a3a2b4bb35653dfe3e434417
+AUTHELIA_SESSION_SECRET=7ccc83d96448637e1132031b00b5d8e0f05d7b17d83be2f2b71c4c8a8e4d43ff
+AUTHELIA_STORAGE_ENCRYPTION_KEY=b369a2675cddb587336f5847d7736f6e8d969c092d929fc69330f1d8df47182d
+
+# Default admin credentials
+AUTHELIA_DEFAULT_USER=admin
+AUTHELIA_DEFAULT_PASSWORD_HASH= # Generate with: docker run authelia/authelia:latest authelia hash-password 'your-password'
+
+# ===========================================
+# API KEYS
+# ===========================================
+
+# Get these from each service after first start
+SONARR_API_KEY=79eecf2b23f34760b91cfcbf97189dd0
+RADARR_API_KEY=1c0fe63736a04e6394dacb3aa1160b1c
+PROWLARR_API_KEY=5a35dd23f90c4d2bb69caa1eb0e1c534
+JELLYFIN_API_KEY=
+OVERSEERR_API_KEY=
+TAUTULLI_API_KEY=
+BAZARR_API_KEY=
+
+# ===========================================
+# DATABASE
+# ===========================================
+
+# MySQL/MariaDB settings
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=mediaserver
+MYSQL_USER=media
+MYSQL_PASSWORD=
+
+# ===========================================
+# CLOUDFLARE (Optional)
+# ===========================================
+
+# Cloudflare Tunnel settings
+CLOUDFLARE_TUNNEL_TOKEN=
+CLOUDFLARE_API_TOKEN=
+CLOUDFLARE_ZONE_ID=
+CLOUDFLARE_TUNNEL_UUID=
+
+# ===========================================
+# MONITORING
+# ===========================================
+
+# Grafana admin credentials
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=
+
+# ===========================================
+# ADDITIONAL SERVICES
+# ===========================================
+
+# qBittorrent settings
+QBITTORRENT_WEBUI_PORT=8080
+
+# Transmission settings (alternative to qBittorrent)
+TRANSMISSION_USER=admin
+TRANSMISSION_PASS=
+
+# Plex settings (if using instead of Jellyfin)
+PLEX_CLAIM=
+
+# ===========================================
+# EMAIL NOTIFICATIONS (Optional)
+# ===========================================
+
+# SMTP settings for notifications
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@example.com
+SMTP_TLS=true
+
+# ===========================================
+# VPN (Optional)
+# ===========================================
+
+# VPN settings for download clients
+VPN_ENABLED=false
+VPN_TYPE=openvpn
+VPN_USERNAME=
+VPN_PASSWORD=
+VPN_ENDPOINT=
+
+# ===========================================
+# BACKUP SETTINGS
+# ===========================================
+
+# Backup destination
+BACKUP_PATH=/path/to/backup/location
+BACKUP_RETENTION_DAYS=30
+
+# ===========================================
+# HARDWARE ACCELERATION (Optional)
+# ===========================================
+
+# Intel QuickSync (for Jellyfin/Plex transcoding)
+QUICKSYNC_ENABLED=false
+
+# NVIDIA GPU (for transcoding)
+NVIDIA_VISIBLE_DEVICES=all
+NVIDIA_DRIVER_CAPABILITIES=compute,video,utility`;
+
+        // Parse and display the content
+        function displayEnvFile() {
+            const contentDiv = document.getElementById('envContent');
+            const lines = envFileContent.split('\n');
+            
+            let formattedContent = '';
+            lines.forEach(line => {
+                if (line.trim().startsWith('#')) {
+                    if (line.includes('===')) {
+                        formattedContent += `<span class="env-section">${line}</span>\n`;
+                    } else {
+                        formattedContent += `<span class="env-comment">${line}</span>\n`;
+                    }
+                } else if (line.includes('=')) {
+                    const [key, ...valueParts] = line.split('=');
+                    const value = valueParts.join('=');
+                    formattedContent += `<span class="env-key">${key}</span>=<span class="env-value">${value}</span>\n`;
+                } else {
+                    formattedContent += line + '\n';
+                }
+            });
+            
+            contentDiv.innerHTML = formattedContent;
+        }
+
+        // Parse environment variables
+        function parseEnvVariables() {
+            const lines = envFileContent.split('\n');
+            const variables = {};
+            
+            lines.forEach(line => {
+                if (!line.trim().startsWith('#') && line.includes('=')) {
+                    const [key, ...valueParts] = line.split('=');
+                    const value = valueParts.join('=').trim();
+                    variables[key.trim()] = value;
+                }
+            });
+            
+            return variables;
+        }
+
+        // Display parsed variables
+        function displayParsedVariables() {
+            const variables = parseEnvVariables();
+            const grid = document.getElementById('valueGrid');
+            
+            Object.entries(variables).forEach(([key, value]) => {
+                const item = document.createElement('div');
+                item.className = 'value-item';
+                
+                const displayValue = value || '<span class="empty">(empty)</span>';
+                const isSecret = key.includes('SECRET') || key.includes('PASSWORD') || key.includes('KEY');
+                const maskedValue = isSecret && value ? '•'.repeat(Math.min(value.length, 20)) + '...' : displayValue;
+                
+                item.innerHTML = `
+                    <div class="value-key">${key}</div>
+                    <div class="value-content">${maskedValue}</div>
+                `;
+                
+                grid.appendChild(item);
+            });
+        }
+
+        // Load the actual .env file from API
+        async function loadEnvFromAPI() {
+            try {
+                const response = await fetch('http://localhost:3456/api/env');
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update the display with real data
+                    console.log('Loaded from API:', data);
+                }
+            } catch (error) {
+                console.log('API not available, showing sample data');
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            displayEnvFile();
+            displayParsedVariables();
+            loadEnvFromAPI();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+import express from 'express';
+import { exec, spawn } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+import os from 'os';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 3000;
+const STACK_DIR = process.env.STACK_DIR || path.join(__dirname, '..');
+
+app.use(express.json());
+app.use(exp    // Pull latest images
+    output += '📥 Pulling latest Docker images...\n';
+    try {
+      const { stdout: pullOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml --project-name media-stack pull');
+      output += pullOutput + '\n';
+    } catch (error) {
+      output += `⚠️ Warning: Failed to pull some images: ${error.message}\n`;
+    }
+
+    // Deploy the stack
+    output += '🚀 Deploying services...\n';
+    try {
+      const { stdout: deployOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml --project-name media-stack up -d');
+      output += deployOutput + '\n';
+    } catch (error) {
+      output += `❌ Failed to deploy: ${error.message}\n`;
+      return res.status(500).send(output);
+    }oin(__dirname, 'public')));
+
+// Utility function to run commands
+function runCommand(cmd, options = {}) {
+  return new Promise((resolve, reject) => {
+    exec(cmd, { cwd: STACK_DIR, ...options }, (err, stdout, stderr) => {
+      if (err) {
+        reject({ error: err.message, stderr, stdout });
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
+
+// Legacy endpoints (kept for compatibility)
+function run(cmd, res) {
+  exec(cmd, { cwd: STACK_DIR }, (err, stdout, stderr) => {
+    if (err) {
+      res.status(500).send(stderr);
+    } else {
+      res.type('text/plain').send(stdout);
+    }
+  });
+}
+
+app.get('/api/status', (req, res) => run('docker compose -f compose/docker-compose.yml ps', res));
+app.post('/api/start', (req, res) => run('docker compose -f compose/docker-compose.yml up -d', res));
+app.post('/api/stop', (req, res) => run('docker compose -f compose/docker-compose.yml stop $(docker compose -f compose/docker-compose.yml config --services | grep -v webui | tr "\\n" " ")', res));
+
+// New API endpoints for enhanced functionality
+
+// System Information
+app.get('/api/system-info', async (req, res) => {
+  try {
+    const systemInfo = {
+      puid: process.getuid ? process.getuid() : 1000,
+      pgid: process.getgid ? process.getgid() : 1000,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      platform: os.platform(),
+      arch: os.arch(),
+      hostname: os.hostname(),
+      memory: Math.round(os.totalmem() / 1024 / 1024 / 1024) + ' GB',
+      cpus: os.cpus().length
+    };
+    
+    // Try to get more accurate timezone on macOS/Linux
+    if (os.platform() !== 'win32') {
+      try {
+        const { stdout } = await runCommand('date +%Z');
+        if (stdout.trim()) {
+          systemInfo.timezoneAbbr = stdout.trim();
+        }
+      } catch (error) {
+        // Ignore timezone detection errors
+      }
+    }
+    
+    res.json(systemInfo);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Environment Status
+app.get('/api/env-status', async (req, res) => {
+  try {
+    const envPath = path.join(STACK_DIR, '.env');
+    
+    try {
+      const stats = await fs.stat(envPath);
+      const content = await fs.readFile(envPath, 'utf8');
+      const variables = content.split('\n').filter(line => 
+        line.trim() && !line.startsWith('#') && line.includes('=')
+      ).length;
+      
+      res.json({
+        exists: true,
+        variables,
+        size: stats.size,
+        modified: stats.mtime
+      });
+    } catch (error) {
+      res.json({ exists: false, variables: 0 });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Load Environment Configuration
+app.get('/api/env-config', async (req, res) => {
+  try {
+    const envPath = path.join(STACK_DIR, '.env');
+    const content = await fs.readFile(envPath, 'utf8');
+    
+    const config = {};
+    content.split('\n').forEach(line => {
+      if (line.trim() && !line.startsWith('#') && line.includes('=')) {
+        const [key, ...valueParts] = line.split('=');
+        config[key.trim()] = valueParts.join('=').trim();
+      }
+    });
+    
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Validate Configuration
+app.post('/api/validate-config', async (req, res) => {
+  try {
+    const config = req.body;
+    const errors = [];
+    const warnings = [];
+    
+    // Domain validation
+    if (!config.domain) {
+      errors.push('Domain is required');
+    } else if (config.domain !== 'localhost') {
+      const domainRegex = /^([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+      if (!domainRegex.test(config.domain)) {
+        errors.push('Invalid domain format');
+      }
+    }
+    
+    // Email validation
+    if (config.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(config.email)) {
+        errors.push('Invalid email format');
+      }
+    }
+    
+    // PUID/PGID validation
+    if (config.puid && (isNaN(config.puid) || config.puid < 1)) {
+      errors.push('Invalid PUID');
+    }
+    
+    // Timezone validation
+    if (config.timezone) {
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: config.timezone });
+      } catch (error) {
+        warnings.push('Timezone may not be valid');
+      }
+    }
+    
+    // VPN warnings
+    if (!config.vpnProvider) {
+      warnings.push('No VPN provider selected - torrenting may expose your IP');
+    }
+    
+    if (errors.length > 0) {
+      res.status(400).json({ 
+        valid: false, 
+        message: 'Configuration has errors',
+        errors,
+        warnings
+      });
+    } else {
+      res.json({ 
+        valid: true, 
+        message: 'Configuration is valid',
+        warnings
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Setup Environment
+app.post('/api/setup-environment', async (req, res) => {
+  try {
+    const config = req.body;
+    
+    // Create configuration object for setup-env.js
+    const envConfig = {
+      DOMAIN: config.domain || 'localhost',
+      EMAIL: config.email || '',
+      PUID: config.puid || '1000',
+      PGID: config.puid || '1000', // Use same as PUID if not provided
+      TZ: config.timezone || 'UTC',
+      UMASK: '002',
+      VPN_PROVIDER: config.vpnProvider || '',
+      VPN_TYPE: config.vpnType || 'wireguard',
+      VPN_PORT_FORWARDING: 'on',
+      VPN_PORT_FORWARDING_PORT: '6881',
+      DATA_ROOT: config.dataRoot || './data',
+      CONFIG_ROOT: config.configRoot || './config',
+      POSTGRES_USER: 'mediaserver',
+      POSTGRES_DB: 'mediaserver'
+    };
+    
+    // Write temporary config file
+    const tempConfigPath = path.join(STACK_DIR, '.env.temp');
+    const envContent = Object.entries(envConfig)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    
+    await fs.writeFile(tempConfigPath, envContent);
+    
+    // Run the setup-env.js tool in non-interactive mode
+    const { stdout, stderr } = await runCommand('node setup-env.js --no-interactive --dry-run');
+    
+    // If dry-run was successful, do the actual setup
+    const { stdout: setupOutput } = await runCommand('node setup-env.js --no-interactive');
+    
+    // Clean up temp file
+    try {
+      await fs.unlink(tempConfigPath);
+    } catch (error) {
+      // Ignore cleanup errors
+    }
+    
+    res.type('text/plain').send(setupOutput);
+  } catch (error) {
+    res.status(500).json({ 
+      error: error.message,
+      details: error.stderr || error.stdout
+    });
+  }
+});
+
+// Docker Status
+app.get('/api/docker-status', async (req, res) => {
+  try {
+    const { stdout } = await runCommand('docker version --format "{{.Server.Version}}"');
+    res.json({
+      running: true,
+      version: stdout.trim()
+    });
+  } catch (error) {
+    res.json({
+      running: false,
+      error: error.message
+    });
+  }
+});
+
+// System Stats
+app.get('/api/system-stats', async (req, res) => {
+  try {
+    const stats = {
+      cpu: 0,
+      memory: 0,
+      disk: 0,
+      network: 'N/A'
+    };
+    
+    // CPU usage (simplified)
+    const loadavg = os.loadavg();
+    stats.cpu = Math.round((loadavg[0] / os.cpus().length) * 100);
+    
+    // Memory usage
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    stats.memory = Math.round(((totalMem - freeMem) / totalMem) * 100);
+    
+    // Disk usage (try to get from df command)
+    try {
+      const { stdout } = await runCommand('df -h . | tail -1 | awk \'{print $5}\' | sed \'s/%//\'');
+      stats.disk = parseInt(stdout.trim()) || 0;
+    } catch (error) {
+      stats.disk = 0;
+    }
+    
+    // Network stats (simplified)
+    try {
+      const { stdout } = await runCommand('docker stats --no-stream --format "table {{.Container}}\t{{.NetIO}}" | tail -n +2 | head -1');
+      if (stdout.trim()) {
+        const parts = stdout.trim().split('\t');
+        if (parts[1]) {
+          stats.network = parts[1];
+        }
+      }
+    } catch (error) {
+      // Ignore network stats errors
+    }
+    
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Service Logs
+app.get('/api/logs/:service', async (req, res) => {
+  try {
+    const service = req.params.service;
+    const download = req.query.download === 'true';
+    
+    let cmd;
+    if (service === 'all') {
+      cmd = 'docker compose -f compose/docker-compose.yml logs --tail=100';
+    } else {
+      cmd = `docker compose -f compose/docker-compose.yml logs --tail=100 ${service}`;
+    }
+    
+    const { stdout } = await runCommand(cmd);
+    
+    if (download) {
+      res.setHeader('Content-Disposition', `attachment; filename="${service}-logs.txt"`);
+      res.setHeader('Content-Type', 'text/plain');
+    } else {
+      res.type('text/plain');
+    }
+    
+    res.send(stdout);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Health Check
+app.get('/api/health', async (req, res) => {
+  try {
+    const checks = {
+      environment: false,
+      docker: false,
+      services: [],
+      timestamp: new Date().toISOString()
+    };
+    
+    // Check environment
+    try {
+      await fs.access(path.join(STACK_DIR, '.env'));
+      checks.environment = true;
+    } catch (error) {
+      // Environment file doesn't exist
+    }
+    
+    // Check Docker
+    try {
+      await runCommand('docker version');
+      checks.docker = true;
+    } catch (error) {
+      // Docker not available
+    }
+    
+    // Check services
+    try {
+      const { stdout } = await runCommand('docker compose -f compose/docker-compose.yml ps --format json');
+      const services = stdout.split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          try {
+            return JSON.parse(line);
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(service => service);
+      
+      checks.services = services.map(service => ({
+        name: service.Service,
+        status: service.State,
+        health: service.Health || 'unknown'
+      }));
+    } catch (error) {
+      // Services check failed
+    }
+    
+    res.json(checks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Enhanced Management Endpoints
+app.post('/api/restart', async (req, res) => {
+  try {
+    // Stop services (excluding webui)
+    await runCommand('docker compose -f compose/docker-compose.yml stop $(docker compose -f compose/docker-compose.yml config --services | grep -v webui | tr "\\n" " ")');
+    
+    // Wait a moment
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Start services
+    const { stdout } = await runCommand('docker compose -f compose/docker-compose.yml up -d');
+    
+    res.type('text/plain').send(stdout);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.post('/api/update', async (req, res) => {
+  try {
+    const { stdout } = await runCommand('docker compose -f compose/docker-compose.yml pull');
+    res.type('text/plain').send(stdout);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// Deployment Endpoints
+app.post('/api/deploy', async (req, res) => {
+  try {
+    // Check if environment is configured
+    try {
+      await fs.access(path.join(STACK_DIR, '.env'));
+    } catch (error) {
+      return res.status(400).send('❌ Environment not configured. Please complete setup first.');
+    }
+
+    let output = '🚀 Starting Media Server Stack Deployment\n';
+    output += '=========================================\n\n';
+
+    // Pull latest images
+    output += '📥 Pulling latest Docker images...\n';
+    try {
+      const { stdout: pullOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml pull', { cwd: STACK_DIR });
+      output += pullOutput + '\n';
+    } catch (error) {
+      output += `⚠️ Warning: Failed to pull some images: ${error.message}\n`;
+    }
+
+    // Deploy the stack
+    output += '🚀 Deploying services...\n';
+    try {
+      const { stdout: deployOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml up -d', { cwd: STACK_DIR });
+      output += deployOutput + '\n';
+    } catch (error) {
+      output += `❌ Failed to deploy: ${error.message}\n`;
+      return res.status(500).send(output);
+    }
+
+    // Wait for services to start
+    output += '⏳ Waiting for services to start...\n';
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    // Check service status
+    output += '🔍 Checking service status...\n';
+    try {
+      const { stdout: statusOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml ps', { cwd: STACK_DIR });
+      output += statusOutput + '\n';
+    } catch (error) {
+      output += `Error checking status: ${error.message}\n`;
+    }
+
+    output += '\n✅ Deployment completed!\n';
+    output += '🌐 Your media server stack should now be running.\n';
+    output += '📝 Check the Monitoring tab for service health status.\n';
+
+    res.type('text/plain').send(output);
+  } catch (error) {
+    console.error('Deployment error:', error);
+    res.status(500).send(`❌ Deployment failed: ${error.message}`);
+  }
+});
+
+app.post('/api/deploy-monitoring', async (req, res) => {
+  try {
+    // Check if environment is configured
+    try {
+      await fs.access(path.join(STACK_DIR, '.env'));
+    } catch (error) {
+      return res.status(400).send('❌ Environment not configured. Please complete setup first.');
+    }
+
+    let output = '🚀 Starting Media Server Stack Deployment with Monitoring\n';
+    output += '========================================================\n\n';
+
+    // Pull latest images
+    output += '📥 Pulling latest Docker images...\n';
+    try {
+      const { stdout: pullOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml -f compose/compose.monitoring.yml pull', { cwd: STACK_DIR });
+      output += pullOutput + '\n';
+    } catch (error) {
+      output += `⚠️ Warning: Failed to pull some images: ${error.message}\n`;
+    }
+
+    // Deploy the stack with monitoring
+    output += '🚀 Deploying services with monitoring stack...\n';
+    const { stdout: deployOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml -f compose/compose.monitoring.yml up -d', { cwd: STACK_DIR });
+    output += deployOutput + '\n';
+
+    // Wait for services to start
+    output += '⏳ Waiting for services to start...\n';
+    await new Promise(resolve => setTimeout(resolve, 15000));
+
+    // Check service status
+    output += '🔍 Checking service status...\n';
+    try {
+      const { stdout: statusOutput } = await runCommand('docker compose --env-file .env -f compose/docker-compose.yml -f compose/compose.monitoring.yml ps', { cwd: STACK_DIR });
+      output += statusOutput + '\n';
+    } catch (error) {
+      output += `Error checking status: ${error.message}\n`;
+    }
+
+    output += '\n✅ Deployment with monitoring completed!\n';
+    output += '🌐 Your media server stack with monitoring is now running.\n';
+    output += '📊 Access Grafana for monitoring dashboards.\n';
+    output += '📝 Check the Monitoring tab for service health status.\n';
+
+    res.type('text/plain').send(output);
+  } catch (error) {
+    res.status(500).send(`❌ Deployment failed: ${error.message}`);
+  }
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Server error:', error);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+app.listen(PORT, () => {
+  console.log(`🎬 Media Server Stack Web UI listening on port ${PORT}`);
+  console.log(`🌐 Access the setup interface at: http://localhost:${PORT}`);
+  console.log(`📁 Stack directory: ${STACK_DIR}`);
+});

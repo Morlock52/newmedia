@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Holographic Media Dashboard 2025 - 3D Edition</title>
+    
+    <!-- External Libraries -->
+    <!-- Using older stable version of Three.js that has proper CORS headers -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <!-- Define shims for missing Three.js components -->
+    <script>
+        // Simple OrbitControls shim
+        THREE.OrbitControls = class OrbitControls {
+            constructor(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.enabled = true;
+                this.enableDamping = true;
+                this.dampingFactor = 0.05;
+                this.rotateSpeed = 0.002;
+                this.zoomSpeed = 0.5;
+                this.minDistance = 20;
+                this.maxDistance = 200;
+                this.maxPolarAngle = Math.PI * 0.495;
+                
+                let mouseX = 0, mouseY = 0;
+                let targetX = 0, targetY = 0;
+                let radius = 50;
+                let theta = 0;
+                let phi = Math.PI / 4;
+                
+                domElement.addEventListener('mousemove', (e) => {
+                    if (e.buttons === 1) {
+                        const deltaX = e.movementX || 0;
+                        const deltaY = e.movementY || 0;
+                        theta -= deltaX * this.rotateSpeed;
+                        phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi + deltaY * this.rotateSpeed));
+                    }
+                });
+                
+                domElement.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    radius = Math.max(this.minDistance, Math.min(this.maxDistance, radius + e.deltaY * 0.1));
+                });
+                
+                this.update = () => {
+                    this.camera.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                    this.camera.position.y = radius * Math.cos(phi);
+                    this.camera.position.z = radius * Math.sin(phi) * Math.sin(theta);
+                    this.camera.lookAt(0, 0, 0);
+                };
+                
+                this.dispose = () => {};
+            }
+        };
+        
+        // Simple EffectComposer shim
+        THREE.EffectComposer = class EffectComposer {
+            constructor(renderer) {
+                this.renderer = renderer;
+                this.passes = [];
+            }
+            addPass(pass) {
+                this.passes.push(pass);
+            }
+            render() {
+                // Simple render without effects
+                if (this.passes.length > 0 && this.passes[0].scene && this.passes[0].camera) {
+                    this.renderer.render(this.passes[0].scene, this.passes[0].camera);
+                }
+            }
+            setSize(width, height) {
+                // Update renderer size
+                this.renderer.setSize(width, height);
+            }
+        };
+        
+        THREE.RenderPass = class RenderPass {
+            constructor(scene, camera) {
+                this.scene = scene;
+                this.camera = camera;
+            }
+        };
+        
+        THREE.UnrealBloomPass = class UnrealBloomPass {
+            constructor() {}
+        };
+        
+        THREE.ShaderPass = class ShaderPass {
+            constructor(shader) {
+                this.uniforms = shader ? shader.uniforms : {};
+                this.material = shader ? new THREE.ShaderMaterial({
+                    uniforms: this.uniforms,
+                    vertexShader: shader.vertexShader,
+                    fragmentShader: shader.fragmentShader
+                }) : null;
+                this.renderToScreen = false;
+                this.enabled = true;
+            }
+        };
+        
+        THREE.CopyShader = {};
+        THREE.LuminosityHighPassShader = {};
+    </script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/holographic.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/responsive-navigation.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- WebGL Canvas Container -->
+    <div id="webgl-container"></div>
+    
+    <!-- HUD Interface -->
+    <div id="hud-interface">
+        <!-- Header -->
+        <header class="holo-header">
+            <div class="header-content">
+                <h1 class="holo-title">
+                    <span class="glitch" data-text="MEDIA SERVER">MEDIA SERVER</span>
+                    <span class="subtitle">2025 HOLOGRAPHIC EDITION</span>
+                </h1>
+                <div class="system-status">
+                    <div class="status-item" data-status="online">
+                        <div class="status-orb"></div>
+                        <span>System Core</span>
+                    </div>
+                    <div class="status-item" data-status="streaming">
+                        <div class="status-orb"></div>
+                        <span><span id="active-streams">0</span> Active Streams</span>
+                    </div>
+                    <div class="status-item" data-status="gpu">
+                        <div class="status-orb"></div>
+                        <span>GPU: <span id="gpu-usage">0</span>%</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Navigation -->
+        <nav class="holo-nav">
+            <div class="nav-wrapper">
+                <button class="nav-btn active" data-section="dashboard" data-route="/dashboard" disabled>
+                    <span class="nav-icon">⊞</span>
+                    Dashboard
+                </button>
+                <button class="nav-btn" data-section="movies" data-route="/movies" disabled>
+                    <span class="nav-icon">🎬</span>
+                    Movies
+                </button>
+                <button class="nav-btn" data-section="series" data-route="/series" disabled>
+                    <span class="nav-icon">📺</span>
+                    Series
+                </button>
+                <button class="nav-btn" data-section="music" data-route="/music" disabled>
+                    <span class="nav-icon">🎵</span>
+                    Music
+                </button>
+                <button class="nav-btn" data-section="live" data-route="/live" disabled>
+                    <span class="nav-icon">📡</span>
+                    Live
+                </button>
+                <button class="nav-btn" data-section="analytics" data-route="/analytics" disabled>
+                    <span class="nav-icon">📊</span>
+                    Analytics
+                </button>
+            </div>
+            
+            <!-- Navigation Help -->
+            <div class="nav-help" style="
+                position: absolute;
+                bottom: -25px;
+                right: 10px;
+                font-size: 10px;
+                color: rgba(0, 255, 255, 0.5);
+                display: none;
+            ">
+                Press 1-6 or Ctrl+K for quick nav
+            </div>
+        </nav>
+        
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs" style="
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            color: rgba(0, 255, 255, 0.7);
+            font-size: 0.9em;
+            z-index: 100;
+        ">
+            <!-- Breadcrumbs will be populated by navigation manager -->
+        </div>
+        
+        <!-- Main HUD Content -->
+        <div class="hud-content" data-router-view>
+            <!-- Stats Panel -->
+            <div class="stats-panel glass-panel">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-media">0</div>
+                    <div class="stat-label">Total Media</div>
+                    <div class="stat-graph" data-stat="media"></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="storage-used">0TB</div>
+                    <div class="stat-label">Storage</div>
+                    <div class="stat-graph" data-stat="storage"></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="active-users">0</div>
+                    <div class="stat-label">Active Users</div>
+                    <div class="stat-graph" data-stat="users"></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="bandwidth">0Mbps</div>
+                    <div class="stat-label">Bandwidth</div>
+                    <div class="stat-graph" data-stat="bandwidth"></div>
+                </div>
+            </div>
+            
+            <!-- Activity Feed -->
+            <div class="activity-panel glass-panel">
+                <h3 class="panel-title">System Activity</h3>
+                <div id="activity-feed" class="activity-feed">
+                    <!-- Activity items will be dynamically added -->
+                </div>
+            </div>
+            
+            <!-- Media Preview -->
+            <div class="preview-panel glass-panel" id="media-preview" style="display: none;">
+                <div class="preview-close">×</div>
+                <div class="preview-content">
+                    <div class="preview-thumbnail"></div>
+                    <div class="preview-info">
+                        <h3 class="preview-title"></h3>
+                        <div class="preview-meta"></div>
+                        <div class="preview-actions">
+                            <button class="action-btn play-btn">▶ Play</button>
+                            <button class="action-btn info-btn">ℹ Info</button>
+                            <button class="action-btn download-btn">⬇ Download</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <button class="control-btn" id="toggle-effects" title="Toggle Effects (E)">
+                <span>🎨</span>
+            </button>
+            <button class="control-btn" id="toggle-particles" title="Toggle Particles (P)">
+                <span>✨</span>
+            </button>
+            <button class="control-btn" id="toggle-audio" title="Toggle Audio Visualizer (A)">
+                <span>🎵</span>
+            </button>
+            <button class="control-btn" id="fullscreen" title="Fullscreen (F)">
+                <span>⛶</span>
+            </button>
+            <button class="control-btn" id="toggle-fallback" title="Toggle 2D/3D Mode (D)" style="display: none;">
+                <span>🔄</span>
+            </button>
+        </div>
+        
+        <!-- Performance Monitor -->
+        <div class="performance-monitor" style="
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: rgba(0, 255, 255, 0.8);
+            display: none;
+            z-index: 1000;
+        ">
+            <div id="fps-counter">FPS: --</div>
+            <div id="memory-usage">Memory: --</div>
+            <div id="webgl-status">WebGL: --</div>
+        </div>
+        
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loading-content">
+                <div class="loading-logo">
+                    <div class="cube-loader">
+                        <div class="cube-face"></div>
+                        <div class="cube-face"></div>
+                        <div class="cube-face"></div>
+                        <div class="cube-face"></div>
+                        <div class="cube-face"></div>
+                        <div class="cube-face"></div>
+                    </div>
+                </div>
+                <div class="loading-text">Initializing Holographic System...</div>
+                <div class="loading-progress">
+                    <div class="progress-bar" id="loading-progress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <!-- Load debug logger first -->
+    <script src="js/debug-logger.js"></script>
+    <script>
+        // Wait for all external libraries to load
+        window.addEventListener('load', () => {
+            window.debugLogger.info('Window loaded, starting script loading');
+            
+            // Load local scripts after THREE.js is ready
+            const scripts = [
+                'js/config.js',
+                'js/utils.js',
+                'js/shaders.js',
+                'js/particles.js',
+                'js/holographic-scene.js',
+                'js/media-cards.js',
+                'js/audio-visualizer.js',
+                'js/router.js',
+                'js/navigation-manager.js',
+                'js/page-manager.js',
+                'js/ui-controller.js',
+                'js/websocket-client.js',
+                'js/webgl-fallback.js',
+                'js/mobile-navigation.js',
+                'js/enhanced-main.js',
+                'js/debug.js'
+            ];
+            
+            let loadIndex = 0;
+            let loadErrors = 0;
+            
+            function loadNextScript() {
+                if (loadIndex < scripts.length) {
+                    const script = document.createElement('script');
+                    script.src = scripts[loadIndex];
+                    
+                    script.onload = () => {
+                        window.debugLogger.success(`Loaded: ${scripts[loadIndex]}`);
+                        loadIndex++;
+                        loadNextScript();
+                    };
+                    
+                    script.onerror = () => {
+                        window.debugLogger.error(`Failed to load: ${scripts[loadIndex]}`);
+                        loadErrors++;
+                        loadIndex++;
+                        
+                        // Continue loading even if some scripts fail
+                        if (loadErrors < 3) {
+                            loadNextScript();
+                        } else {
+                            console.error('Too many script loading errors, stopping');
+                            // Show fallback interface
+                            if (window.webglFallback) {
+                                window.webglFallback.forceActivate('Script loading errors');
+                            }
+                        }
+                    };
+                    
+                    document.body.appendChild(script);
+                } else {
+                    window.debugLogger.success('All scripts loaded successfully');
+                    window.debugLogger.info('Script loading complete, dashboard will initialize');
+                    // Check dependencies
+                    window.debugLogger.checkDependencies();
+                }
+            }
+            
+            loadNextScript();
+        });
+        
+        // Enhanced error handling
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            
+            // Show user-friendly error message
+            if (window.dashboard && window.dashboard.uiController) {
+                window.dashboard.uiController.showNotification(
+                    'An error occurred. Switching to safe mode if needed.',
+                    'error'
+                );
+            }
+            
+            // Activate fallback if too many errors
+            if (window.webglFallback && !window.webglFallback.isActive()) {
+                setTimeout(() => {
+                    window.webglFallback.forceActivate('Critical error detected');
+                }, 1000);
+            }
+        });
+        
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            event.preventDefault();
+        });
+    </script>
+</body>
+</html>

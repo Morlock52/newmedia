@@ -1,0 +1,122 @@
+# AppArmor profile for media server containers
+# Path: /etc/apparmor.d/media-server-profile
+
+#include <tunables/global>
+
+profile media-server-profile flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Network access
+  network inet tcp,
+  network inet udp,
+  network inet6 tcp,
+  network inet6 udp,
+  
+  # Deny network raw (prevent packet crafting)
+  deny network raw,
+  
+  # Process capabilities
+  capability dac_override,
+  capability chown,
+  capability setuid,
+  capability setgid,
+  capability kill,
+  capability sys_nice,
+  
+  # Deny dangerous capabilities
+  deny capability sys_admin,
+  deny capability sys_boot,
+  deny capability sys_module,
+  deny capability sys_time,
+  deny capability sys_rawio,
+  deny capability mknod,
+  deny capability audit_write,
+  deny capability setfcap,
+  
+  # File access patterns
+  # Configuration directory
+  /config/ r,
+  /config/** rwk,
+  
+  # Media directories (read-only)
+  /media/ r,
+  /media/** r,
+  
+  # Transcoding directory
+  /transcode/ r,
+  /transcode/** rwk,
+  
+  # Temporary files
+  /tmp/ r,
+  /tmp/** rwk,
+  owner /tmp/** rwk,
+  
+  # Process and system files
+  /proc/sys/kernel/osrelease r,
+  /proc/sys/net/core/somaxconn r,
+  /proc/self/** r,
+  /proc/*/stat r,
+  /proc/*/status r,
+  /proc/*/fd/ r,
+  
+  # System libraries
+  /usr/lib/** mr,
+  /lib/** mr,
+  /lib64/** mr,
+  
+  # Binary execution
+  /usr/bin/* ix,
+  /bin/* ix,
+  /usr/local/bin/* ix,
+  
+  # Shared memory
+  /dev/shm/ r,
+  /dev/shm/** rwk,
+  
+  # Device access (for hardware acceleration)
+  /dev/dri/ r,
+  /dev/dri/* r,
+  /dev/nvidia* r,
+  
+  # Standard devices
+  /dev/null rw,
+  /dev/zero rw,
+  /dev/full rw,
+  /dev/random r,
+  /dev/urandom r,
+  /dev/tty rw,
+  /dev/pts/* rw,
+  
+  # Deny access to sensitive areas
+  deny /proc/*/mem rwx,
+  deny /proc/*/kmem rwx,
+  deny /proc/kcore rwx,
+  deny /sys/** w,
+  deny /boot/** rwx,
+  deny /etc/passwd w,
+  deny /etc/shadow rwx,
+  deny /etc/sudoers rwx,
+  deny /root/** rwx,
+  deny /home/** rwx,
+  
+  # Signal permissions
+  signal send set=(term, kill) peer=unconfined,
+  signal receive set=(term, kill) peer=unconfined,
+  
+  # Unix socket access
+  unix (connect, receive, send) type=stream addr=none,
+  unix (connect, receive, send) type=dgram addr=none,
+  
+  # DBus (if needed)
+  #include <abstractions/dbus-session-strict>
+  
+  # Ptrace (for debugging, normally denied)
+  deny ptrace,
+  
+  # Mount operations (denied)
+  deny mount,
+  deny umount,
+  deny pivot_root,
+}

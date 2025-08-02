@@ -1,0 +1,80 @@
+---
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+# Server Configuration
+server:
+  address: 'tcp://0.0.0.0:9091/'
+
+# Log Configuration  
+log:
+  level: info
+
+# Theme Configuration
+theme: light
+
+# Default redirection URL
+default_redirection_url: https://auth.morloksmaze.com
+
+# TOTP Configuration
+totp:
+  issuer: authelia.com
+
+# Authentication Backend Configuration
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+
+# Access Control Configuration
+access_control:
+  default_policy: deny
+  rules:
+    - domain: auth.morloksmaze.com
+      policy: bypass
+    - domain: jellyfin.morloksmaze.com
+      policy: one_factor
+    - domain: sonarr.morloksmaze.com
+      policy: one_factor
+    - domain: radarr.morloksmaze.com
+      policy: one_factor
+    - domain: prowlarr.morloksmaze.com
+      policy: one_factor
+    - domain: overseerr.morloksmaze.com
+      policy: one_factor
+    - domain: traefik.morloksmaze.com
+      policy: one_factor
+
+# Session Configuration
+session:
+  name: authelia_session
+  expiration: 3600
+  inactivity: 300
+  cookies:
+    - domain: morloksmaze.com
+      authelia_url: https://auth.morloksmaze.com
+  redis:
+    host: redis
+    port: 6379
+    password: ${REDIS_PASSWORD}
+
+# Regulation Configuration
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+# Storage Configuration
+storage:
+  local:
+    path: /config/db.sqlite3
+
+# Notification Configuration  
+notifier:
+  filesystem:
+    filename: /config/notification.txt
+
+# Identity Validation
+identity_validation:
+  reset_password:
+    jwt_secret: changeme-jwt-secret

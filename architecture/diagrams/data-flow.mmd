@@ -1,0 +1,92 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#1f2937', 'primaryTextColor': '#fff', 'primaryBorderColor': '#374151', 'lineColor': '#6b7280', 'secondaryColor': '#374151', 'tertiaryColor': '#1f2937'}}}%%
+
+graph LR
+    subgraph "Content Acquisition"
+        USER[User Request]
+        OVER[Overseerr]
+        ARR[*arr Services]
+        PROW[Prowlarr]
+        INDEX[Indexers]
+        DL[Download Clients]
+    end
+    
+    subgraph "Processing Pipeline"
+        PROC[Processing]
+        TRANS[Transcoding]
+        META[Metadata]
+        SUB[Subtitles]
+        THUMB[Thumbnails]
+    end
+    
+    subgraph "Storage Layer"
+        CACHE[SSD Cache]
+        NAS[NAS Storage]
+        BACKUP[Backup Storage]
+        ARCH[Archive Storage]
+    end
+    
+    subgraph "Delivery"
+        CDN[CDN Cache]
+        STREAM[Streaming Servers]
+        CLIENT[Client Devices]
+    end
+    
+    subgraph "Analytics"
+        METRICS[Metrics Collection]
+        ELASTIC[Elasticsearch]
+        GRAF[Grafana]
+    end
+    
+    %% Content Flow
+    USER -->|Request Content| OVER
+    OVER -->|Approved| ARR
+    ARR -->|Search| PROW
+    PROW -->|Query| INDEX
+    INDEX -->|Results| PROW
+    PROW -->|Best Match| ARR
+    ARR -->|Download| DL
+    
+    %% Processing Flow
+    DL -->|Raw Files| PROC
+    PROC -->|Extract| META
+    PROC -->|Generate| THUMB
+    PROC -->|Download| SUB
+    PROC -->|Convert| TRANS
+    
+    %% Storage Flow
+    TRANS -->|Hot Data| CACHE
+    CACHE -->|Age Out| NAS
+    NAS -->|Backup| BACKUP
+    NAS -->|Archive| ARCH
+    
+    %% Delivery Flow
+    CACHE -->|Stream| STREAM
+    STREAM -->|Cache| CDN
+    CDN -->|Deliver| CLIENT
+    NAS -->|Direct| STREAM
+    
+    %% Analytics Flow
+    STREAM -->|Events| METRICS
+    METRICS -->|Store| ELASTIC
+    ELASTIC -->|Query| GRAF
+    DL -->|Stats| METRICS
+    PROC -->|Performance| METRICS
+    
+    %% Feedback Loops
+    CLIENT -.->|Watch Data| METRICS
+    GRAF -.->|Insights| OVER
+    METRICS -.->|Popular| CACHE
+    
+    %% Data Lifecycle
+    style USER fill:#3b82f6
+    style OVER fill:#10b981
+    style ARR fill:#10b981
+    style PROW fill:#10b981
+    style DL fill:#f59e0b
+    style PROC fill:#8b5cf6
+    style CACHE fill:#ef4444
+    style NAS fill:#06b6d4
+    style STREAM fill:#3b82f6
+    style CLIENT fill:#10b981
+    style METRICS fill:#f59e0b
+    style GRAF fill:#ef4444

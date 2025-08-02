@@ -1,0 +1,333 @@
+# Istio Service Mesh Configuration
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: istio-control-plane
+  namespace: istio-system
+spec:
+  profile: production
+  
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 4Gi
+          limits:
+            cpu: 2000m
+            memory: 8Gi
+        hpaSpec:
+          minReplicas: 3
+          maxReplicas: 10
+          
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 4Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi
+        hpaSpec:
+          minReplicas: 3
+          maxReplicas: 20
+        service:
+          type: LoadBalancer
+          ports:
+          - port: 80
+            targetPort: 8080
+            name: http2
+          - port: 443
+            targetPort: 8443
+            name: https
+          - port: 31400
+            targetPort: 31400
+            name: tcp-status
+            
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+            
+  meshConfig:
+    accessLogFile: /dev/stdout
+    defaultConfig:
+      proxyStatsMatcher:
+        inclusionRegexps:
+        - ".*outlier_detection.*"
+        - ".*circuit_breakers.*"
+        - ".*upstream_rq_retry.*"
+        - ".*upstream_rq_pending.*"
+        - ".*local_rate_limit.*"
+      
+      # Enable distributed tracing
+      tracing:
+        sampling: 100.0
+        max_path_tag_length: 256
+        
+    extensionProviders:
+    - name: otel
+      envoyOtelAls:
+        service: opentelemetry-collector.media-platform-monitoring.svc.cluster.local
+        port: 4317
+    - name: prometheus
+      prometheus:
+        service: prometheus.media-platform-monitoring.svc.cluster.local
+        port: 9090
+        
+    telemetry:
+      v2:
+        prometheus:
+          configOverride:
+            inboundSidecar:
+              disable_host_header_fallback: true
+            outboundSidecar:
+              disable_host_header_fallback: true
+            gateway:
+              disable_host_header_fallback: true
+              
+  values:
+    telemetry:
+      v2:
+        stackdriver:
+          configOverride:
+            disable: true
+---
+# Gateway Configuration
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: media-platform-gateway
+  namespace: media-platform
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: media-platform-tls
+    hosts:
+    - "*.media.example.com"
+    - "media.example.com"
+---
+# Virtual Service for API routing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: media-api
+  namespace: media-platform
+spec:
+  hosts:
+  - "api.media.example.com"
+  gateways:
+  - media-platform-gateway
+  http:
+  # GraphQL endpoint
+  - match:
+    - uri:
+        prefix: "/graphql"
+    route:
+    - destination:
+        host: graphql-gateway
+        port:
+          number: 80
+      weight: 100
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: gateway-error,reset,connect-failure,refused-stream
+      
+  # REST API with version routing
+  - match:
+    - uri:
+        prefix: "/api/v2"
+    route:
+    - destination:
+        host: api-gateway-v2
+        port:
+          number: 80
+      weight: 90
+    - destination:
+        host: api-gateway-v3
+        port:
+          number: 80
+      weight: 10  # Canary deployment
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    timeout: 30s
+    
+  # WebSocket for real-time features
+  - match:
+    - headers:
+        upgrade:
+          exact: websocket
+    route:
+    - destination:
+        host: websocket-gateway
+        port:
+          number: 80
+    websocketUpgrade: true
+---
+# Destination Rules with circuit breaking
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: media-services
+  namespace: media-platform
+spec:
+  host: "*.media-platform.svc.cluster.local"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 2
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: "x-session-id"
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+---
+# Service Entry for external services
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-ml-api
+  namespace: media-platform
+spec:
+  hosts:
+  - ml-api.external.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+---
+# Authorization Policy
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: media-api-auth
+  namespace: media-platform
+spec:
+  selector:
+    matchLabels:
+      app: graphql-gateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/graphql"]
+    when:
+    - key: request.auth.claims[iss]
+      values: ["https://auth.media.example.com"]
+  - from:
+    - source:
+        notRequestPrincipals: ["*"]
+    to:
+    - operation:
+        methods: ["POST"]
+        paths: ["/graphql"]
+        notPaths: ["/graphql/introspection"]
+    when:
+    - key: request.headers[x-api-key]
+      values: ["*"]
+---
+# Request Authentication
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: media-platform
+spec:
+  selector:
+    matchLabels:
+      app: graphql-gateway
+  jwtRules:
+  - issuer: "https://auth.media.example.com"
+    jwksUri: "https://auth.media.example.com/.well-known/jwks.json"
+    audiences:
+    - "media-platform"
+    forwardOriginalToken: true
+---
+# Rate Limiting
+apiVersion: networking.istio.io/v1beta1
+kind: EnvoyFilter
+metadata:
+  name: rate-limit
+  namespace: media-platform
+spec:
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.local_ratelimit
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          value:
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              max_tokens: 1000
+              tokens_per_fill: 100
+              fill_interval: 60s
+            filter_enabled:
+              runtime_key: local_rate_limit_enabled
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            filter_enforced:
+              runtime_key: local_rate_limit_enforced
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            response_headers_to_add:
+              - append: false
+                header:
+                  key: x-local-rate-limit
+                  value: 'true'

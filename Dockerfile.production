@@ -1,0 +1,308 @@
+# Multi-stage Dockerfile for Media Server Stack Production
+# =========================================================
+# Version: 3.0.0
+# Features: Security hardening, minimal attack surface, optimized layers
+
+# =========================================================
+# Stage 1: Base Security Layer
+# =========================================================
+FROM alpine:3.19 AS security-base
+
+# Install security tools and certificates
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    su-exec \
+    tini \
+    shadow \
+    libcap \
+    openssl \
+    curl \
+    && update-ca-certificates
+
+# Create non-root user with specific UID/GID
+ARG PUID=1000
+ARG PGID=1000
+RUN addgroup -g ${PGID} mediauser \
+    && adduser -D -u ${PUID} -G mediauser mediauser \
+    && mkdir -p /config /data /logs \
+    && chown -R mediauser:mediauser /config /data /logs
+
+# =========================================================
+# Stage 2: Python Base (for Python-based services)
+# =========================================================
+FROM python:3.12-alpine AS python-base
+
+# Copy security certificates from previous stage
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /usr/share/zoneinfo /usr/share/zoneinfo
+
+# Install Python dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo \
+    && pip install --no-cache-dir --upgrade \
+    pip \
+    wheel \
+    setuptools \
+    cryptography \
+    requests \
+    pyyaml \
+    redis \
+    psycopg2-binary \
+    prometheus-client \
+    && apk del gcc musl-dev libffi-dev openssl-dev cargo
+
+# =========================================================
+# Stage 3: Node.js Base (for Node-based services)
+# =========================================================
+FROM node:20-alpine AS node-base
+
+# Copy security certificates
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /usr/share/zoneinfo /usr/share/zoneinfo
+
+# Install production dependencies only
+RUN apk add --no-cache \
+    tini \
+    && npm install -g \
+    npm@latest \
+    yarn@latest \
+    pnpm@latest \
+    && npm cache clean --force
+
+# =========================================================
+# Stage 4: Media Processing Base
+# =========================================================
+FROM alpine:3.19 AS media-base
+
+# Copy security setup
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=security-base /sbin/su-exec /sbin/su-exec
+COPY --from=security-base /sbin/tini /sbin/tini
+
+# Install media processing tools
+RUN apk add --no-cache \
+    # Media tools
+    ffmpeg \
+    mediainfo \
+    # Image processing
+    imagemagick \
+    libwebp-tools \
+    # Archive tools
+    unrar \
+    p7zip \
+    # Network tools
+    curl \
+    wget \
+    # System tools
+    bash \
+    busybox-extras \
+    findutils \
+    grep \
+    sed \
+    # Performance monitoring
+    htop \
+    iotop \
+    # Hardware acceleration support
+    intel-media-driver \
+    mesa-va-drivers \
+    && rm -rf /var/cache/apk/*
+
+# =========================================================
+# Stage 5: Custom API Service
+# =========================================================
+FROM python-base AS api-service
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY docker/api/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY docker/api/src ./src
+COPY docker/api/config ./config
+
+# Create non-root user
+RUN addgroup -g 1000 apiuser \
+    && adduser -D -u 1000 -G apiuser apiuser \
+    && chown -R apiuser:apiuser /app
+
+# Switch to non-root user
+USER apiuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health').raise_for_status()"
+
+# Use tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# =========================================================
+# Stage 6: Custom Web UI Service
+# =========================================================
+FROM node-base AS web-builder
+
+# Build arguments
+ARG REACT_APP_API_URL
+ARG REACT_APP_VERSION
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY docker/web-ui/package*.json ./
+RUN npm ci --only=production
+
+# Copy source code
+COPY docker/web-ui/src ./src
+COPY docker/web-ui/public ./public
+
+# Build production bundle
+RUN npm run build
+
+# =========================================================
+# Stage 7: Web UI Runtime
+# =========================================================
+FROM nginx:alpine AS web-runtime
+
+# Copy built assets from builder
+COPY --from=web-builder /app/build /usr/share/nginx/html
+
+# Copy custom nginx configuration
+COPY docker/web-ui/nginx.conf /etc/nginx/nginx.conf
+COPY docker/web-ui/security-headers.conf /etc/nginx/conf.d/
+
+# Create non-root user
+RUN addgroup -g 1000 webuser \
+    && adduser -D -u 1000 -G webuser webuser \
+    && chown -R webuser:webuser /usr/share/nginx/html \
+    && chown -R webuser:webuser /var/cache/nginx \
+    && chown -R webuser:webuser /var/log/nginx \
+    && touch /var/run/nginx.pid \
+    && chown webuser:webuser /var/run/nginx.pid
+
+# Switch to non-root user
+USER webuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
+
+# =========================================================
+# Stage 8: Monitoring Agent
+# =========================================================
+FROM alpine:3.19 AS monitoring-agent
+
+# Copy base security
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /sbin/tini /sbin/tini
+
+# Install monitoring tools
+RUN apk add --no-cache \
+    prometheus-node-exporter \
+    collectd \
+    python3 \
+    py3-pip \
+    && pip3 install --no-cache-dir \
+    prometheus-client \
+    psutil \
+    docker
+
+# Copy monitoring scripts
+COPY docker/monitoring/scripts /scripts
+RUN chmod +x /scripts/*
+
+# Create non-root user
+RUN addgroup -g 1000 monitor \
+    && adduser -D -u 1000 -G monitor monitor
+
+USER monitor
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/scripts/monitor.sh"]
+
+# =========================================================
+# Stage 9: Backup Agent
+# =========================================================
+FROM alpine:3.19 AS backup-agent
+
+# Copy base security
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /sbin/tini /sbin/tini
+
+# Install backup tools
+RUN apk add --no-cache \
+    restic \
+    rclone \
+    postgresql16-client \
+    redis \
+    bash \
+    curl \
+    gzip \
+    tar \
+    && curl -L https://github.com/wal-g/wal-g/releases/latest/download/wal-g-pg-alpine-amd64 -o /usr/local/bin/wal-g \
+    && chmod +x /usr/local/bin/wal-g
+
+# Copy backup scripts
+COPY docker/backup/scripts /scripts
+RUN chmod +x /scripts/*
+
+# Create non-root user
+RUN addgroup -g 1000 backup \
+    && adduser -D -u 1000 -G backup backup
+
+USER backup
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/scripts/backup.sh"]
+
+# =========================================================
+# Stage 10: Init Container
+# =========================================================
+FROM alpine:3.19 AS init-container
+
+# Copy base utilities
+COPY --from=security-base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=security-base /sbin/su-exec /sbin/su-exec
+
+# Install initialization tools
+RUN apk add --no-cache \
+    bash \
+    curl \
+    postgresql16-client \
+    redis \
+    openssl \
+    jq \
+    yq \
+    gettext \
+    && rm -rf /var/cache/apk/*
+
+# Copy initialization scripts
+COPY docker/init /init
+RUN chmod +x /init/*.sh
+
+# This container runs as root to set permissions
+# but drops privileges when executing tasks
+ENTRYPOINT ["/init/entrypoint.sh"]
+
+# =========================================================
+# Build Examples:
+# =========================================================
+# docker build --target api-service -t media-api:latest -f Dockerfile.production .
+# docker build --target web-runtime -t media-web:latest -f Dockerfile.production .
+# docker build --target monitoring-agent -t media-monitor:latest -f Dockerfile.production .
+# docker build --target backup-agent -t media-backup:latest -f Dockerfile.production .
+# docker build --target init-container -t media-init:latest -f Dockerfile.production .

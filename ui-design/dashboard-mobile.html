@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Media Hub - Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary-dark: #0A0E27;
+            --primary-light: #F8F9FA;
+            --accent-blue: #3B82F6;
+            --accent-green: #10B981;
+            --accent-yellow: #F59E0B;
+            --accent-red: #EF4444;
+            --dark-surface: #1A1F3A;
+            --dark-card: #242B47;
+            --dark-border: #2D3561;
+            --text-primary: #F8F9FA;
+            --text-secondary: #94A3B8;
+            --safe-area-top: env(safe-area-inset-top);
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+        }
+
+        /* Mobile Header */
+        .mobile-header {
+            background: var(--dark-surface);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(26, 31, 58, 0.95);
+        }
+
+        .mobile-logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Level Bar */
+        .level-bar {
+            background: var(--dark-card);
+            padding: 1rem;
+            margin: 0.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .level-text {
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .streak {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .xp-bar {
+            height: 20px;
+            background: var(--dark-border);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 90%;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .xp-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            padding: 0 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: space-between;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: var(--dark-card);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+            background: var(--accent-blue);
+        }
+
+        .action-icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .action-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Services Section */
+        .services-section {
+            padding: 0 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            margin: 1rem 0.5rem 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .service-card {
+            background: var(--dark-card);
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .service-card.swiping {
+            transition: none;
+        }
+
+        .service-main {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            background: var(--dark-card);
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .service-actions {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 80px;
+            background: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .service-icon {
+            font-size: 1.2rem;
+        }
+
+        .service-name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        .service-description {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .service-toggle {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .service-card.off .toggle-icon {
+            transform: rotate(90deg);
+            opacity: 0.5;
+        }
+
+        .service-card.off .status-dot {
+            background: var(--accent-red);
+        }
+
+        .service-card.off .service-status {
+            color: var(--accent-red);
+        }
+
+        /* Achievements Footer */
+        .achievements-footer {
+            background: var(--dark-card);
+            margin: 1rem 0.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .achievement-badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+        }
+
+        .badge.locked {
+            background: var(--dark-border);
+            opacity: 0.5;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--dark-surface);
+            padding: 0.5rem 0;
+            padding-bottom: calc(0.5rem + var(--safe-area-bottom));
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--dark-border);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .nav-item.active {
+            color: var(--accent-blue);
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Pull to refresh */
+        .pull-to-refresh {
+            position: fixed;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: var(--dark-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 99;
+        }
+
+        .pull-to-refresh.show {
+            top: 80px;
+        }
+
+        .pull-to-refresh.refreshing {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translateX(-50%) rotate(360deg); }
+        }
+
+        /* Gesture hints */
+        .gesture-hint {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .gesture-hint.show {
+            opacity: 1;
+        }
+
+        /* Mode switcher overlay */
+        .mode-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .mode-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .mode-selector {
+            background: var(--dark-card);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .mode-overlay.show .mode-selector {
+            transform: scale(1);
+        }
+
+        .mode-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-options {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .mode-option {
+            flex: 1;
+            padding: 1rem;
+            background: var(--dark-surface);
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-option:active {
+            transform: scale(0.95);
+        }
+
+        .mode-option.selected {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Haptic feedback simulation */
+        .haptic {
+            animation: haptic 0.1s ease;
+        }
+
+        @keyframes haptic {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.98); }
+        }
+
+        /* Landscape adjustments */
+        @media (orientation: landscape) {
+            .action-row {
+                justify-content: center;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+
+            .services-section {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Safe area adjustments */
+        @supports (padding: max(0px)) {
+            .mobile-header {
+                padding-top: max(1rem, var(--safe-area-top));
+            }
+
+            .bottom-nav {
+                padding-bottom: max(0.5rem, var(--safe-area-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Pull to Refresh -->
+    <div class="pull-to-refresh" id="pullRefresh">
+        <span>🔄</span>
+    </div>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="mobile-logo">
+            🏠 Media Hub
+        </div>
+        <div class="user-icon">A</div>
+    </header>
+
+    <!-- Level Bar -->
+    <div class="level-bar">
+        <div class="level-text">
+            <span>Level 5</span>
+            <span class="streak">🔥 7 days</span>
+        </div>
+        <div class="xp-bar">
+            <div class="xp-fill"></div>
+        </div>
+        <div class="xp-text">450/500 XP</div>
+    </div>
+
+    <!-- Quick Actions -->
+    <section class="quick-actions">
+        <div class="action-row">
+            <button class="action-btn" onclick="handleAction('watch')">
+                <span class="action-icon">📺</span>
+                <span class="action-label">Watch</span>
+            </button>
+            <button class="action-btn" onclick="handleAction('download')">
+                <span class="action-icon">🎬</span>
+                <span class="action-label">Download</span>
+            </button>
+            <button class="action-btn" onclick="handleAction('organize')">
+                <span class="action-icon">📚</span>
+                <span class="action-label">Organize</span>
+            </button>
+            <button class="action-btn" onclick="handleAction('play')">
+                <span class="action-icon">🎮</span>
+                <span class="action-label">Play</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Services -->
+    <section class="services-section">
+        <h2 class="section-title">Services</h2>
+        
+        <div class="service-card" data-service="plex">
+            <div class="service-actions">Settings</div>
+            <div class="service-main">
+                <div class="service-info">
+                    <div class="service-header">
+                        <span class="service-icon">📺</span>
+                        <span class="service-name">Plex</span>
+                        <div class="service-status">
+                            <span class="status-dot"></span>
+                            <span>Running</span>
+                        </div>
+                    </div>
+                    <div class="service-description">Stream anywhere</div>
+                </div>
+                <div class="service-toggle" onclick="toggleService(this)">
+                    <span class="toggle-icon">▣</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="service-card" data-service="sonarr">
+            <div class="service-actions">Settings</div>
+            <div class="service-main">
+                <div class="service-info">
+                    <div class="service-header">
+                        <span class="service-icon">📺</span>
+                        <span class="service-name">Sonarr</span>
+                        <div class="service-status">
+                            <span class="status-dot"></span>
+                            <span>Running</span>
+                        </div>
+                    </div>
+                    <div class="service-description">TV automated</div>
+                </div>
+                <div class="service-toggle" onclick="toggleService(this)">
+                    <span class="toggle-icon">▣</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="service-card" data-service="radarr">
+            <div class="service-actions">Settings</div>
+            <div class="service-main">
+                <div class="service-info">
+                    <div class="service-header">
+                        <span class="service-icon">🎬</span>
+                        <span class="service-name">Radarr</span>
+                        <div class="service-status">
+                            <span class="status-dot"></span>
+                            <span>Running</span>
+                        </div>
+                    </div>
+                    <div class="service-description">Movies automated</div>
+                </div>
+                <div class="service-toggle" onclick="toggleService(this)">
+                    <span class="toggle-icon">▣</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Achievements -->
+    <div class="achievements-footer">
+        <div class="section-title">Recent Wins 🏆</div>
+        <div class="achievement-badges">
+            <div class="badge">🎬</div>
+            <div class="badge">📺</div>
+            <div class="badge">🔧</div>
+            <div class="badge">🚀</div>
+            <div class="badge locked">❓</div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">📊</span>
+            <span>Stats</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">🎯</span>
+            <span>Goals</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+        </div>
+    </nav>
+
+    <!-- Gesture Hint -->
+    <div class="gesture-hint" id="gestureHint"></div>
+
+    <!-- Mode Overlay -->
+    <div class="mode-overlay" id="modeOverlay">
+        <div class="mode-selector">
+            <h2 class="mode-title">Choose Your View</h2>
+            <div class="mode-options">
+                <div class="mode-option selected" onclick="selectMode('simple')">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎯</div>
+                    <div>Simple</div>
+                </div>
+                <div class="mode-option" onclick="selectMode('advanced')">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🚀</div>
+                    <div>Advanced</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Touch handling
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let currentX = 0;
+        let isDragging = false;
+        let draggedElement = null;
+
+        // Initialize swipe on service cards
+        document.querySelectorAll('.service-card').forEach(card => {
+            const main = card.querySelector('.service-main');
+            
+            main.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDragging = true;
+                draggedElement = main;
+                card.classList.add('swiping');
+            });
+            
+            main.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                
+                currentX = e.touches[0].clientX;
+                const diffX = touchStartX - currentX;
+                const diffY = Math.abs(touchStartY - e.touches[0].clientY);
+                
+                // Only swipe horizontally
+                if (diffX > 0 && diffY < 50) {
+                    e.preventDefault();
+                    const translateX = Math.min(diffX, 80);
+                    main.style.transform = `translateX(-${translateX}px)`;
+                }
+            });
+            
+            main.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                
+                const diffX = touchStartX - currentX;
+                
+                if (diffX > 50) {
+                    // Show actions
+                    draggedElement.style.transform = 'translateX(-80px)';
+                    showHint('Tap Settings to configure');
+                } else {
+                    // Hide actions
+                    draggedElement.style.transform = 'translateX(0)';
+                }
+                
+                card.classList.remove('swiping');
+                isDragging = false;
+                draggedElement = null;
+            });
+        });
+
+        // Pull to refresh
+        let pullStartY = 0;
+        let isPulling = false;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0) {
+                pullStartY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            
+            const pullDistance = e.touches[0].clientY - pullStartY;
+            
+            if (pullDistance > 0 && pullDistance < 100) {
+                const pullRefresh = document.getElementById('pullRefresh');
+                pullRefresh.classList.add('show');
+                pullRefresh.style.transform = `translateX(-50%) translateY(${pullDistance}px)`;
+            }
+        });
+        
+        document.addEventListener('touchend', () => {
+            if (!isPulling) return;
+            
+            const pullRefresh = document.getElementById('pullRefresh');
+            const pullDistance = parseInt(pullRefresh.style.transform.match(/translateY\((\d+)px\)/)?.[1] || 0);
+            
+            if (pullDistance > 60) {
+                pullRefresh.classList.add('refreshing');
+                refresh();
+            } else {
+                pullRefresh.classList.remove('show');
+                pullRefresh.style.transform = 'translateX(-50%)';
+            }
+            
+            isPulling = false;
+        });
+
+        // Toggle service
+        function toggleService(toggle) {
+            const card = toggle.closest('.service-card');
+            const statusText = card.querySelector('.service-status span:last-child');
+            
+            card.classList.toggle('off');
+            toggle.classList.add('haptic');
+            
+            if (card.classList.contains('off')) {
+                statusText.textContent = 'Stopped';
+                vibrate(50);
+            } else {
+                statusText.textContent = 'Running';
+                vibrate([50, 50, 50]);
+            }
+            
+            setTimeout(() => {
+                toggle.classList.remove('haptic');
+            }, 100);
+        }
+
+        // Handle quick actions
+        function handleAction(action) {
+            vibrate(10);
+            showHint(`${action} feature coming soon!`);
+        }
+
+        // Show gesture hint
+        function showHint(text) {
+            const hint = document.getElementById('gestureHint');
+            hint.textContent = text;
+            hint.classList.add('show');
+            
+            setTimeout(() => {
+                hint.classList.remove('show');
+            }, 2000);
+        }
+
+        // Refresh function
+        function refresh() {
+            setTimeout(() => {
+                const pullRefresh = document.getElementById('pullRefresh');
+                pullRefresh.classList.remove('show', 'refreshing');
+                pullRefresh.style.transform = 'translateX(-50%)';
+                showHint('Everything is up to date!');
+                vibrate(100);
+            }, 1000);
+        }
+
+        // Vibration function
+        function vibrate(pattern) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // Mode selection
+        function selectMode(mode) {
+            document.querySelectorAll('.mode-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.target.closest('.mode-option').classList.add('selected');
+            vibrate(10);
+            
+            setTimeout(() => {
+                document.getElementById('modeOverlay').classList.remove('show');
+            }, 300);
+        }
+
+        // Pinch gesture for mode switching
+        let initialDistance = 0;
+        let isPinching = false;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                initialDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isPinching || e.touches.length !== 2) return;
+            
+            const currentDistance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            
+            if (currentDistance < initialDistance * 0.8) {
+                // Pinch in - show mode selector
+                document.getElementById('modeOverlay').classList.add('show');
+                isPinching = false;
+                vibrate(20);
+            }
+        });
+        
+        document.addEventListener('touchend', () => {
+            isPinching = false;
+        });
+
+        // Bottom nav handling
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                this.classList.add('active');
+                vibrate(10);
+            });
+        });
+
+        // Long press for detailed stats
+        let longPressTimer;
+        
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('touchstart', (e) => {
+                longPressTimer = setTimeout(() => {
+                    vibrate([50, 50]);
+                    showHint(`${card.dataset.service}: CPU 12%, RAM 2.1GB`);
+                }, 500);
+            });
+            
+            card.addEventListener('touchend', () => {
+                clearTimeout(longPressTimer);
+            });
+            
+            card.addEventListener('touchmove', () => {
+                clearTimeout(longPressTimer);
+            });
+        });
+
+        // Show tutorial on first load
+        if (!localStorage.getItem('tutorialShown')) {
+            setTimeout(() => {
+                showHint('Swipe left on services for options');
+                localStorage.setItem('tutorialShown', 'true');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+# Authelia Configuration - Production 2025
+# ==========================================
+# High-security authentication and authorization
+
+server:
+  host: 0.0.0.0
+  port: 9091
+  path: ""
+  read_buffer_size: 4096
+  write_buffer_size: 4096
+  enable_pprof: false
+  enable_expvars: false
+
+log:
+  level: info
+  format: json
+  file_path: /config/authelia.log
+  keep_stdout: true
+
+totp:
+  disable: false
+  issuer: morloksmaze.com
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+  secret_size: 32
+
+webauthn:
+  disable: false
+  timeout: 60s
+  display_name: Morloks Maze Media Server
+  attestation_conveyance_preference: indirect
+  user_verification: preferred
+
+duo_api:
+  disable: true
+
+authentication_backend:
+  password_reset:
+    disable: false
+  refresh_interval: 5m
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 3
+      salt_length: 16
+      parallelism: 4
+      memory: 64
+      key_length: 32
+
+access_control:
+  default_policy: deny
+  networks:
+    - name: internal
+      networks:
+        - 172.30.0.0/16
+        - 10.0.0.0/8
+        - 192.168.0.0/16
+  rules:
+    # Public services (minimal auth)
+    - domain: 
+        - "overseerr.morloksmaze.com"
+        - "requests.morloksmaze.com"
+      policy: bypass
+      networks:
+        - internal
+
+    # Media services (require authentication)
+    - domain:
+        - "jellyfin.morloksmaze.com"
+        - "tautulli.morloksmaze.com"
+      policy: one_factor
+      networks:
+        - internal
+
+    # Management services (require two-factor)
+    - domain:
+        - "*.morloksmaze.com"
+      policy: two_factor
+      networks:
+        - internal
+      resources:
+        - "^/admin.*"
+        - "^/settings.*"
+        - "^/api.*"
+
+    # Download services (admin only)
+    - domain:
+        - "qbittorrent.morloksmaze.com"
+        - "sabnzbd.morloksmaze.com"
+        - "prowlarr.morloksmaze.com"
+        - "sonarr.morloksmaze.com"
+        - "radarr.morloksmaze.com"
+        - "lidarr.morloksmaze.com"
+        - "readarr.morloksmaze.com"
+        - "bazarr.morloksmaze.com"
+      policy: two_factor
+      subject:
+        - "group:admins"
+
+    # Infrastructure services (admin only)
+    - domain:
+        - "traefik.morloksmaze.com"
+        - "portainer.morloksmaze.com"
+        - "grafana.morloksmaze.com"
+        - "prometheus.morloksmaze.com"
+        - "backup.morloksmaze.com"
+      policy: two_factor
+      subject:
+        - "group:admins"
+
+session:
+  name: authelia_session
+  domain: morloksmaze.com
+  same_site: lax
+  secret: ${AUTHELIA_SESSION_SECRET}
+  expiration: 1h
+  inactivity: 30m
+  remember_me_duration: 1M
+  redis:
+    host: redis
+    port: 6379
+    password: ${REDIS_PASSWORD}
+    database_index: 0
+    maximum_active_connections: 8
+    minimum_idle_connections: 0
+
+regulation:
+  max_retries: 3
+  find_time: 2m
+  ban_time: 5m
+
+storage:
+  encryption_key: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+  postgres:
+    host: ${AUTHELIA_STORAGE_POSTGRES_HOST}
+    port: ${AUTHELIA_STORAGE_POSTGRES_PORT}
+    database: ${AUTHELIA_STORAGE_POSTGRES_DATABASE}
+    username: ${AUTHELIA_STORAGE_POSTGRES_USERNAME}
+    password: ${AUTHELIA_STORAGE_POSTGRES_PASSWORD}
+    timeout: 5s
+    ssl:
+      mode: disable
+
+notifier:
+  disable_startup_check: false
+  smtp:
+    username: ${AUTHELIA_NOTIFIER_SMTP_USERNAME}
+    password: ${AUTHELIA_NOTIFIER_SMTP_PASSWORD}
+    host: ${AUTHELIA_NOTIFIER_SMTP_HOST}
+    port: ${AUTHELIA_NOTIFIER_SMTP_PORT}
+    sender: ${AUTHELIA_NOTIFIER_SMTP_SENDER}
+    identifier: morloksmaze.com
+    subject: "[Authelia] {title}"
+    startup_check_address: test@authelia.com
+    disable_require_tls: false
+    disable_html_emails: false
+    tls:
+      server_name: ${AUTHELIA_NOTIFIER_SMTP_HOST}
+      skip_verify: false
+      minimum_version: TLS1.2
+
+identity_providers:
+  oidc:
+    hmac_secret: ${AUTHELIA_JWT_SECRET}
+    issuer_private_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      # Your RSA private key here for OIDC
+      -----END RSA PRIVATE KEY-----
+    access_token_lifespan: 1h
+    authorize_code_lifespan: 1m
+    id_token_lifespan: 1h
+    refresh_token_lifespan: 90m
+    enable_client_debug_messages: false
+    clients:
+      - id: media-dashboard
+        description: Media Dashboard
+        secret: ${OIDC_CLIENT_SECRET}
+        public: false
+        authorization_policy: two_factor
+        redirect_uris:
+          - https://dashboard.morloksmaze.com/auth/callback
+        scopes:
+          - openid
+          - profile
+          - email
+          - groups
+        userinfo_signing_algorithm: none
+
+password_policy:
+  standard:
+    enabled: true
+    min_length: 12
+    max_length: 128
+    require_uppercase: true
+    require_lowercase: true
+    require_number: true
+    require_special: true
+  zxcvbn:
+    enabled: true
+    min_score: 3
+
+privacy_policy:
+  enabled: false
+  require_user_acceptance: false
+  policy_url: "https://morloksmaze.com/privacy"
+
+# Theme customization
+theme: dark

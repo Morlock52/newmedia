@@ -1,0 +1,52 @@
+# Ultimate Media Server 2025 - Test Dependencies
+# Install with: pip3 install -r test-requirements.txt
+
+# Core testing frameworks
+pytest>=7.4.0
+pytest-html>=3.2.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.1
+pytest-timeout>=2.1.0
+
+# HTTP client for API testing
+aiohttp>=3.8.5
+requests>=2.31.0
+httpx>=0.24.1
+
+# Data handling and parsing
+pyyaml>=6.0.1
+jsonschema>=4.18.0
+python-dateutil>=2.8.2
+
+# SSL certificate handling
+certifi>=2023.7.22
+
+# Performance testing (optional - k6 preferred)
+locust>=2.15.1
+
+# Security testing helpers
+bandit>=1.7.5
+safety>=2.3.5
+
+# Report generation
+jinja2>=3.1.2
+markdown>=3.4.4
+
+# Utilities
+click>=8.1.6
+colorama>=0.4.6
+tabulate>=0.9.0
+tqdm>=4.65.0
+
+# Development and debugging
+ipython>=8.14.0
+pdbpp>=0.10.3
+
+# Docker SDK (optional - for advanced container management)
+docker>=6.1.3
+
+# Monitoring and metrics
+prometheus-client>=0.17.1
+
+# Environment and configuration
+python-dotenv>=1.0.0

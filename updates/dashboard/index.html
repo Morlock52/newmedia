@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Update Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .update-available { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold mb-2">
+                <i class="fas fa-docker text-blue-500"></i> Docker Update Dashboard
+            </h1>
+            <p class="text-gray-400">Monitor and manage container updates safely</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Total Containers</p>
+                        <p class="text-2xl font-bold" id="total-containers">0</p>
+                    </div>
+                    <i class="fas fa-cube text-3xl text-gray-600"></i>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Updates Available</p>
+                        <p class="text-2xl font-bold text-yellow-500" id="updates-available">0</p>
+                    </div>
+                    <i class="fas fa-download text-3xl text-yellow-500"></i>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Up to Date</p>
+                        <p class="text-2xl font-bold text-green-500" id="up-to-date">0</p>
+                    </div>
+                    <i class="fas fa-check-circle text-3xl text-green-500"></i>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Last Check</p>
+                        <p class="text-sm font-mono" id="last-check">Never</p>
+                    </div>
+                    <i class="fas fa-clock text-3xl text-gray-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 mb-8">
+            <button onclick="checkUpdates()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-sync-alt mr-2"></i> Check for Updates
+            </button>
+            <button onclick="updateAll()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-cloud-download-alt mr-2"></i> Update All Safe
+            </button>
+            <button onclick="showBackups()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-archive mr-2"></i> View Backups
+            </button>
+            <button onclick="showSettings()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-cog mr-2"></i> Settings
+            </button>
+        </div>
+
+        <!-- Container List -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-list mr-2"></i> Container Status
+            </h2>
+            <div id="loading" class="flex justify-center py-8">
+                <div class="loading-spinner"></div>
+            </div>
+            <div id="container-list" class="hidden">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-3 px-4">Service</th>
+                            <th class="text-left py-3 px-4">Current Version</th>
+                            <th class="text-left py-3 px-4">Latest Version</th>
+                            <th class="text-left py-3 px-4">Status</th>
+                            <th class="text-left py-3 px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="container-tbody">
+                        <!-- Container rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Update History -->
+        <div class="bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-history mr-2"></i> Update History
+            </h2>
+            <div id="update-history" class="space-y-2">
+                <!-- History entries will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for update confirmation -->
+    <div id="update-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4">Confirm Update</h3>
+            <p class="text-gray-400 mb-6" id="update-modal-text"></p>
+            <div class="flex gap-4">
+                <button onclick="confirmUpdate()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold flex-1">
+                    <i class="fas fa-check mr-2"></i> Update
+                </button>
+                <button onclick="closeModal()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-semibold flex-1">
+                    <i class="fas fa-times mr-2"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        const mockContainers = [
+            { name: 'traefik', current: '2.9.6', latest: '2.10.7', status: 'update', critical: true },
+            { name: 'authelia', current: '4.37.5', latest: '4.37.5', status: 'current', critical: true },
+            { name: 'jellyfin', current: '10.8.9', latest: '10.8.13', status: 'update', critical: false },
+            { name: 'sonarr', current: '4.0.0.400', latest: '4.0.0.400', status: 'current', critical: false },
+            { name: 'radarr', current: '4.7.5.7809', latest: '5.1.3.8246', status: 'update', critical: false },
+            { name: 'qbittorrent', current: '4.5.5', latest: '4.6.2', status: 'update', critical: false },
+            { name: 'postgres', current: '15.5', latest: '16.1', status: 'update', critical: true },
+            { name: 'redis', current: '7.2.3', latest: '7.2.3', status: 'current', critical: false }
+        ];
+
+        let selectedContainer = null;
+
+        function initDashboard() {
+            updateStats();
+            renderContainers();
+            loadHistory();
+            setInterval(updateLastCheck, 60000); // Update every minute
+        }
+
+        function updateStats() {
+            const total = mockContainers.length;
+            const updates = mockContainers.filter(c => c.status === 'update').length;
+            const current = mockContainers.filter(c => c.status === 'current').length;
+
+            document.getElementById('total-containers').textContent = total;
+            document.getElementById('updates-available').textContent = updates;
+            document.getElementById('up-to-date').textContent = current;
+            updateLastCheck();
+        }
+
+        function updateLastCheck() {
+            const now = new Date();
+            document.getElementById('last-check').textContent = now.toLocaleString();
+        }
+
+        function renderContainers() {
+            const tbody = document.getElementById('container-tbody');
+            tbody.innerHTML = '';
+
+            mockContainers.forEach(container => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700 hover:bg-gray-700 transition duration-200';
+                
+                const statusClass = container.status === 'update' ? 'text-yellow-500 update-available' : 'text-green-500';
+                const statusIcon = container.status === 'update' ? 'fa-exclamation-circle' : 'fa-check-circle';
+                const criticalBadge = container.critical ? '<span class="bg-red-600 text-xs px-2 py-1 rounded ml-2">CRITICAL</span>' : '';
+
+                row.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="flex items-center">
+                            <i class="fab fa-docker mr-2"></i>
+                            <span class="font-semibold">${container.name}</span>
+                            ${criticalBadge}
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-sm">${container.current}</td>
+                    <td class="py-3 px-4 font-mono text-sm">${container.latest}</td>
+                    <td class="py-3 px-4">
+                        <span class="${statusClass}">
+                            <i class="fas ${statusIcon} mr-1"></i>
+                            ${container.status === 'update' ? 'Update Available' : 'Up to Date'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        ${container.status === 'update' ? `
+                            <button onclick="updateContainer('${container.name}')" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm mr-2">
+                                <i class="fas fa-download mr-1"></i> Update
+                            </button>
+                        ` : ''}
+                        <button onclick="viewDetails('${container.name}')" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm">
+                            <i class="fas fa-info-circle mr-1"></i> Details
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('container-list').classList.remove('hidden');
+        }
+
+        function loadHistory() {
+            const history = [
+                { date: '2024-01-15 14:30', service: 'jellyfin', from: '10.8.8', to: '10.8.9', status: 'success' },
+                { date: '2024-01-14 22:15', service: 'sonarr', from: '3.0.10.1567', to: '4.0.0.400', status: 'success' },
+                { date: '2024-01-13 18:45', service: 'traefik', from: '2.9.5', to: '2.9.6', status: 'success' },
+                { date: '2024-01-12 09:20', service: 'postgres', from: '15.4', to: '15.5', status: 'rollback' }
+            ];
+
+            const historyDiv = document.getElementById('update-history');
+            historyDiv.innerHTML = '';
+
+            history.forEach(entry => {
+                const statusIcon = entry.status === 'success' ? 'fa-check-circle text-green-500' : 'fa-undo text-yellow-500';
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 bg-gray-700 rounded';
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas ${statusIcon} mr-3"></i>
+                        <div>
+                            <span class="font-semibold">${entry.service}</span>
+                            <span class="text-gray-400 text-sm ml-2">${entry.from} → ${entry.to}</span>
+                        </div>
+                    </div>
+                    <span class="text-gray-400 text-sm">${entry.date}</span>
+                `;
+                historyDiv.appendChild(div);
+            });
+        }
+
+        function checkUpdates() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('container-list').classList.add('hidden');
+            
+            // Simulate checking for updates
+            setTimeout(() => {
+                updateStats();
+                renderContainers();
+                showNotification('Update check completed', 'success');
+            }, 2000);
+        }
+
+        function updateContainer(containerName) {
+            selectedContainer = containerName;
+            const container = mockContainers.find(c => c.name === containerName);
+            document.getElementById('update-modal-text').textContent = 
+                `Update ${containerName} from ${container.current} to ${container.latest}?`;
+            document.getElementById('update-modal').classList.remove('hidden');
+        }
+
+        function confirmUpdate() {
+            closeModal();
+            showNotification(`Updating ${selectedContainer}...`, 'info');
+            
+            // Simulate update process
+            setTimeout(() => {
+                const container = mockContainers.find(c => c.name === selectedContainer);
+                container.current = container.latest;
+                container.status = 'current';
+                updateStats();
+                renderContainers();
+                showNotification(`${selectedContainer} updated successfully!`, 'success');
+            }, 3000);
+        }
+
+        function updateAll() {
+            const updates = mockContainers.filter(c => c.status === 'update' && !c.critical);
+            if (updates.length === 0) {
+                showNotification('No safe updates available', 'info');
+                return;
+            }
+            
+            showNotification(`Updating ${updates.length} services...`, 'info');
+            
+            setTimeout(() => {
+                updates.forEach(container => {
+                    container.current = container.latest;
+                    container.status = 'current';
+                });
+                updateStats();
+                renderContainers();
+                showNotification('All safe updates completed!', 'success');
+            }, 5000);
+        }
+
+        function viewDetails(containerName) {
+            showNotification(`Viewing details for ${containerName}`, 'info');
+        }
+
+        function showBackups() {
+            showNotification('Backup management coming soon', 'info');
+        }
+
+        function showSettings() {
+            showNotification('Settings panel coming soon', 'info');
+        }
+
+        function closeModal() {
+            document.getElementById('update-modal').classList.add('hidden');
+            selectedContainer = null;
+        }
+
+        function showNotification(message, type) {
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-blue-600'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+            notification.innerHTML = `
+                <i class="fas fa-info-circle mr-2"></i>
+                ${message}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

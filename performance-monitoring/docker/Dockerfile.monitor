@@ -1,0 +1,67 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    procps \
+    net-tools \
+    iputils-ping \
+    dnsutils \
+    htop \
+    iotop \
+    stress-ng \
+    sysbench \
+    fio \
+    iperf3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r monitoring && useradd -r -g monitoring monitoring
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt /app/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY core/ /app/core/
+COPY config/ /app/config/
+COPY benchmarks/ /app/benchmarks/
+COPY optimization/ /app/optimization/
+COPY dashboard/ /app/dashboard/
+COPY scripts/ /app/scripts/
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs /app/tmp && \
+    chown -R monitoring:monitoring /app
+
+# Copy startup script
+COPY docker/scripts/start-monitor.sh /app/start-monitor.sh
+RUN chmod +x /app/start-monitor.sh
+
+# Switch to non-root user
+USER monitoring
+
+# Expose ports
+EXPOSE 8765 8766
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8766/health || exit 1
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV CONFIG_PATH=/app/config/monitoring.yml
+ENV DB_PATH=/app/data/monitoring.db
+ENV LOG_LEVEL=INFO
+
+# Start the monitoring service
+CMD ["/app/start-monitor.sh"]

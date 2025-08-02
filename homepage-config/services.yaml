@@ -1,0 +1,49 @@
+- Media:
+    - Jellyfin:
+        href: https://jellyfin.${DOMAIN}
+        description: Media streaming server
+        icon: jellyfin.png
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: ${JELLYFIN_API_KEY}
+
+    - Overseerr:
+        href: https://requests.${DOMAIN}
+        description: Media request management
+        icon: overseerr.png
+
+- Services:
+    - Sonarr:
+        href: https://sonarr.${DOMAIN}
+        description: TV show management
+        icon: sonarr.png
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: ${SONARR_API_KEY}
+
+    - Radarr:
+        href: https://radarr.${DOMAIN}
+        description: Movie management
+        icon: radarr.png
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: ${RADARR_API_KEY}
+
+    - Prowlarr:
+        href: https://prowlarr.${DOMAIN}
+        description: Indexer management
+        icon: prowlarr.png
+
+- Monitoring:
+    - Grafana:
+        href: https://grafana.${DOMAIN}
+        description: Metrics dashboard
+        icon: grafana.png
+
+    - Prometheus:
+        href: https://prometheus.${DOMAIN}
+        description: Metrics collection
+        icon: prometheus.png

@@ -1,0 +1,560 @@
+# Security Enhancements for Media Server Stack - 2025
+# Implementation of research findings from MEDIA_SERVER_INTEGRATION_RESEARCH_2025.md
+
+version: '3.9'
+
+# Security-focused network configuration
+networks:
+  # Isolated network for download clients and VPN
+  vpn-isolated:
+    driver: bridge
+    internal: true  # No internet access except through VPN
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  
+  # Secure media network with controlled access
+  media-secure:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+  
+  # Management network for admin tools
+  management:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+  
+  # Monitoring network isolated from media
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
+
+# Secure volume definitions with explicit permissions
+volumes:
+  socket-proxy-data:
+    driver: local
+  traefik-data:
+    driver: local
+  security-scanner-data:
+    driver: local
+
+services:
+  # ==================== SECURITY INFRASTRUCTURE ====================
+  
+  # Docker Socket Proxy - Critical security component
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: socket-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      # Minimal permissions - only what's needed
+      CONTAINERS: 1
+      NETWORKS: 1 
+      SERVICES: 1
+      TASKS: 1
+      # Explicitly deny dangerous operations
+      SWARM: 0
+      SYSTEM: 0
+      VOLUMES: 0
+      IMAGES: 0
+      INFO: 0
+      BUILD: 0
+      COMMIT: 0
+      CONFIGS: 0
+      DISTRIBUTION: 0
+      EXEC: 0
+      GRPC: 0
+      PING: 0
+      PLUGINS: 0
+      POST: 0
+      SECRETS: 0
+      SESSION: 0
+      VERSION: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - socket-proxy-data:/data
+    networks:
+      - management
+    ports:
+      - "2375:2375"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    labels:
+      - "traefik.enable=false"  # Never expose to web
+
+  # Fail2ban for intrusion prevention
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    security_opt:
+      - no-new-privileges:true
+    network_mode: "host"
+    volumes:
+      - ./fail2ban-data:/data
+      - /var/log:/var/log:ro
+      - /var/log/auth.log:/var/log/auth.log:ro
+    environment:
+      TZ: ${TZ:-UTC}
+      F2B_LOG_LEVEL: INFO
+      F2B_DB_PURGE_AGE: 30d
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+  # Container security scanner
+  trivy-scanner:
+    image: aquasec/trivy:latest
+    container_name: trivy-scanner
+    restart: "no"  # Run on demand
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - security-scanner-data:/root/.cache/trivy
+      - ./security-reports:/reports
+    networks:
+      - management
+    command: >
+      sh -c "
+      echo 'Starting security scan of all running containers...' &&
+      trivy image --exit-code 1 --severity HIGH,CRITICAL --format json --output /reports/scan-$(date +%Y%m%d).json --no-progress $(docker ps --format '{{.Image}}' | sort -u | tr '\n' ' ') &&
+      echo 'Security scan completed. Check /reports/ for results.'
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # ==================== SECURE REVERSE PROXY ====================
+  
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      - socket-proxy
+    command:
+      # Basic configuration
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      
+      # Docker provider with socket proxy
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--providers.docker.network=media-secure"
+      
+      # Entry points
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      
+      # TLS configuration
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      
+      # Security headers
+      - "--entrypoints.websecure.http.middlewares=security-headers@docker"
+      
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addentrypointslabels=true"
+      - "--metrics.prometheus.addserviceslabels=true"
+    
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8088:8080"  # Dashboard
+    
+    volumes:
+      - traefik-data:/letsencrypt
+      - ./traefik-logs:/var/log/traefik
+    
+    networks:
+      - media-secure
+      - management
+    
+    environment:
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: ${ACME_EMAIL}
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+    
+    labels:
+      # Traefik dashboard configuration
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth"
+      
+      # Basic auth middleware
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH:-admin:$$2y$$10$$3QiDqO2wUjHHV4sMnYUo.Op8v73hTU1T7vgXxHoB.4i.Q1V4.5zg2}"
+      
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stspreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsseconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.forcestsheader=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+
+  # ==================== SECURED MEDIA SERVICES ====================
+  
+  jellyfin-secure:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin-secure
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Required for hardware acceleration
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    environment:
+      TZ: ${TZ:-UTC}
+      JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN:-localhost}
+    volumes:
+      - jellyfin-config:/config
+      - media-data:/media:ro  # Read-only media access
+      - /dev/dri:/dev/dri  # Hardware acceleration
+      - jellyfin-cache:/cache
+    networks:
+      - media-secure
+    depends_on:
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.http.routers.jellyfin.middlewares=security-headers"
+
+  # ==================== SECURED *ARR SERVICES ====================
+  
+  prowlarr-secure:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr-secure
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      TZ: ${TZ:-UTC}
+      # Enforce authentication (2025 requirement)
+      PROWLARR__AUTHENTICATION__METHOD: Forms
+      PROWLARR__AUTHENTICATION__REQUIRED: Enabled
+    volumes:
+      - prowlarr-config:/config
+      - prowlarr-logs:/config/logs
+    networks:
+      - media-secure
+    depends_on:
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prowlarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.routers.prowlarr.middlewares=auth,security-headers"
+
+  # ==================== SECURED VPN INFRASTRUCTURE ====================
+  
+  gluetun-secure:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun-secure
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      TZ: ${TZ:-UTC}
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-nordvpn}
+      VPN_TYPE: ${VPN_TYPE:-openvpn}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_COUNTRY:-Switzerland}
+      # Enhanced firewall rules
+      FIREWALL_OUTBOUND_SUBNETS: 172.21.0.0/16,172.22.0.0/16
+      FIREWALL_INPUT_PORTS: 8080,9091
+      FIREWALL_VPN_INPUT_PORTS: 8080,9091
+      # Health server
+      HEALTH_SERVER_ADDRESS: 0.0.0.0:9999
+      # Kill switch
+      FIREWALL: on
+      DOT: off
+    volumes:
+      - gluetun-config:/gluetun:ro
+    networks:
+      vpn-isolated:
+        ipv4_address: 172.21.0.10
+      media-secure:
+    ports:
+      - "8080:8080"  # qBittorrent
+      - "9999:9999"  # Health check
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  qbittorrent-secure:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent-secure
+    network_mode: "service:gluetun-secure"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      WEBUI_PORT: 8080
+      # Security settings
+      QBT_EULA: accept
+    volumes:
+      - qbittorrent-config:/config
+      - downloads:/downloads
+      - qbittorrent-temp:/tmp
+    depends_on:
+      gluetun-secure:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # ==================== SECURE MONITORING ====================
+  
+  prometheus-secure:
+    image: prom/prometheus:latest
+    container_name: prometheus-secure
+    restart: unless-stopped
+    user: "65534:65534"  # nobody user
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.external-url=https://prometheus.${DOMAIN:-localhost}'
+    volumes:
+      - ./prometheus-config:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring
+      - media-secure
+    depends_on:
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.middlewares=auth,security-headers"
+
+  # ==================== SECURE DATABASES ====================
+  
+  postgres-secure:
+    image: postgres:16-alpine
+    container_name: postgres-secure
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${POSTGRES_DB:-media_db}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - media-secure
+    secrets:
+      - postgres_password
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "traefik.enable=false"  # Never expose database
+
+  redis-secure:
+    image: redis:7-alpine
+    container_name: redis-secure
+    restart: unless-stopped
+    user: "999:999"  # redis user
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    networks:
+      - media-secure
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "auth", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=false"  # Never expose database
+
+# ==================== SECRETS MANAGEMENT ====================
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  traefik_auth:
+    file: ./secrets/traefik_auth.txt
+
+# ==================== SECURE VOLUMES ====================
+
+volumes:
+  jellyfin-config:
+    driver: local
+  jellyfin-cache:
+    driver: local
+  prowlarr-config:
+    driver: local
+  prowlarr-logs:
+    driver: local
+  qbittorrent-config:
+    driver: local
+  qbittorrent-temp:
+    driver: local
+  gluetun-config:
+    driver: local
+  prometheus-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  media-data:
+    driver: local
+  downloads:
+    driver: local

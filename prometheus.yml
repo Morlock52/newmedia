@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'jellyfin'
+    static_configs:
+      - targets: ['jellyfin:8096']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'sonarr'
+    static_configs:
+      - targets: ['sonarr:8989']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'radarr'
+    static_configs:
+      - targets: ['radarr:7878']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'prowlarr'
+    static_configs:
+      - targets: ['prowlarr:9696']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s

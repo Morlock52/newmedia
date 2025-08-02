@@ -1,0 +1,53 @@
+{
+  "name": "webxr-immersive-platform",
+  "version": "2.0.0",
+  "description": "Production-ready WebXR platform with support for Apple Vision Pro, Meta Quest 3, and spatial computing devices",
+  "type": "module",
+  "main": "webxr/core/app.js",
+  "scripts": {
+    "start": "npx serve . -p 8080",
+    "dev": "npx serve . -p 8080 --ssl-cert cert.pem --ssl-key key.pem",
+    "build": "rollup -c",
+    "test": "jest",
+    "lint": "eslint webxr/**/*.js",
+    "generate-cert": "openssl req -newkey rsa:2048 -new -nodes -x509 -days 365 -keyout key.pem -out cert.pem"
+  },
+  "dependencies": {
+    "three": "^0.161.0",
+    "resonance-audio": "^1.0.0",
+    "webxr-polyfill": "^2.0.0",
+    "simple-peer": "^9.11.1",
+    "nipplejs": "^0.10.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.161.0",
+    "@types/webxr": "^0.5.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "rollup": "^4.9.0",
+    "serve": "^14.2.1",
+    "@rollup/plugin-node-resolve": "^15.2.0",
+    "@rollup/plugin-commonjs": "^25.0.0"
+  },
+  "keywords": [
+    "webxr",
+    "vr",
+    "ar",
+    "mixed-reality",
+    "apple-vision-pro",
+    "meta-quest-3",
+    "spatial-computing",
+    "hand-tracking",
+    "eye-tracking"
+  ],
+  "author": "WebXR Platform Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "Safari >= 17",
+    "last 2 Firefox versions"
+  ]
+}

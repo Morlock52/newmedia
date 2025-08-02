@@ -1,0 +1,477 @@
+# Ultimate Media Server 2025 - Production Ready (Without Problematic Services)
+# =====================================================================
+# Features: Service Profiles, Hardware Acceleration, Security First
+# Usage: docker compose --profile core --profile media up -d
+
+version: '3.9'
+
+# =====================================================================
+# NETWORKS - Segmented for Security and Performance
+# =====================================================================
+networks:
+  public:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+  frontend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.1.0/24
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.2.0/24
+  downloads:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.3.0/24
+  monitoring:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.25.4.0/24
+
+# =====================================================================
+# VOLUMES - Persistent Storage
+# =====================================================================
+volumes:
+  # Core Infrastructure
+  traefik_certs:
+  authelia_data:
+  redis_data:
+  postgres_data:
+  
+  # Media Servers
+  jellyfin_config:
+  plex_config:
+  emby_config:
+  
+  # Automation
+  sonarr_config:
+  radarr_config:
+  prowlarr_config:
+  bazarr_config:
+  lidarr_config:
+  readarr_config:
+  
+  # Download Clients
+  qbittorrent_config:
+  sabnzbd_config:
+  nzbget_config:
+  
+  # Request Management
+  overseerr_config:
+  ombi_config:
+  
+  # Monitoring
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  tautulli_config:
+  
+  # Management
+  homepage_config:
+  portainer_data:
+  yacht_config:
+
+# =====================================================================
+# EXTENSION FIELDS - Reusable Configurations
+# =====================================================================
+x-security-opts: &security-opts
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+x-common-env: &common-env
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+# =====================================================================
+# SERVICES - Organized by Profiles
+# =====================================================================
+services:
+  # =================================================================
+  # PROFILE: core - Essential Infrastructure Services
+  # =================================================================
+  
+  redis:
+    profiles: ["core"]
+    image: redis:7-alpine
+    container_name: redis
+    <<: *security-opts
+    networks:
+      - backend
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    profiles: ["core"]
+    image: postgres:16-alpine
+    container_name: postgres
+    <<: *security-opts
+    networks:
+      - backend
+    environment:
+      POSTGRES_USER: ${DB_USER:-mediaserver}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-mediadb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # =================================================================
+  # PROFILE: media - Media Streaming Services
+  # =================================================================
+  
+  jellyfin:
+    profiles: ["media"]
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+      JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN:-localhost}
+    volumes:
+      - jellyfin_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+      - /dev/shm:/transcodes
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU
+    ports:
+      - "${JELLYFIN_PORT:-8096}:8096"
+
+  plex:
+    profiles: ["media"]
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+      VERSION: docker
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+    volumes:
+      - plex_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+      - /dev/shm:/transcode
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - "${PLEX_PORT:-32400}:32400"
+
+  # =================================================================
+  # PROFILE: automation - Media Automation Services
+  # =================================================================
+  
+  sonarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - sonarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${SONARR_PORT:-8989}:8989"
+
+  radarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - radarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${RADARR_PORT:-7878}:7878"
+
+  prowlarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - prowlarr_config:/config
+    ports:
+      - "${PROWLARR_PORT:-9696}:9696"
+
+  bazarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - bazarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+    ports:
+      - "${BAZARR_PORT:-6767}:6767"
+
+  lidarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - lidarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${LIDARR_PORT:-8686}:8686"
+
+  readarr:
+    profiles: ["automation"]
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - readarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${READARR_PORT:-8787}:8787"
+
+  # =================================================================
+  # PROFILE: downloads - Download Clients
+  # =================================================================
+  
+  qbittorrent:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    <<: *security-opts
+    networks:
+      - frontend
+      - downloads
+    environment:
+      <<: *common-env
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent_config:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${QBITTORRENT_PORT:-8080}:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+
+  sabnzbd:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    <<: *security-opts
+    networks:
+      - frontend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - sabnzbd_config:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${SABNZBD_PORT:-8081}:8080"
+
+  nzbget:
+    profiles: ["downloads"]
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    <<: *security-opts
+    networks:
+      - frontend
+      - downloads
+    environment:
+      <<: *common-env
+    volumes:
+      - nzbget_config:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "${NZBGET_PORT:-6789}:6789"
+
+  # =================================================================
+  # PROFILE: requests - Media Request Management
+  # =================================================================
+  
+  overseerr:
+    profiles: ["requests"]
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - overseerr_config:/app/config
+    ports:
+      - "${OVERSEERR_PORT:-5055}:5055"
+
+  ombi:
+    profiles: ["requests"]
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - ombi_config:/config
+    ports:
+      - "${OMBI_PORT:-3579}:3579"
+
+  # =================================================================
+  # PROFILE: monitoring - System Monitoring
+  # =================================================================
+  
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:latest
+    container_name: prometheus
+    <<: *security-opts
+    networks:
+      - monitoring
+      - backend
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:latest
+    container_name: grafana
+    <<: *security-opts
+    networks:
+      - frontend
+      - monitoring
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+
+  loki:
+    profiles: ["monitoring"]
+    image: grafana/loki:latest
+    container_name: loki
+    <<: *security-opts
+    networks:
+      - monitoring
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  tautulli:
+    profiles: ["monitoring"]
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    <<: *security-opts
+    networks:
+      - frontend
+      - backend
+    environment:
+      <<: *common-env
+    volumes:
+      - tautulli_config:/config
+    ports:
+      - "${TAUTULLI_PORT:-8181}:8181"
+
+  # =================================================================
+  # PROFILE: management - Container & System Management
+  # =================================================================
+  
+  homepage:
+    profiles: ["management"]
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    <<: *security-opts
+    networks:
+      - frontend
+    environment:
+      <<: *common-env
+    volumes:
+      - homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${HOMEPAGE_PORT:-3001}:3000"
+
+  portainer:
+    profiles: ["management"]
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    <<: *security-opts
+    networks:
+      - frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    ports:
+      - "${PORTAINER_PORT:-9000}:9000"
+      - "${PORTAINER_HTTPS_PORT:-9443}:9443"
+
+  yacht:
+    profiles: ["management"]
+    image: selfhostedpro/yacht:latest
+    container_name: yacht
+    <<: *security-opts
+    networks:
+      - frontend
+    volumes:
+      - yacht_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${YACHT_PORT:-8001}:8000"

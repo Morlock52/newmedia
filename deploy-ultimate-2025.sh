@@ -1,487 +1,526 @@
 #!/bin/bash
 
-# 🚀 NEXUS Media Server 2025 - Ultimate Deployment Script
-# The World's Most Advanced AI-Powered Media Ecosystem
+# Ultimate Media Server 2025 - Complete Deployment
+# This script deploys the fully enhanced media server with all new features
 
-set -euo pipefail
+set -e
 
-# Colors and styling
-RED='\033[0;31m'
+echo "🚀 Ultimate Media Server 2025 - Complete Deployment"
+echo "===================================================="
+echo ""
+
+# Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Unicode symbols
-ROCKET="🚀"
-BRAIN="🧠"
-SHIELD="🔒"
-DIAMOND="💎"
-STAR="⭐"
-CHECK="✅"
-CROSS="❌"
-WARNING="⚠️"
-INFO="ℹ️"
+# Configuration
+PUID=$(id -u)
+PGID=$(id -g)
+TZ=$(cat /etc/timezone 2>/dev/null || echo "America/New_York")
+CONFIG_DIR="$(pwd)/config"
+MEDIA_DIR="$(pwd)/data/media"
+DOWNLOADS_DIR="$(pwd)/data/downloads"
 
-# Function to print styled headers
-print_banner() {
-    echo -e "\n${CYAN}════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${WHITE}${ROCKET} NEXUS MEDIA SERVER 2025 ${ROCKET}${NC}"
-    echo -e "${PURPLE}The World's Most Advanced AI-Powered Media Ecosystem${NC}"
-    echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}\n"
+echo -e "${YELLOW}🔧 Configuration:${NC}"
+echo "   PUID: $PUID"
+echo "   PGID: $PGID"
+echo "   Timezone: $TZ"
+echo "   Config: $CONFIG_DIR"
+echo "   Media: $MEDIA_DIR"
+echo ""
+
+# Create enhanced directory structure
+echo -e "${BLUE}📁 Creating enhanced directory structure...${NC}"
+mkdir -p "$CONFIG_DIR"/{authelia,redis,postgres,traefik,homepage}
+mkdir -p "$CONFIG_DIR"/{jellyfin,sonarr,radarr,lidarr,readarr,prowlarr,overseerr,qbittorrent}
+mkdir -p "$CONFIG_DIR"/{bazarr,audiobookshelf,navidrome,kavita,calibre-web,tautulli}
+mkdir -p "$CONFIG_DIR"/{uptime-kuma,gotify,metube,duplicati,autobrr,cross-seed}
+mkdir -p "$MEDIA_DIR"/{movies,tv,music,audiobooks,books,comics,photos,podcasts}
+mkdir -p "$DOWNLOADS_DIR"/{complete,incomplete,torrents,watch}
+mkdir -p secrets backups logs
+
+# Function to check if container exists
+container_exists() {
+    docker ps -a --format '{{.Names}}' | grep -q "^$1$"
 }
 
-print_header() {
-    echo -e "\n${BLUE}${DIAMOND} $1 ${DIAMOND}${NC}"
-    echo -e "${CYAN}────────────────────────────────────────────────────────────────${NC}"
-}
-
-print_success() {
-    echo -e "${GREEN}${CHECK} $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}${CROSS} $1${NC}"
-}
-
-print_warning() {
-    echo -e "${YELLOW}${WARNING} $1${NC}"
-}
-
-print_info() {
-    echo -e "${CYAN}${INFO} $1${NC}"
-}
-
-# Check system requirements
-check_system_requirements() {
-    print_header "System Requirements Check"
+# Function to wait for service
+wait_for_service() {
+    local service=$1
+    local port=$2
+    local max_attempts=30
+    local attempt=0
     
-    local requirements_met=true
-    
-    # Check Docker
-    if command -v docker &> /dev/null; then
-        print_success "Docker: $(docker --version)"
-    else
-        print_error "Docker is not installed!"
-        requirements_met=false
-    fi
-    
-    # Check Docker Compose
-    if command -v docker-compose &> /dev/null || docker compose version &> /dev/null; then
-        print_success "Docker Compose: Available"
-    else
-        print_error "Docker Compose is not available!"
-        requirements_met=false
-    fi
-    
-    # Check available memory
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        local memory_gb=$(system_profiler SPHardwareDataType | grep "Memory:" | awk '{print $2}')
-        if [[ ${memory_gb%% *} -ge 8 ]]; then
-            print_success "Memory: ${memory_gb} (Sufficient)"
-        else
-            print_warning "Memory: ${memory_gb} (Recommended: 16GB+)"
+    echo -n "   Waiting for $service"
+    while ! nc -z localhost $port 2>/dev/null; do
+        if [ $attempt -eq $max_attempts ]; then
+            echo -e " ${RED}[TIMEOUT]${NC}"
+            return 1
         fi
-    fi
-    
-    # Check disk space
-    local available_space=$(df -h . | awk 'NR==2{printf "%.0f\n", $4}')
-    if [[ $available_space -ge 50 ]]; then
-        print_success "Disk Space: ${available_space}GB available"
-    else
-        print_warning "Disk Space: ${available_space}GB (Recommended: 100GB+)"
-    fi
-    
-    if [[ $requirements_met == false ]]; then
-        print_error "System requirements not met. Please install missing components."
-        exit 1
-    fi
-}
-
-# Create directory structure
-create_directories() {
-    print_header "Creating NEXUS Directory Structure"
-    
-    local directories=(
-        # Core directories
-        "config" "media-data" "cache" "logs" "backups"
-        
-        # AI and ML directories
-        "ai-models" "neural-cache" "ml-training-data"
-        
-        # Security directories
-        "quantum-keys" "blockchain-data" "security-logs"
-        
-        # Web3 directories
-        "ipfs-data" "smart-contracts" "dao-governance"
-        
-        # AR/VR directories
-        "xr-assets" "spatial-data" "holographic-cache"
-        
-        # Performance directories
-        "edge-cache" "distributed-processing" "gpu-workloads"
-        
-        # Media structure
-        "media-data/movies" "media-data/tv" "media-data/music" "media-data/books"
-        "media-data/downloads/complete" "media-data/downloads/incomplete"
-        "media-data/usenet/complete" "media-data/usenet/incomplete"
-        
-        # Service configs
-        "config/jellyfin" "config/sonarr" "config/radarr" "config/lidarr"
-        "config/prowlarr" "config/bazarr" "config/overseerr" "config/tautulli"
-        "config/qbittorrent" "config/sabnzbd" "config/homepage" "config/portainer"
-        "config/traefik" "config/grafana" "config/prometheus" "config/loki"
-        
-        # Advanced service configs
-        "config/ai-engine" "config/neural-dashboard" "config/quantum-security"
-        "config/blockchain-node" "config/ar-vr-services" "config/voice-ai"
-    )
-    
-    for dir in "${directories[@]}"; do
-        mkdir -p "$dir"
-        print_success "Created: $dir"
+        echo -n "."
+        sleep 2
+        ((attempt++))
     done
-    
-    # Set proper permissions
-    chmod -R 755 config media-data
-    print_success "Set proper permissions"
+    echo -e " ${GREEN}[OK]${NC}"
 }
 
-# Initialize environment configuration
-setup_environment() {
-    print_header "Environment Configuration"
-    
-    if [[ ! -f .env ]]; then
-        if [[ -f .env.example ]]; then
-            cp .env.example .env
-            print_success "Created .env from template"
-        else
-            # Create comprehensive .env file
-            cat > .env << 'EOF'
-# NEXUS Media Server 2025 Configuration
-# The World's Most Advanced AI-Powered Media Ecosystem
+# Deploy Phase 1: Core Infrastructure
+echo ""
+echo -e "${PURPLE}🏗️  Phase 1: Core Infrastructure${NC}"
+echo ""
 
-# ===============================
-# Core Settings
-# ===============================
-TZ=America/New_York
-COMPOSE_PROJECT_NAME=nexus-media-2025
+# Redis Cache
+if ! container_exists "redis"; then
+    echo -e "${BLUE}💾 Starting Redis Cache...${NC}"
+    docker run -d \
+        --name redis \
+        --restart unless-stopped \
+        -v $CONFIG_DIR/redis:/data \
+        -p 6379:6379 \
+        redis:7-alpine \
+        redis-server --save 60 1 --loglevel warning
+    wait_for_service "Redis" 6379
+else
+    echo -e "${GREEN}✓ Redis already running${NC}"
+fi
 
-# ===============================
-# Media Paths
-# ===============================
-MEDIA_PATH=./media-data
-DOWNLOADS_PATH=./media-data/downloads
-USENET_PATH=./media-data/usenet
+# PostgreSQL Database  
+if ! container_exists "postgres"; then
+    echo -e "${BLUE}🗄️  Starting PostgreSQL...${NC}"
+    docker run -d \
+        --name postgres \
+        --restart unless-stopped \
+        --platform linux/amd64 \
+        -e POSTGRES_PASSWORD=mediaserver2025 \
+        -e POSTGRES_USER=mediaserver \
+        -e POSTGRES_DB=mediaserver \
+        -v $CONFIG_DIR/postgres:/var/lib/postgresql/data \
+        -p 5432:5432 \
+        postgres:15-alpine
+    wait_for_service "PostgreSQL" 5432
+else
+    echo -e "${GREEN}✓ PostgreSQL already running${NC}"
+fi
 
-# ===============================
-# AI & Neural Network Settings
-# ===============================
-AI_ENABLED=true
-NEURAL_CACHE_SIZE=10GB
-ML_MODEL_PATH=./ai-models
-NEURAL_PROCESSING_THREADS=4
-AI_RECOMMENDATION_ENGINE=transformer
-EMOTION_DETECTION=enabled
-VOICE_AI_LANGUAGES=150
+# Deploy Phase 2: Enhanced Media Services
+echo ""
+echo -e "${PURPLE}🎬 Phase 2: Enhanced Media Services${NC}"
+echo ""
 
-# ===============================
-# Performance Optimization
-# ===============================
-GPU_ACCELERATION=enabled
-EDGE_COMPUTING=enabled
-NEURAL_COMPRESSION=enabled
-PREDICTIVE_CACHING=enabled
-AUTO_SCALING=enabled
-DISTRIBUTED_PROCESSING=enabled
+# Core media services that should already be running
+CORE_SERVICES=("jellyfin" "sonarr" "radarr" "overseerr" "qbittorrent" "prowlarr")
+echo -e "${BLUE}🔍 Checking core services...${NC}"
+for service in "${CORE_SERVICES[@]}"; do
+    if container_exists "$service"; then
+        echo -e "${GREEN}✓ $service already running${NC}"
+    else
+        echo -e "${YELLOW}⚠ $service not found - will deploy${NC}"
+    fi
+done
 
-# ===============================
-# Quantum Security
-# ===============================
-QUANTUM_ENCRYPTION=enabled
-POST_QUANTUM_TLS=enabled
-BIOMETRIC_AUTH=enabled
-ZERO_TRUST_NETWORK=enabled
-AI_THREAT_DETECTION=enabled
+# Lidarr - Music Management
+if ! container_exists "lidarr"; then
+    echo -e "${BLUE}🎵 Starting Lidarr...${NC}"
+    docker run -d \
+        --name lidarr \
+        --restart unless-stopped \
+        -e PUID=$PUID -e PGID=$PGID -e TZ=$TZ \
+        -p 8686:8686 \
+        -v $CONFIG_DIR/lidarr:/config \
+        -v $MEDIA_DIR/music:/music \
+        -v $DOWNLOADS_DIR:/downloads \
+        linuxserver/lidarr:latest
+    wait_for_service "Lidarr" 8686
+else
+    echo -e "${GREEN}✓ Lidarr already running${NC}"
+fi
 
-# ===============================
-# Web3 & Blockchain
-# ===============================
-WEB3_ENABLED=true
-BLOCKCHAIN_NETWORK=ethereum
-IPFS_ENABLED=true
-NFT_SUPPORT=enabled
-DAO_GOVERNANCE=enabled
-CRYPTO_PAYMENTS=enabled
+# AudioBookshelf - Audiobooks & Podcasts
+if ! container_exists "audiobookshelf"; then
+    echo -e "${BLUE}🎧 Starting AudioBookshelf...${NC}"
+    docker run -d \
+        --name audiobookshelf \
+        --restart unless-stopped \
+        -e TZ=$TZ \
+        -p 13378:80 \
+        -v $CONFIG_DIR/audiobookshelf:/config \
+        -v $MEDIA_DIR/audiobooks:/audiobooks \
+        -v $MEDIA_DIR/podcasts:/podcasts \
+        advplyr/audiobookshelf:latest
+    wait_for_service "AudioBookshelf" 13378
+else
+    echo -e "${GREEN}✓ AudioBookshelf already running${NC}"
+fi
 
-# ===============================
-# AR/VR & Immersive Tech
-# ===============================
-WEBXR_ENABLED=true
-VR_CINEMA_ROOMS=enabled
-AR_OVERLAY_SYSTEM=enabled
-SPATIAL_VIDEO_SUPPORT=enabled
-HAPTIC_FEEDBACK=enabled
-EYE_TRACKING=enabled
-GESTURE_RECOGNITION=enabled
+# Navidrome - Music Streaming
+if ! container_exists "navidrome"; then
+    echo -e "${BLUE}🎼 Starting Navidrome...${NC}"
+    docker run -d \
+        --name navidrome \
+        --restart unless-stopped \
+        -e ND_SCANSCHEDULE=1h \
+        -e ND_LOGLEVEL=info \
+        -e ND_SESSIONTIMEOUT=24h \
+        -e ND_ENABLETRANSCODINGCONFIG=true \
+        -e ND_ENABLEDOWNLOADS=true \
+        -p 4533:4533 \
+        -v $CONFIG_DIR/navidrome:/data \
+        -v $MEDIA_DIR/music:/music:ro \
+        deluan/navidrome:latest
+    wait_for_service "Navidrome" 4533
+else
+    echo -e "${GREEN}✓ Navidrome already running${NC}"
+fi
 
-# ===============================
-# Monitoring & Analytics
-# ===============================
-AI_ANALYTICS=enabled
-PREDICTIVE_MAINTENANCE=enabled
-NEURAL_MONITORING=enabled
-PRIVACY_SAFE_ANALYTICS=enabled
-REAL_TIME_OPTIMIZATION=enabled
+# Deploy Phase 3: Automation & Enhancement Services
+echo ""
+echo -e "${PURPLE}🤖 Phase 3: Automation & Enhancement${NC}"
+echo ""
 
-# ===============================
-# Service Passwords (Change These!)
-# ===============================
-GRAFANA_PASSWORD=NexusAdmin2025!
-POSTGRES_PASSWORD=SecureDB2025!
-REDIS_PASSWORD=RedisSecure2025!
+# Bazarr - Subtitles
+if ! container_exists "bazarr"; then
+    echo -e "${BLUE}💬 Starting Bazarr...${NC}"
+    docker run -d \
+        --name bazarr \
+        --restart unless-stopped \
+        -e PUID=$PUID -e PGID=$PGID -e TZ=$TZ \
+        -p 6767:6767 \
+        -v $CONFIG_DIR/bazarr:/config \
+        -v $MEDIA_DIR/movies:/movies \
+        -v $MEDIA_DIR/tv:/tv \
+        linuxserver/bazarr:latest
+    wait_for_service "Bazarr" 6767
+else
+    echo -e "${GREEN}✓ Bazarr already running${NC}"
+fi
 
-# ===============================
-# External Integrations
-# ===============================
-CLOUDFLARE_EMAIL=your_email@example.com
-CLOUDFLARE_API_KEY=your_api_key_here
-VPN_PROVIDER=mullvad
-VPN_PRIVATE_KEY=your_vpn_key_here
+# Tautulli - Analytics
+if ! container_exists "tautulli"; then
+    echo -e "${BLUE}📈 Starting Tautulli...${NC}"
+    docker run -d \
+        --name tautulli \
+        --restart unless-stopped \
+        -e PUID=$PUID -e PGID=$PGID -e TZ=$TZ \
+        -p 8181:8181 \
+        -v $CONFIG_DIR/tautulli:/config \
+        linuxserver/tautulli:latest
+    wait_for_service "Tautulli" 8181
+else
+    echo -e "${GREEN}✓ Tautulli already running${NC}"
+fi
 
-# ===============================
-# Domain Configuration
-# ===============================
-DOMAIN=nexus.local
-SSL_ENABLED=false
+# Autobrr - Release Automation
+if ! container_exists "autobrr"; then
+    echo -e "${BLUE}🎯 Starting Autobrr...${NC}"
+    docker run -d \
+        --name autobrr \
+        --restart unless-stopped \
+        -e TZ=$TZ \
+        -p 7474:7474 \
+        -v $CONFIG_DIR/autobrr:/config \
+        ghcr.io/autobrr/autobrr:latest
+    wait_for_service "Autobrr" 7474
+else
+    echo -e "${GREEN}✓ Autobrr already running${NC}"
+fi
+
+# Deploy Phase 4: Monitoring & Management
+echo ""
+echo -e "${PURPLE}📊 Phase 4: Monitoring & Management${NC}"
+echo ""
+
+# Uptime Kuma - Service Monitoring
+if ! container_exists "uptime-kuma"; then
+    echo -e "${BLUE}🔍 Starting Uptime Kuma...${NC}"
+    docker run -d \
+        --name uptime-kuma \
+        --restart unless-stopped \
+        -p 3011:3001 \
+        -v $CONFIG_DIR/uptime-kuma:/app/data \
+        louislam/uptime-kuma:latest
+    wait_for_service "Uptime Kuma" 3011
+else
+    echo -e "${GREEN}✓ Uptime Kuma already running${NC}"
+fi
+
+# Enhanced Homepage (keep existing if running)
+if container_exists "homepage"; then
+    echo -e "${GREEN}✓ Homepage already running${NC}"
+else
+    echo -e "${BLUE}🏠 Starting Enhanced Homepage...${NC}"
+    docker run -d \
+        --name homepage \
+        --restart unless-stopped \
+        -p 3001:3000 \
+        -v $CONFIG_DIR/homepage:/app/config \
+        -v /var/run/docker.sock:/var/run/docker.sock:ro \
+        ghcr.io/gethomepage/homepage:latest
+    wait_for_service "Homepage" 3001
+fi
+
+# Homarr Dashboard (handle existing container)
+if container_exists "homarr"; then
+    echo -e "${GREEN}✓ Homarr already exists${NC}"
+    if docker ps --format '{{.Names}}' | grep -q "^homarr$"; then
+        echo -e "${GREEN}  → Homarr is running${NC}"
+    else
+        echo -e "${YELLOW}  → Starting existing Homarr container...${NC}"
+        docker start homarr
+        wait_for_service "Homarr" 7575
+    fi
+else
+    echo -e "${BLUE}🏠 Homarr container not found - will be created by docker-compose${NC}"
+fi
+
+# Create service status dashboard
+echo ""
+echo -e "${BLUE}📊 Creating service status dashboard...${NC}"
+cat > service-status.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Ultimate Media Server 2025 - Status Dashboard</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 2.5rem; margin-bottom: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .service { 
+            background: rgba(255,255,255,0.1); 
+            padding: 20px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        .service:hover { transform: translateY(-5px); }
+        .service h3 { margin: 0 0 10px 0; color: #00ff88; font-size: 1.4rem; }
+        .service a { 
+            color: #fff; 
+            text-decoration: none; 
+            background: rgba(0,255,136,0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+        .service a:hover { background: rgba(0,255,136,0.4); }
+        .status { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #00ff88; 
+            margin-right: 8px; 
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .phase { 
+            background: rgba(255,255,255,0.05); 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border-left: 4px solid #00ff88;
+        }
+        .phase h2 { color: #00ff88; margin: 0 0 15px 0; }
+        .management-links {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+        .management-links a {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+        .management-links a:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Ultimate Media Server 2025</h1>
+        
+        <div class="management-links">
+            <h2 style="color: #00ff88; margin-bottom: 20px;">🔧 Management Interfaces</h2>
+            <a href="env-settings-manager.html" target="_blank">🔧 Environment Manager</a>
+            <a href="ultimate-fun-dashboard.html" target="_blank">🎮 Fun Dashboard</a>
+            <a href="http://localhost:3001" target="_blank">🏠 Homepage</a>
+            <a href="http://localhost:3011" target="_blank">📊 Uptime Monitor</a>
+        </div>
+
+        <div class="phase">
+            <h2>🏗️ Core Infrastructure</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Redis Cache</h3>
+                    <p>High-performance caching layer</p>
+                    <a href="http://localhost:6379" target="_blank">Port 6379</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>PostgreSQL</h3>
+                    <p>Primary database server</p>
+                    <a href="http://localhost:5432" target="_blank">Port 5432</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>🎬 Media Services</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Jellyfin</h3>
+                    <p>Your personal Netflix</p>
+                    <a href="http://localhost:8096" target="_blank">Launch Jellyfin</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Sonarr</h3>
+                    <p>TV show automation</p>
+                    <a href="http://localhost:8989" target="_blank">Launch Sonarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Radarr</h3>
+                    <p>Movie automation</p>
+                    <a href="http://localhost:7878" target="_blank">Launch Radarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Lidarr</h3>
+                    <p>Music management</p>
+                    <a href="http://localhost:8686" target="_blank">Launch Lidarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>AudioBookshelf</h3>
+                    <p>Audiobook server</p>
+                    <a href="http://localhost:13378" target="_blank">Launch AudioBookshelf</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Navidrome</h3>
+                    <p>Music streaming</p>
+                    <a href="http://localhost:4533" target="_blank">Launch Navidrome</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>🤖 Automation & Enhancement</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Prowlarr</h3>
+                    <p>Indexer management</p>
+                    <a href="http://localhost:9696" target="_blank">Launch Prowlarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Bazarr</h3>
+                    <p>Subtitle automation</p>
+                    <a href="http://localhost:6767" target="_blank">Launch Bazarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Autobrr</h3>
+                    <p>Release automation</p>
+                    <a href="http://localhost:7474" target="_blank">Launch Autobrr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>qBittorrent</h3>
+                    <p>Download client</p>
+                    <a href="http://localhost:8080" target="_blank">Launch qBittorrent</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>📊 Monitoring & Management</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Homepage</h3>
+                    <p>Main dashboard</p>
+                    <a href="http://localhost:3001" target="_blank">Launch Homepage</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Uptime Kuma</h3>
+                    <p>Service monitoring</p>
+                    <a href="http://localhost:3011" target="_blank">Launch Uptime Kuma</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Tautulli</h3>
+                    <p>Media analytics</p>
+                    <a href="http://localhost:8181" target="_blank">Launch Tautulli</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Overseerr</h3>
+                    <p>Request management</p>
+                    <a href="http://localhost:5055" target="_blank">Launch Overseerr</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
 EOF
-            print_success "Created comprehensive .env configuration"
-        fi
-        
-        print_warning "Please edit .env file with your specific values"
-        print_info "Key settings to configure:"
-        echo "  - VPN credentials (for secure torrenting)"
-        echo "  - Cloudflare API (for SSL certificates)"
-        echo "  - Service passwords"
-        echo "  - Domain configuration"
-        
-        read -p "Press Enter after editing .env to continue..."
-    else
-        print_success ".env file already exists"
-    fi
-}
 
-# Deploy AI models and neural networks
-deploy_ai_systems() {
-    print_header "Deploying AI & Neural Systems"
-    
-    print_info "Initializing AI model registry..."
-    docker run --rm -v "$PWD/ai-models:/models" alpine:latest sh -c "
-        mkdir -p /models/{transformers,computer-vision,speech,neural-compression}
-        echo 'AI model registry initialized' > /models/README.txt
-    "
-    
-    print_info "Setting up neural cache system..."
-    mkdir -p neural-cache/{embeddings,predictions,training-data}
-    
-    print_info "Configuring ML training pipeline..."
-    mkdir -p ml-training-data/{user-behavior,content-analysis,performance-metrics}
-    
-    print_success "AI systems initialized"
-}
+# Generate deployment summary
+echo ""
+echo -e "${CYAN}📊 Generating deployment summary...${NC}"
+echo ""
 
-# Deploy quantum security infrastructure
-deploy_quantum_security() {
-    print_header "Deploying Quantum Security Layer"
-    
-    print_info "Generating quantum-resistant key pairs..."
-    mkdir -p quantum-keys/{ml-kem,dilithium,falcon}
-    
-    print_info "Initializing blockchain verification system..."
-    mkdir -p blockchain-data/{contracts,verification,dao-governance}
-    
-    print_info "Setting up biometric authentication..."
-    mkdir -p config/biometric-auth/{face-recognition,voice-prints,behavioral-patterns}
-    
-    print_success "Quantum security layer deployed"
-}
+# Check running services
+echo -e "${YELLOW}📋 Service Status Summary:${NC}"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -20
 
-# Deploy Web3 infrastructure
-deploy_web3_systems() {
-    print_header "Deploying Web3 & Blockchain Infrastructure"
-    
-    print_info "Initializing IPFS node..."
-    mkdir -p ipfs-data/{blocks,config,datastore}
-    
-    print_info "Setting up smart contract deployment..."
-    mkdir -p smart-contracts/{nft-ownership,content-licensing,dao-voting,payment-processing}
-    
-    print_info "Configuring DAO governance system..."
-    mkdir -p dao-governance/{proposals,voting-records,community-decisions}
-    
-    print_success "Web3 infrastructure deployed"
-}
+echo ""
+echo -e "${GREEN}✅ Ultimate Media Server 2025 Deployment Complete!${NC}"
+echo ""
+echo -e "${YELLOW}🌐 Access Points:${NC}"
+echo "   🎮 Fun Dashboard:      $(pwd)/ultimate-fun-dashboard.html"
+echo "   🔧 Environment Manager: $(pwd)/env-settings-manager.html"
+echo "   📊 Status Dashboard:    $(pwd)/service-status.html"
+echo "   🏠 Homepage:            http://localhost:3001"
+echo "   📺 Jellyfin:            http://localhost:8096"
+echo "   📊 Uptime Monitor:      http://localhost:3011"
+echo ""
+echo -e "${YELLOW}📋 Next Steps:${NC}"
+echo "1. Open the Environment Manager to configure your services"
+echo "2. Configure Prowlarr with your indexers"
+echo "3. Connect all *arr apps to Prowlarr"
+echo "4. Set up your media libraries in Jellyfin"
+echo "5. Configure Autobrr for automated downloads"
+echo ""
+echo -e "${GREEN}🎉 Your Ultimate Media Server 2025 is ready!${NC}"
+echo ""
 
-# Deploy AR/VR and immersive systems
-deploy_immersive_systems() {
-    print_header "Deploying AR/VR & Immersive Technologies"
-    
-    print_info "Setting up WebXR runtime environment..."
-    mkdir -p xr-assets/{3d-models,spatial-audio,haptic-patterns,gesture-libraries}
-    
-    print_info "Initializing spatial computing system..."
-    mkdir -p spatial-data/{room-mapping,object-recognition,spatial-anchors}
-    
-    print_info "Configuring holographic projection support..."
-    mkdir -p holographic-cache/{light-field-data,volumetric-content,neural-holograms}
-    
-    print_success "Immersive systems deployed"
-}
+# Open dashboards
+if command -v open &> /dev/null; then
+    echo -e "${BLUE}🚀 Opening dashboards...${NC}"
+    open service-status.html 2>/dev/null &
+    sleep 2
+    open env-settings-manager.html 2>/dev/null &
+    echo -e "${GREEN}✓ Dashboards opened in your browser${NC}"
+fi
 
-# Start core services
-start_core_services() {
-    print_header "Starting NEXUS Core Services"
-    
-    print_info "Pulling latest Docker images..."
-    docker-compose pull --quiet
-    
-    print_info "Starting core media services..."
-    docker-compose up -d jellyfin sonarr radarr lidarr prowlarr bazarr overseerr
-    
-    print_info "Starting download clients with VPN protection..."
-    docker-compose up -d vpn qbittorrent sabnzbd
-    
-    print_info "Starting monitoring and analytics..."
-    docker-compose up -d prometheus grafana tautulli portainer
-    
-    print_success "Core services started"
-}
-
-# Start advanced AI services
-start_ai_services() {
-    print_header "Starting AI & Neural Services"
-    
-    if [[ -f ai-compose.yml ]]; then
-        print_info "Starting neural recommendation engine..."
-        docker-compose -f ai-compose.yml up -d neural-recommender
-        
-        print_info "Starting content generation system..."
-        docker-compose -f ai-compose.yml up -d content-generator
-        
-        print_info "Starting voice AI system..."
-        docker-compose -f ai-compose.yml up -d voice-ai
-        
-        print_info "Starting predictive analytics..."
-        docker-compose -f ai-compose.yml up -d predictive-analytics
-        
-        print_success "AI services started"
-    else
-        print_warning "AI compose file not found, skipping AI services"
-    fi
-}
-
-# Health check and validation
-perform_health_check() {
-    print_header "System Health Check & Validation"
-    
-    local services=(
-        "jellyfin:8096"
-        "sonarr:8989"
-        "radarr:7878"
-        "prowlarr:9696"
-        "overseerr:5055"
-        "grafana:3000"
-        "homepage:3001"
-    )
-    
-    print_info "Waiting for services to initialize..."
-    sleep 30
-    
-    local healthy_services=0
-    local total_services=${#services[@]}
-    
-    for service in "${services[@]}"; do
-        IFS=':' read -r name port <<< "$service"
-        
-        if curl -s -o /dev/null -w "%{http_code}" "http://localhost:$port" | grep -q "200\|302\|401"; then
-            print_success "$name is healthy (port $port)"
-            ((healthy_services++))
-        else
-            print_warning "$name may still be starting (port $port)"
-        fi
-    done
-    
-    print_info "Service Health: $healthy_services/$total_services services responding"
-    
-    if [[ $healthy_services -gt $((total_services / 2)) ]]; then
-        print_success "System deployment successful!"
-    else
-        print_warning "Some services may need more time to start"
-    fi
-}
-
-# Display access information
-show_access_info() {
-    print_header "NEXUS Access Information"
-    
-    echo -e "${WHITE}🌐 Service Access URLs:${NC}"
-    echo -e "${CYAN}  🏠 Neural Dashboard:    ${WHITE}http://localhost:3001${NC}"
-    echo -e "${CYAN}  🎬 Jellyfin Media:      ${WHITE}http://localhost:8096${NC}"
-    echo -e "${CYAN}  🔍 Content Requests:    ${WHITE}http://localhost:5055${NC}"
-    echo -e "${CYAN}  📊 Analytics & Grafana: ${WHITE}http://localhost:3000${NC}"
-    echo -e "${CYAN}  🛠️  System Management:   ${WHITE}http://localhost:9000${NC}"
-    echo -e "${CYAN}  🧠 AI Analytics:        ${WHITE}http://localhost:8090${NC}"
-    echo -e "${CYAN}  🎮 AR/VR Portal:        ${WHITE}http://localhost:8091${NC}"
-    echo -e "${CYAN}  🗣️  Voice Interface:     ${WHITE}http://localhost:8092${NC}"
-    echo -e "${CYAN}  ⛓️  Blockchain Console:  ${WHITE}http://localhost:8093${NC}"
-    echo -e "${CYAN}  🔒 Security Dashboard:  ${WHITE}http://localhost:8094${NC}"
-    
-    echo -e "\n${WHITE}🔑 Default Credentials:${NC}"
-    echo -e "${YELLOW}  Grafana: admin / NexusAdmin2025!${NC}"
-    echo -e "${YELLOW}  Portainer: admin / (set on first login)${NC}"
-    
-    echo -e "\n${WHITE}🚀 Quick Setup Commands:${NC}"
-    echo -e "${GREEN}  docker-compose logs -f        ${NC}# View all logs"
-    echo -e "${GREEN}  docker-compose ps             ${NC}# Check service status"
-    echo -e "${GREEN}  docker-compose restart <service>  ${NC}# Restart specific service"
-    
-    echo -e "\n${WHITE}📚 Next Steps:${NC}"
-    echo -e "${CYAN}  1. Configure Prowlarr with indexers${NC}"
-    echo -e "${CYAN}  2. Connect Sonarr/Radarr to Prowlarr${NC}"
-    echo -e "${CYAN}  3. Set up download clients${NC}"
-    echo -e "${CYAN}  4. Configure Jellyfin media libraries${NC}"
-    echo -e "${CYAN}  5. Enable AI features in settings${NC}"
-    echo -e "${CYAN}  6. Explore AR/VR experiences${NC}"
-}
-
-# Main deployment function
-main() {
-    print_banner
-    
-    echo -e "${WHITE}Welcome to the NEXUS Media Server 2025 deployment!${NC}"
-    echo -e "${PURPLE}This will install the world's most advanced AI-powered media ecosystem.${NC}\n"
-    
-    # Deployment phases
-    check_system_requirements
-    create_directories
-    setup_environment
-    deploy_ai_systems
-    deploy_quantum_security
-    deploy_web3_systems
-    deploy_immersive_systems
-    start_core_services
-    start_ai_services
-    perform_health_check
-    show_access_info
-    
-    print_header "Deployment Complete!"
-    echo -e "${GREEN}${ROCKET} Congratulations! NEXUS Media Server 2025 is now running! ${ROCKET}${NC}"
-    echo -e "${PURPLE}You now have access to the world's most advanced media ecosystem.${NC}"
-    echo -e "${CYAN}Enjoy your journey into the future of media consumption! ${STAR}${NC}\n"
-}
-
-# Run main function
-main "$@"
+echo ""
+echo -e "${PURPLE}🚀 Ultimate Media Server 2025 - Deployment Complete! 🚀${NC}"

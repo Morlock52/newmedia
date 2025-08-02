@@ -1,0 +1,385 @@
+version: "3.9"
+
+networks:
+  web3_network:
+    driver: bridge
+  media_network:
+    external: true  # Connect to existing media network
+
+volumes:
+  ipfs_data:
+  ipfs_staging:
+  web3_api_data:
+  blockchain_data:
+
+services:
+  # =========================
+  # IPFS Infrastructure
+  # =========================
+  
+  ipfs-node:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node
+    environment:
+      - IPFS_PROFILE=server
+      - IPFS_PATH=/ipfsdata
+    volumes:
+      - ipfs_data:/ipfsdata
+      - ipfs_staging:/export
+      - ./web3-blockchain-integration/ipfs-integration/config:/config
+    ports:
+      - "4001:4001"     # P2P port
+      - "4001:4001/udp" # P2P port UDP
+      - "5001:5001"     # API port
+      - "8080:8080"     # Gateway port
+    networks:
+      - web3_network
+      - media_network
+    restart: unless-stopped
+    command: |
+      sh -c "
+        ipfs init --profile server &&
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '[\"*\"]' &&
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '[\"GET\", \"POST\"]' &&
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Headers '[\"Authorization\"]' &&
+        ipfs config --json Swarm.ConnMgr.HighWater 2000 &&
+        ipfs config --json Swarm.ConnMgr.LowWater 500 &&
+        ipfs config --json Datastore.StorageMax '100GB' &&
+        ipfs daemon --migrate=true --agent-version-suffix=media-platform
+      "
+    healthcheck:
+      test: ["CMD", "ipfs", "swarm", "peers"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # IPFS Cluster for redundancy and load balancing
+  ipfs-cluster:
+    image: ipfs/ipfs-cluster:latest
+    container_name: ipfs-cluster
+    environment:
+      - CLUSTER_PEERNAME=cluster0
+      - CLUSTER_SECRET=${CLUSTER_SECRET:-your-secret-key}
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-node/tcp/5001
+      - CLUSTER_CRDT_TRUSTEDPEERS='*'
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_MONITORPINGINTERVAL=2s
+      - CLUSTER_PINTRACKER=stateless
+    volumes:
+      - ./web3-blockchain-integration/ipfs-integration/cluster:/data/ipfs-cluster
+    ports:
+      - "9094:9094"     # REST API
+      - "9095:9095"     # IPFS Proxy API
+      - "9096:9096"     # Cluster management
+    networks:
+      - web3_network
+    depends_on:
+      - ipfs-node
+    restart: unless-stopped
+
+  # =========================
+  # Web3 API Services
+  # =========================
+  
+  web3-api:
+    build:
+      context: ./web3-blockchain-integration
+      dockerfile: Dockerfile.web3-api
+    container_name: web3-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3030
+      
+      # Blockchain Configuration
+      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL:-https://rpc.ankr.com/eth}
+      - POLYGON_RPC_URL=${POLYGON_RPC_URL:-https://rpc.ankr.com/polygon}
+      - BSC_RPC_URL=${BSC_RPC_URL:-https://rpc.ankr.com/bsc}
+      
+      # Smart Contract Addresses
+      - CONTENT_OWNERSHIP_ADDRESS=${CONTENT_OWNERSHIP_ADDRESS}
+      - MEDIA_DAO_ADDRESS=${MEDIA_DAO_ADDRESS}
+      - MARKETPLACE_ADDRESS=${MARKETPLACE_ADDRESS}
+      
+      # IPFS Configuration
+      - IPFS_API_URL=http://ipfs-node:5001
+      - IPFS_GATEWAY_URL=http://ipfs-node:8080
+      - IPFS_CLUSTER_API=http://ipfs-cluster:9094
+      
+      # Jellyfin Integration
+      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      
+      # Database
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/web3_media
+      - REDIS_URL=redis://redis:6379
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your-encryption-key}
+      
+      # Performance
+      - MAX_FILE_SIZE=1GB
+      - CONCURRENT_UPLOADS=5
+      - CACHE_TTL=300
+      
+    volumes:
+      - web3_api_data:/app/data
+      - ./web3-blockchain-integration:/app/src
+      - ${MEDIA_PATH:-./media-data}:/media:ro  # Access to media files
+    ports:
+      - "3030:3030"
+    networks:
+      - web3_network
+      - media_network
+    depends_on:
+      - ipfs-node
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Web3 Frontend DApp
+  # =========================
+  
+  web3-frontend:
+    build:
+      context: ./web3-blockchain-integration/web3-frontend
+      dockerfile: Dockerfile
+    container_name: web3-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3030
+      - REACT_APP_IPFS_GATEWAY=http://localhost:8080
+      - REACT_APP_JELLYFIN_URL=http://localhost:8096
+      
+      # Smart Contract Addresses (injected at build time)
+      - REACT_APP_CONTENT_OWNERSHIP_ADDRESS=${CONTENT_OWNERSHIP_ADDRESS}
+      - REACT_APP_MEDIA_DAO_ADDRESS=${MEDIA_DAO_ADDRESS}
+      - REACT_APP_MARKETPLACE_ADDRESS=${MARKETPLACE_ADDRESS}
+      
+      # Network Configuration
+      - REACT_APP_DEFAULT_CHAIN_ID=1
+      - REACT_APP_SUPPORTED_CHAINS=1,137,56,43114,42161,10
+      
+    ports:
+      - "3031:3000"
+    networks:
+      - web3_network
+      - media_network
+    depends_on:
+      - web3-api
+    restart: unless-stopped
+
+  # =========================
+  # Blockchain Infrastructure
+  # =========================
+  
+  # Local blockchain for development/testing
+  hardhat-node:
+    image: node:18-alpine
+    container_name: hardhat-node
+    working_dir: /app
+    command: |
+      sh -c "
+        npm install -g hardhat &&
+        npx hardhat node --hostname 0.0.0.0 --port 8545
+      "
+    volumes:
+      - ./web3-blockchain-integration/smart-contracts:/app
+      - blockchain_data:/app/cache
+    ports:
+      - "8545:8545"
+    networks:
+      - web3_network
+    restart: unless-stopped
+    profiles:
+      - development
+
+  # Smart contract deployment service
+  contract-deployer:
+    build:
+      context: ./web3-blockchain-integration/smart-contracts
+      dockerfile: Dockerfile.deployer
+    container_name: contract-deployer
+    environment:
+      - NETWORK=${DEPLOY_NETWORK:-localhost}
+      - PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
+      - RPC_URL=${ETHEREUM_RPC_URL:-http://hardhat-node:8545}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+    volumes:
+      - ./web3-blockchain-integration/smart-contracts:/app
+      - blockchain_data:/app/deployments
+    networks:
+      - web3_network
+    depends_on:
+      - hardhat-node
+    profiles:
+      - deployment
+
+  # =========================
+  # Supporting Services
+  # =========================
+  
+  # PostgreSQL for Web3 API data
+  postgres:
+    image: postgres:15-alpine
+    container_name: web3-postgres
+    environment:
+      - POSTGRES_DB=web3_media
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - ./web3-blockchain-integration/database/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    networks:
+      - web3_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: web3-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    networks:
+      - web3_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =========================
+  # Monitoring & Analytics
+  # =========================
+  
+  # Web3 Analytics Dashboard
+  web3-analytics:
+    build:
+      context: ./web3-blockchain-integration/analytics
+      dockerfile: Dockerfile
+    container_name: web3-analytics
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/web3_media
+      - WEB3_API_URL=http://web3-api:3030
+      - IPFS_API_URL=http://ipfs-node:5001
+    ports:
+      - "3032:3000"
+    networks:
+      - web3_network
+    depends_on:
+      - postgres
+      - web3-api
+    restart: unless-stopped
+
+  # Blockchain Event Indexer
+  event-indexer:
+    build:
+      context: ./web3-blockchain-integration/indexer
+      dockerfile: Dockerfile
+    container_name: event-indexer
+    environment:
+      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL:-https://rpc.ankr.com/eth}
+      - POLYGON_RPC_URL=${POLYGON_RPC_URL:-https://rpc.ankr.com/polygon}
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/web3_media
+      - REDIS_URL=redis://redis:6379
+      
+      # Contract addresses to index
+      - CONTENT_OWNERSHIP_ADDRESS=${CONTENT_OWNERSHIP_ADDRESS}
+      - MEDIA_DAO_ADDRESS=${MEDIA_DAO_ADDRESS}
+      - MARKETPLACE_ADDRESS=${MARKETPLACE_ADDRESS}
+      
+      # Indexing configuration
+      - START_BLOCK=${START_BLOCK:-latest}
+      - BATCH_SIZE=1000
+      - INDEXING_INTERVAL=10000  # 10 seconds
+      
+    volumes:
+      - ./web3-blockchain-integration/indexer:/app/src
+    networks:
+      - web3_network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # =========================
+  # Security & Backup
+  # =========================
+  
+  # IPFS Content Backup Service
+  ipfs-backup:
+    build:
+      context: ./web3-blockchain-integration/backup
+      dockerfile: Dockerfile
+    container_name: ipfs-backup
+    environment:
+      - IPFS_API_URL=http://ipfs-node:5001
+      - BACKUP_INTERVAL=3600  # 1 hour
+      - BACKUP_RETENTION=30   # 30 backups
+      - S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    volumes:
+      - ./backups/ipfs:/backups
+      - ipfs_data:/ipfs:ro
+    networks:
+      - web3_network
+    depends_on:
+      - ipfs-node
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Security Scanner
+  security-scanner:
+    build:
+      context: ./web3-blockchain-integration/security
+      dockerfile: Dockerfile
+    container_name: security-scanner
+    environment:
+      - SCAN_INTERVAL=86400  # 24 hours
+      - WEB3_API_URL=http://web3-api:3030
+      - IPFS_API_URL=http://ipfs-node:5001
+      - ALERT_WEBHOOK_URL=${SECURITY_ALERT_WEBHOOK}
+    volumes:
+      - ./web3-blockchain-integration/security/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web3_network
+    depends_on:
+      - web3-api
+      - ipfs-node
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# =========================
+# Health Check Endpoints
+# =========================
+# All services expose /health endpoints
+# Main health check: http://localhost:3030/health
+# IPFS health: http://localhost:5001/api/v0/version
+# Frontend health: http://localhost:3031
+# Analytics health: http://localhost:3032/health

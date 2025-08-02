@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Apps Timeline - Holographic Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0b2e 25%, #16213e 50%, #0f3460 75%, #0a0a0a 100%);
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #00ffff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(45deg, transparent 48%, rgba(0, 255, 255, 0.03) 49%, rgba(0, 255, 255, 0.03) 51%, transparent 52%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: holographicShimmer 3s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #888;
+            opacity: 0.8;
+        }
+
+        .back-button {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-button:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        .timeline-container {
+            position: relative;
+            margin: 40px 0;
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #00ffff, #ff00ff);
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .phase {
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .phase-marker {
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            transform: translateX(-50%);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            z-index: 2;
+        }
+
+        .phase-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        .phase-info {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .phase-info::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            animation: holographicSweep 4s linear infinite;
+            pointer-events: none;
+        }
+
+        .phase-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00ffff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .phase-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+
+        .status-in-progress {
+            background: rgba(255, 255, 0, 0.2);
+            color: #ffff00;
+            border: 1px solid #ffff00;
+        }
+
+        .status-pending {
+            background: rgba(128, 128, 128, 0.2);
+            color: #888;
+            border: 1px solid #888;
+        }
+
+        .phase-details {
+            margin-top: 20px;
+        }
+
+        .phase-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+        }
+
+        .phase-progress {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .app-card {
+            background: rgba(255, 0, 255, 0.1);
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.3);
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 0, 255, 0.1), transparent);
+            animation: holographicSweep 4s linear infinite reverse;
+            pointer-events: none;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .app-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .app-info h3 {
+            color: #ff00ff;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        .app-info p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .app-status-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-installed {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .status-pending {
+            background: #888;
+            box-shadow: 0 0 10px #888;
+        }
+
+        .status-failed {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .app-description {
+            color: #ccc;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+
+        .app-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-button {
+            padding: 8px 16px;
+            border: 1px solid;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .install-button {
+            color: #00ffff;
+            border-color: #00ffff;
+        }
+
+        .install-button:hover {
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .config-button {
+            color: #ff00ff;
+            border-color: #ff00ff;
+        }
+
+        .config-button:hover {
+            background: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .health-button {
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+
+        .health-button:hover {
+            background: rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .dependencies {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dependencies h4 {
+            color: #ffff00;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .dependency-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .dependency-tag {
+            padding: 3px 8px;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid rgba(255, 255, 0, 0.3);
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: #ffff00;
+        }
+
+        .phase-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .phase-button {
+            padding: 12px 24px;
+            border: 2px solid;
+            border-radius: 8px;
+            background: transparent;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .start-phase {
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+
+        .start-phase:hover {
+            background: rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .complete-phase {
+            color: #00ffff;
+            border-color: #00ffff;
+        }
+
+        .complete-phase:hover {
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .right-side {
+            text-align: right;
+        }
+
+        .left-side {
+            text-align: left;
+        }
+
+        .installation-progress {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 15px;
+            padding: 30px;
+            z-index: 1000;
+            display: none;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .progress-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top: 3px solid #00ffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes holographicShimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes holographicSweep {
+            0% { transform: translate(-100%, -100%) rotate(45deg); }
+            100% { transform: translate(100%, 100%) rotate(45deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .phase-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .timeline-line {
+                left: 20px;
+            }
+
+            .phase-marker {
+                left: 20px;
+            }
+
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .back-button {
+                position: static;
+                transform: none;
+                margin-bottom: 20px;
+            }
+
+            .header {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="working-dashboard.html" class="back-button">← Back to Dashboard</a>
+            <h1 class="title">Media Apps Timeline</h1>
+            <p class="subtitle">Installation phases and progress tracking</p>
+        </div>
+
+        <div class="timeline-container">
+            <div class="timeline-line"></div>
+
+            <!-- Phase 1 - Foundation -->
+            <div class="phase">
+                <div class="phase-marker"></div>
+                <div class="phase-content">
+                    <div class="phase-info">
+                        <div class="phase-title">
+                            Phase 1 - Foundation
+                            <span class="phase-status status-completed">Completed</span>
+                        </div>
+                        <div class="phase-details">
+                            <div class="phase-detail">
+                                <span>Timeline:</span>
+                                <span>Day 1</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Difficulty:</span>
+                                <span>Easy</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Est. Time:</span>
+                                <span>2-4 hours</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Apps:</span>
+                                <span>3 services</span>
+                            </div>
+                        </div>
+                        <div class="phase-progress">
+                            <div>Progress: 100%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div class="phase-actions">
+                            <button class="phase-button complete-phase" disabled>Phase Complete</button>
+                        </div>
+                    </div>
+                    <div class="apps-grid">
+                        <div class="app-card">
+                            <div class="app-status-indicator status-installed"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🐳</div>
+                                <div class="app-info">
+                                    <h3>Docker</h3>
+                                    <p>Container Platform</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Container platform that enables easy deployment and management of all media applications.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button health-button">Check Status</button>
+                                <a href="https://docs.docker.com" class="action-button config-button">Documentation</a>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-installed"></div>
+                            <div class="app-header">
+                                <div class="app-icon">📥</div>
+                                <div class="app-info">
+                                    <h3>qBittorrent</h3>
+                                    <p>Torrent Client</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Open-source BitTorrent client for downloading media files with web interface management.
+                            </div>
+                            <div class="app-actions">
+                                <a href="http://localhost:8080" class="action-button config-button">Web UI</a>
+                                <button class="action-button health-button">Health Check</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-installed"></div>
+                            <div class="app-header">
+                                <div class="app-icon">📺</div>
+                                <div class="app-info">
+                                    <h3>Jellyfin</h3>
+                                    <p>Media Server</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Free media server that organizes and streams your movies, TV shows, and music collection.
+                            </div>
+                            <div class="app-actions">
+                                <a href="http://localhost:8096" class="action-button config-button">Web UI</a>
+                                <button class="action-button health-button">Health Check</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 - Automation -->
+            <div class="phase">
+                <div class="phase-marker"></div>
+                <div class="phase-content">
+                    <div class="phase-info right-side">
+                        <div class="phase-title">
+                            <span class="phase-status status-in-progress">In Progress</span>
+                            Phase 2 - Automation
+                        </div>
+                        <div class="phase-details">
+                            <div class="phase-detail">
+                                <span>Days 2-3</span>
+                                <span>Timeline:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Medium</span>
+                                <span>Difficulty:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>4-6 hours</span>
+                                <span>Est. Time:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>4 services</span>
+                                <span>Apps:</span>
+                            </div>
+                        </div>
+                        <div class="phase-progress">
+                            <div>Progress: 50%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="phase-actions">
+                            <button class="phase-button start-phase">Continue Phase</button>
+                            <button class="phase-button complete-phase">Mark Complete</button>
+                        </div>
+                    </div>
+                    <div class="apps-grid">
+                        <div class="app-card">
+                            <div class="app-status-indicator status-installed"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🔍</div>
+                                <div class="app-info">
+                                    <h3>Prowlarr</h3>
+                                    <p>Indexer Manager</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Indexer manager that provides indexers to Radarr, Sonarr, and other automation tools.
+                            </div>
+                            <div class="app-actions">
+                                <a href="http://localhost:9696" class="action-button config-button">Web UI</a>
+                                <button class="action-button health-button">Health Check</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">qBittorrent</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-installed"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🎬</div>
+                                <div class="app-info">
+                                    <h3>Radarr</h3>
+                                    <p>Movie Collection Manager</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Automated movie collection manager that searches, downloads, and organizes movies.
+                            </div>
+                            <div class="app-actions">
+                                <a href="http://localhost:7878" class="action-button config-button">Web UI</a>
+                                <button class="action-button health-button">Health Check</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Prowlarr</span>
+                                    <span class="dependency-tag">qBittorrent</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">📺</div>
+                                <div class="app-info">
+                                    <h3>Sonarr</h3>
+                                    <p>TV Series Manager</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Automated TV series collection manager that tracks, downloads, and organizes TV shows.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button">Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Prowlarr</span>
+                                    <span class="dependency-tag">qBittorrent</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">💬</div>
+                                <div class="app-info">
+                                    <h3>Bazarr</h3>
+                                    <p>Subtitle Manager</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Companion application to Sonarr and Radarr that manages and downloads subtitles.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button">Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Radarr</span>
+                                    <span class="dependency-tag">Sonarr</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3 - Enhancement -->
+            <div class="phase">
+                <div class="phase-marker"></div>
+                <div class="phase-content">
+                    <div class="phase-info">
+                        <div class="phase-title">
+                            Phase 3 - Enhancement
+                            <span class="phase-status status-pending">Pending</span>
+                        </div>
+                        <div class="phase-details">
+                            <div class="phase-detail">
+                                <span>Timeline:</span>
+                                <span>Week 1</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Difficulty:</span>
+                                <span>Medium</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Est. Time:</span>
+                                <span>3-5 hours</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Apps:</span>
+                                <span>3 services</span>
+                            </div>
+                        </div>
+                        <div class="phase-progress">
+                            <div>Progress: 0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="phase-actions">
+                            <button class="phase-button start-phase">Start Phase</button>
+                        </div>
+                    </div>
+                    <div class="apps-grid">
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🎭</div>
+                                <div class="app-info">
+                                    <h3>Overseerr</h3>
+                                    <p>Request Management</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Request management and media discovery tool for Plex and Jellyfin media servers.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button">Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Jellyfin</span>
+                                    <span class="dependency-tag">Radarr</span>
+                                    <span class="dependency-tag">Sonarr</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">📊</div>
+                                <div class="app-info">
+                                    <h3>Tautulli</h3>
+                                    <p>Media Analytics</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Monitoring and tracking tool for Plex/Jellyfin that provides detailed statistics and analytics.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button">Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Jellyfin</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🏠</div>
+                                <div class="app-info">
+                                    <h3>Homepage</h3>
+                                    <p>Dashboard</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Modern, customizable dashboard that provides quick access to all your services and applications.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button">Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 - Advanced -->
+            <div class="phase">
+                <div class="phase-marker"></div>
+                <div class="phase-content">
+                    <div class="phase-info right-side">
+                        <div class="phase-title">
+                            <span class="phase-status status-pending">Pending</span>
+                            Phase 4 - Advanced
+                        </div>
+                        <div class="phase-details">
+                            <div class="phase-detail">
+                                <span>Week 2+</span>
+                                <span>Timeline:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>Hard</span>
+                                <span>Difficulty:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>6-10 hours</span>
+                                <span>Est. Time:</span>
+                            </div>
+                            <div class="phase-detail">
+                                <span>4 services</span>
+                                <span>Apps:</span>
+                            </div>
+                        </div>
+                        <div class="phase-progress">
+                            <div>Progress: 0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="phase-actions">
+                            <button class="phase-button start-phase" disabled>Requires Phase 3</button>
+                        </div>
+                    </div>
+                    <div class="apps-grid">
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🎵</div>
+                                <div class="app-info">
+                                    <h3>Lidarr</h3>
+                                    <p>Music Collection Manager</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Automated music collection manager that searches, downloads, and organizes music albums.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button" disabled>Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">Prowlarr</span>
+                                    <span class="dependency-tag">qBittorrent</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🐳</div>
+                                <div class="app-info">
+                                    <h3>Portainer</h3>
+                                    <p>Container Management</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Web-based Docker management interface for easy container administration and monitoring.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button" disabled>Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🌐</div>
+                                <div class="app-info">
+                                    <h3>Traefik</h3>
+                                    <p>Reverse Proxy</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                Modern reverse proxy and load balancer with automatic service discovery and SSL certificates.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button" disabled>Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="app-status-indicator status-pending"></div>
+                            <div class="app-header">
+                                <div class="app-icon">🛡️</div>
+                                <div class="app-info">
+                                    <h3>Gluetun</h3>
+                                    <p>VPN Gateway</p>
+                                </div>
+                            </div>
+                            <div class="app-description">
+                                VPN client container that provides secure connections for download clients and other services.
+                            </div>
+                            <div class="app-actions">
+                                <button class="action-button install-button" disabled>Install</button>
+                                <button class="action-button config-button" disabled>Configure</button>
+                            </div>
+                            <div class="dependencies">
+                                <h4>Dependencies:</h4>
+                                <div class="dependency-list">
+                                    <span class="dependency-tag">Docker</span>
+                                    <span class="dependency-tag">VPN Provider</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Installation Progress Modal -->
+    <div class="installation-progress" id="installProgress">
+        <div class="progress-spinner"></div>
+        <h3>Installing <span id="appName"></span>...</h3>
+        <p id="progressText">Preparing installation...</p>
+    </div>
+
+    <script>
+        // Sample data for app statuses
+        const appStatuses = {
+            'docker': 'installed',
+            'qbittorrent': 'installed',
+            'jellyfin': 'installed',
+            'prowlarr': 'installed',
+            'radarr': 'installed',
+            'sonarr': 'pending',
+            'bazarr': 'pending',
+            'overseerr': 'pending',
+            'tautulli': 'pending',
+            'homepage': 'pending',
+            'lidarr': 'pending',
+            'portainer': 'pending',
+            'traefik': 'pending',
+            'gluetun': 'pending'
+        };
+
+        // Phase progress calculation
+        function calculatePhaseProgress(phaseApps) {
+            const total = phaseApps.length;
+            const installed = phaseApps.filter(app => appStatuses[app] === 'installed').length;
+            return Math.round((installed / total) * 100);
+        }
+
+        // Phase definitions
+        const phases = {
+            1: ['docker', 'qbittorrent', 'jellyfin'],
+            2: ['prowlarr', 'radarr', 'sonarr', 'bazarr'],
+            3: ['overseerr', 'tautulli', 'homepage'],
+            4: ['lidarr', 'portainer', 'traefik', 'gluetun']
+        };
+
+        // Update phase progress
+        function updatePhaseProgress() {
+            Object.keys(phases).forEach(phaseNum => {
+                const progress = calculatePhaseProgress(phases[phaseNum]);
+                const progressBar = document.querySelector(`.phase:nth-child(${phaseNum}) .progress-fill`);
+                const progressText = document.querySelector(`.phase:nth-child(${phaseNum}) .phase-progress div`);
+                
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                }
+                if (progressText) {
+                    progressText.textContent = `Progress: ${progress}%`;
+                }
+
+                // Update phase status
+                const statusElement = document.querySelector(`.phase:nth-child(${phaseNum}) .phase-status`);
+                if (statusElement) {
+                    statusElement.className = 'phase-status';
+                    if (progress === 100) {
+                        statusElement.classList.add('status-completed');
+                        statusElement.textContent = 'Completed';
+                    } else if (progress > 0) {
+                        statusElement.classList.add('status-in-progress');
+                        statusElement.textContent = 'In Progress';
+                    } else {
+                        statusElement.classList.add('status-pending');
+                        statusElement.textContent = 'Pending';
+                    }
+                }
+            });
+        }
+
+        // Installation simulation
+        function simulateInstallation(appName) {
+            const modal = document.getElementById('installProgress');
+            const appNameElement = document.getElementById('appName');
+            const progressText = document.getElementById('progressText');
+            
+            appNameElement.textContent = appName;
+            modal.style.display = 'block';
+            
+            const steps = [
+                'Downloading container image...',
+                'Creating configuration files...',
+                'Starting container...',
+                'Configuring network settings...',
+                'Installation complete!'
+            ];
+            
+            let currentStep = 0;
+            const interval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    progressText.textContent = steps[currentStep];
+                    currentStep++;
+                } else {
+                    clearInterval(interval);
+                    appStatuses[appName.toLowerCase()] = 'installed';
+                    updateAppStatuses();
+                    updatePhaseProgress();
+                    modal.style.display = 'none';
+                }
+            }, 1500);
+        }
+
+        // Update app status indicators
+        function updateAppStatuses() {
+            document.querySelectorAll('.app-card').forEach(card => {
+                const appName = card.querySelector('h3').textContent.toLowerCase();
+                const indicator = card.querySelector('.app-status-indicator');
+                const installButton = card.querySelector('.install-button');
+                const configButton = card.querySelector('.config-button:not(.health-button)');
+                
+                if (indicator) {
+                    indicator.className = 'app-status-indicator';
+                    if (appStatuses[appName] === 'installed') {
+                        indicator.classList.add('status-installed');
+                        if (installButton) installButton.style.display = 'none';
+                        if (configButton) configButton.disabled = false;
+                    } else if (appStatuses[appName] === 'failed') {
+                        indicator.classList.add('status-failed');
+                    } else {
+                        indicator.classList.add('status-pending');
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePhaseProgress();
+            updateAppStatuses();
+
+            // Install button handlers
+            document.querySelectorAll('.install-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const appName = this.closest('.app-card').querySelector('h3').textContent;
+                    simulateInstallation(appName);
+                });
+            });
+
+            // Health check handlers
+            document.querySelectorAll('.health-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const appName = this.closest('.app-card').querySelector('h3').textContent;
+                    alert(`${appName} is running normally. All health checks passed.`);
+                });
+            });
+
+            // Phase action handlers
+            document.querySelectorAll('.start-phase, .complete-phase').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const phaseTitle = this.closest('.phase-info').querySelector('.phase-title').textContent;
+                    if (this.classList.contains('start-phase')) {
+                        alert(`Starting ${phaseTitle}. Check the installation guide for detailed steps.`);
+                    } else {
+                        alert(`${phaseTitle} marked as complete!`);
+                    }
+                });
+            });
+
+            // App card click handlers for details
+            document.querySelectorAll('.app-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                        const appName = this.querySelector('h3').textContent;
+                        const status = appStatuses[appName.toLowerCase()];
+                        const statusText = status === 'installed' ? 'Installed and Running' : 'Not Installed';
+                        alert(`${appName}\nStatus: ${statusText}\n\nClick the action buttons to manage this service.`);
+                    }
+                });
+            });
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('installProgress').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

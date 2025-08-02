@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR/VR Immersive Media Platform 2.0</title>
+    <link rel="stylesheet" href="styles/main-v2.css">
+    <!-- Using ES modules for Three.js and other dependencies -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.161.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/",
+            "webxr-polyfill": "https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.module.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1>🌐 Immersive Media Platform 2.0</h1>
+            <p>Production-Ready WebXR Experience</p>
+        </header>
+
+        <nav class="feature-nav">
+            <button data-feature="handTracking" class="feature-btn">
+                <span class="feature-icon">👋</span>
+                <span class="feature-name">Hand Tracking</span>
+            </button>
+            <button data-feature="spatialVideo" class="feature-btn">
+                <span class="feature-icon">📹</span>
+                <span class="feature-name">Spatial Video</span>
+            </button>
+            <button data-feature="mixedReality" class="feature-btn">
+                <span class="feature-icon">🌍</span>
+                <span class="feature-name">Mixed Reality</span>
+            </button>
+            <button data-feature="haptics" class="feature-btn">
+                <span class="feature-icon">🤝</span>
+                <span class="feature-name">Haptic Feedback</span>
+            </button>
+            <button data-feature="portal" class="feature-btn">
+                <span class="feature-icon">🌀</span>
+                <span class="feature-name">AR Portal</span>
+            </button>
+        </nav>
+
+        <main id="main-content">
+            <div id="device-support" class="device-support">
+                <h2>Device Compatibility</h2>
+                <div class="devices">
+                    <div class="device apple-vision-pro">
+                        <h3>Apple Vision Pro</h3>
+                        <p>Transient-pointer eye tracking</p>
+                        <div class="support-status"></div>
+                    </div>
+                    <div class="device meta-quest">
+                        <h3>Meta Quest 3</h3>
+                        <p>Full hand tracking & passthrough</p>
+                        <div class="support-status"></div>
+                    </div>
+                    <div class="device spatial-computing">
+                        <h3>Spatial Computing</h3>
+                        <p>WebXR ready devices</p>
+                        <div class="support-status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="feature-demo" class="feature-demo">
+                <canvas id="webxr-canvas"></canvas>
+                <div id="ui-overlay" class="ui-overlay"></div>
+            </div>
+
+            <div class="instructions">
+                <h3>Instructions</h3>
+                <ul>
+                    <li>Click "Enter VR/AR" to start immersive mode</li>
+                    <li>Select a demo from the navigation above</li>
+                    <li>Use hand gestures or controllers to interact</li>
+                    <li>Vision Pro: Look and pinch to select</li>
+                    <li>Quest 3: Use full hand tracking gestures</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2025 Immersive Media Platform 2.0 - Real WebXR Implementation</p>
+            <p>Supports: Apple Vision Pro, Meta Quest 3, and WebXR-compatible devices</p>
+        </footer>
+    </div>
+
+    <!-- Load enhanced WebXR implementations -->
+    <script type="module" src="webxr/core/webxr-manager-v2.js"></script>
+    <script type="module" src="webxr/core/app-v2.js"></script>
+</body>
+</html>

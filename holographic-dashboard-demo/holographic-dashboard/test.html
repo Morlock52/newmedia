@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <h1>Dashboard Loading Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function log(msg, isError = false) {
+            const p = document.createElement('p');
+            p.textContent = msg;
+            p.style.color = isError ? 'red' : 'green';
+            results.appendChild(p);
+            console.log(msg);
+        }
+        
+        // Test THREE.js
+        if (typeof THREE !== 'undefined') {
+            log('✓ THREE.js loaded successfully');
+        } else {
+            log('✗ THREE.js failed to load', true);
+        }
+        
+        // Test WebGL
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            log('✓ WebGL is supported');
+        } else {
+            log('✗ WebGL is not supported', true);
+        }
+        
+        // Test if all required scripts exist
+        const scripts = [
+            'js/config.js',
+            'js/utils.js',
+            'js/shaders.js',
+            'js/particles.js',
+            'js/webgl-fallback.js',
+            'js/holographic-scene.js',
+            'js/media-cards.js',
+            'js/audio-visualizer.js',
+            'js/router.js',
+            'js/navigation-manager.js',
+            'js/page-manager.js',
+            'js/ui-controller.js',
+            'js/websocket-client.js',
+            'js/main.js'
+        ];
+        
+        log('Testing script loading...');
+        
+        let loadedCount = 0;
+        scripts.forEach((script, index) => {
+            const scriptElement = document.createElement('script');
+            scriptElement.src = script;
+            scriptElement.onload = () => {
+                loadedCount++;
+                log(`✓ Loaded ${script}`);
+                
+                if (loadedCount === scripts.length) {
+                    log('All scripts loaded! Testing initialization...');
+                    
+                    // Test if classes are defined
+                    if (typeof HolographicMediaDashboard !== 'undefined') {
+                        log('✓ HolographicMediaDashboard class is defined');
+                    } else {
+                        log('✗ HolographicMediaDashboard class is not defined', true);
+                    }
+                    
+                    if (typeof HolographicScene !== 'undefined') {
+                        log('✓ HolographicScene class is defined');
+                    } else {
+                        log('✗ HolographicScene class is not defined', true);
+                    }
+                }
+            };
+            
+            scriptElement.onerror = () => {
+                log(`✗ Failed to load ${script}`, true);
+            };
+            
+            document.body.appendChild(scriptElement);
+        });
+    </script>
+</body>
+</html>

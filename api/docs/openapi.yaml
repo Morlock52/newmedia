@@ -1,0 +1,906 @@
+openapi: 3.0.3
+info:
+  title: Media Server Orchestration API
+  description: |
+    Complete API for managing media server infrastructure including Docker services,
+    configuration management, health monitoring, and seedbox integration.
+  version: 1.0.0
+  contact:
+    name: Media Server API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3002
+    description: Development server
+  - url: https://api.mediaserver.local
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the API health status
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/docs:
+    get:
+      summary: API documentation
+      description: Returns API documentation in JSON format
+      tags:
+        - Documentation
+      security: []
+      responses:
+        '200':
+          description: API documentation
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # Service Management Endpoints
+  /api/services:
+    get:
+      summary: Get all services
+      description: Returns status of all Docker services
+      tags:
+        - Services
+      responses:
+        '200':
+          description: List of services with their status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicesResponse'
+
+  /api/services/{serviceName}/status:
+    get:
+      summary: Get service status
+      description: Returns detailed status of a specific service
+      tags:
+        - Services
+      parameters:
+        - name: serviceName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Name of the service
+      responses:
+        '200':
+          description: Service status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStatusResponse'
+        '404':
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/services/start:
+    post:
+      summary: Start services
+      description: Start one or more Docker services
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceActionRequest'
+      responses:
+        '200':
+          description: Services started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceActionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/services/stop:
+    post:
+      summary: Stop services
+      description: Stop one or more Docker services
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceActionRequest'
+      responses:
+        '200':
+          description: Services stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceActionResponse'
+
+  /api/services/restart:
+    post:
+      summary: Restart services
+      description: Restart one or more Docker services
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceActionRequest'
+      responses:
+        '200':
+          description: Services restarted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceActionResponse'
+
+  /api/services/{serviceName}/logs:
+    get:
+      summary: Get service logs
+      description: Returns logs for a specific service
+      tags:
+        - Services
+      parameters:
+        - name: serviceName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lines
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Number of log lines to return
+        - name: follow
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Follow log output
+      responses:
+        '200':
+          description: Service logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogsResponse'
+
+  # Configuration Management Endpoints
+  /api/config:
+    get:
+      summary: Get configuration
+      description: Returns current system configuration
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: System configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+    
+    put:
+      summary: Update configuration
+      description: Updates system configuration
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdateRequest'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+        '400':
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/config/validate:
+    post:
+      summary: Validate configuration
+      description: Validates configuration without applying changes
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdateRequest'
+      responses:
+        '200':
+          description: Configuration validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigValidationResponse'
+
+  /api/config/env:
+    get:
+      summary: Get environment variables
+      description: Returns current environment variables
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Environment variables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvResponse'
+
+  # Health Monitoring Endpoints
+  /api/health/overview:
+    get:
+      summary: Get health overview
+      description: Returns overall system health status
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Health overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthOverviewResponse'
+
+  /api/health/detailed:
+    get:
+      summary: Get detailed health check
+      description: Returns detailed health information including Docker status
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+
+  /api/health/metrics:
+    get:
+      summary: Get system metrics
+      description: Returns system metrics with historical data
+      tags:
+        - Health
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+
+  # Seedbox Management Endpoints
+  /api/seedbox/status:
+    get:
+      summary: Get seedbox status
+      description: Returns seedbox and torrent client status
+      tags:
+        - Seedbox
+      responses:
+        '200':
+          description: Seedbox status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedboxStatusResponse'
+
+  /api/seedbox/cross-seed/start:
+    post:
+      summary: Start cross-seed
+      description: Starts cross-seed operation with specified options
+      tags:
+        - Seedbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossSeedRequest'
+      responses:
+        '200':
+          description: Cross-seed started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossSeedResponse'
+
+  /api/seedbox/torrents/stats:
+    get:
+      summary: Get torrent statistics
+      description: Returns detailed torrent statistics and analytics
+      tags:
+        - Seedbox
+      responses:
+        '200':
+          description: Torrent statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TorrentStatsResponse'
+
+  # Log Management Endpoints
+  /api/logs:
+    get:
+      summary: Get logs
+      description: Returns system logs with filtering options
+      tags:
+        - Logs
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [error, warn, info, debug, trace]
+          description: Filter by log level
+        - name: service
+          in: query
+          schema:
+            type: string
+          description: Filter by service name
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: Maximum number of log entries to return
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Return logs since this timestamp
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Return logs until this timestamp
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+          description: Search term to filter logs
+      responses:
+        '200':
+          description: System logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogsResponse'
+
+  /api/logs/stream:
+    get:
+      summary: Stream logs
+      description: Information about WebSocket log streaming endpoint
+      tags:
+        - Logs
+      responses:
+        '200':
+          description: WebSocket endpoint information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  endpoint:
+                    type: string
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # Base Response Schemas
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - success
+        - timestamp
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            error:
+              type: string
+            details:
+              type: string
+            errorId:
+              type: string
+          required:
+            - error
+
+    # Health Schemas
+    HealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [healthy]
+            version:
+              type: string
+            uptime:
+              type: number
+
+    HealthOverviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                overall:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    status:
+                      type: string
+                      enum: [healthy, warning, critical]
+                system:
+                  $ref: '#/components/schemas/SystemHealth'
+                services:
+                  $ref: '#/components/schemas/ServicesHealth'
+
+    SystemHealth:
+      type: object
+      properties:
+        cpu:
+          type: object
+          properties:
+            usage:
+              type: number
+            cores:
+              type: integer
+            status:
+              type: string
+        memory:
+          type: object
+          properties:
+            total:
+              type: integer
+            free:
+              type: integer
+            used:
+              type: integer
+            usage:
+              type: number
+            status:
+              type: string
+        disk:
+          type: object
+          properties:
+            overall:
+              type: number
+            disks:
+              type: array
+              items:
+                type: object
+
+    ServicesHealth:
+      type: object
+      properties:
+        total:
+          type: integer
+        healthy:
+          type: integer
+        unhealthy:
+          type: integer
+        unknown:
+          type: integer
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceStatus'
+
+    DetailedHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/HealthOverviewResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                docker:
+                  type: object
+                filesystem:
+                  type: object
+                ports:
+                  type: object
+                certificates:
+                  type: object
+
+    MetricsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                current:
+                  type: object
+                history:
+                  type: array
+                  items:
+                    type: object
+                trends:
+                  type: object
+
+    # Service Schemas
+    ServicesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                services:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ServiceStatus'
+
+    ServiceStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ServiceStatus'
+
+    ServiceStatus:
+      type: object
+      properties:
+        service:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        running:
+          type: boolean
+        port:
+          type: integer
+        webUrl:
+          type: string
+        healthCheck:
+          type: object
+          properties:
+            status:
+              type: string
+            responseTime:
+              type: number
+            httpStatus:
+              type: integer
+        lastChecked:
+          type: string
+          format: date-time
+
+    ServiceActionRequest:
+      type: object
+      properties:
+        services:
+          type: array
+          items:
+            type: string
+          description: List of service names to act upon (empty for all services)
+        profile:
+          type: string
+          enum: [minimal, media, download, monitoring, full]
+          description: Service profile to use
+
+    ServiceActionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                services:
+                  type: array
+                  items:
+                    type: string
+                profile:
+                  type: string
+                stdout:
+                  type: string
+                stderr:
+                  type: string
+
+    # Configuration Schemas
+    ConfigResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Configuration'
+
+    Configuration:
+      type: object
+      properties:
+        general:
+          type: object
+          properties:
+            PUID:
+              type: integer
+            PGID:
+              type: integer
+            TZ:
+              type: string
+            DOMAIN:
+              type: string
+        paths:
+          type: object
+          properties:
+            MEDIA_PATH:
+              type: string
+            DOWNLOADS_PATH:
+              type: string
+        authentication:
+          type: object
+        apiKeys:
+          type: object
+        cloudflare:
+          type: object
+        monitoring:
+          type: object
+        vpn:
+          type: object
+        smtp:
+          type: object
+
+    ConfigUpdateRequest:
+      type: object
+      properties:
+        general:
+          type: object
+        paths:
+          type: object
+        authentication:
+          type: object
+        apiKeys:
+          type: object
+        cloudflare:
+          type: object
+        monitoring:
+          type: object
+        vpn:
+          type: object
+        smtp:
+          type: object
+
+    ConfigValidationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                errors:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                      message:
+                        type: string
+
+    EnvResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                environment:
+                  type: object
+                  additionalProperties:
+                    type: string
+
+    # Seedbox Schemas
+    SeedboxStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                qbittorrent:
+                  type: object
+                  properties:
+                    connected:
+                      type: boolean
+                    version:
+                      type: string
+                    stats:
+                      type: object
+                crossSeed:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    running:
+                      type: boolean
+                disk:
+                  type: object
+
+    CrossSeedRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [search, daemon]
+          default: search
+        trackers:
+          type: array
+          items:
+            type: string
+        excludeOlder:
+          type: integer
+          minimum: 0
+          default: 7
+        includeNonVideos:
+          type: boolean
+          default: false
+
+    CrossSeedResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                command:
+                  type: string
+                pid:
+                  type: integer
+
+    TorrentStatsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                overview:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    downloading:
+                      type: integer
+                    seeding:
+                      type: integer
+                    avgRatio:
+                      type: number
+                trackers:
+                  type: object
+                categories:
+                  type: object
+                ratioDistribution:
+                  type: object
+
+    # Log Schemas
+    LogsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                logs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LogEntry'
+
+    LogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [ERROR, WARN, INFO, DEBUG, TRACE]
+        message:
+          type: string
+        meta:
+          type: object
+        service:
+          type: string
+      required:
+        - timestamp
+        - level
+        - message
+
+tags:
+  - name: Health
+    description: API and system health monitoring
+  - name: Services
+    description: Docker service management
+  - name: Configuration
+    description: System configuration management
+  - name: Seedbox
+    description: Seedbox and torrent management
+  - name: Logs
+    description: Log management and streaming
+  - name: Documentation
+    description: API documentation

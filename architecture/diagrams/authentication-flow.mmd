@@ -1,0 +1,78 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#1f2937', 'primaryTextColor': '#fff', 'primaryBorderColor': '#374151', 'lineColor': '#6b7280', 'secondaryColor': '#374151', 'tertiaryColor': '#1f2937'}}}%%
+
+sequenceDiagram
+    participant U as User
+    participant CF as Cloudflare
+    participant TR as Traefik
+    participant AU as Authelia
+    participant LDAP as LDAP/AD
+    participant REDIS as Redis Cache
+    participant SVC as Service
+    participant DB as PostgreSQL
+    
+    Note over U,DB: Initial Access Attempt
+    U->>CF: Request service.domain.com
+    CF->>CF: DDoS Protection & WAF
+    CF->>TR: Forward request (HTTPS)
+    
+    Note over TR,AU: Authentication Check
+    TR->>TR: Check auth middleware
+    TR->>AU: Verify session token
+    AU->>REDIS: Check session cache
+    
+    alt Session Valid
+        REDIS-->>AU: Valid session
+        AU-->>TR: Authorized
+        TR->>SVC: Forward request
+        SVC-->>U: Service response
+    else Session Invalid/Missing
+        REDIS-->>AU: No valid session
+        AU-->>TR: Unauthorized
+        TR-->>U: Redirect to auth.domain.com
+        
+        Note over U,AU: Authentication Flow
+        U->>AU: Access auth portal
+        AU-->>U: Login page
+        U->>AU: Submit credentials
+        
+        AU->>LDAP: Validate credentials
+        LDAP-->>AU: User validated
+        
+        AU->>AU: Check 2FA requirement
+        AU-->>U: 2FA challenge
+        U->>AU: Submit 2FA code
+        AU->>AU: Validate TOTP
+        
+        Note over AU,DB: Session Creation
+        AU->>DB: Log authentication
+        AU->>REDIS: Create session
+        AU->>AU: Generate JWT token
+        AU-->>U: Set secure cookie
+        
+        Note over U,SVC: Retry with Auth
+        U->>TR: Request with session
+        TR->>AU: Verify session
+        AU->>REDIS: Check session
+        REDIS-->>AU: Valid session
+        AU-->>TR: Authorized
+        TR->>SVC: Forward request
+        SVC-->>U: Service response
+    end
+    
+    Note over U,DB: Advanced Security Features
+    
+    rect rgb(50, 50, 50)
+        Note right of AU: Security Policies
+        AU->>AU: Check ACL rules
+        AU->>AU: Verify IP whitelist
+        AU->>AU: Rate limiting
+        AU->>AU: Device fingerprinting
+    end
+    
+    rect rgb(50, 50, 50)
+        Note right of TR: Service Integration
+        TR->>TR: Add auth headers
+        TR->>TR: X-Forwarded-User
+        TR->>TR: X-Forwarded-Groups
+        TR->>TR: X-Forwarded-Email
+    end

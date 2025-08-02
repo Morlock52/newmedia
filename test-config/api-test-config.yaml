@@ -1,0 +1,22 @@
+services:
+  jellyfin:
+    api_key: ""
+    timeout: 30
+  sonarr:
+    api_key: ""
+    timeout: 30
+  radarr:
+    api_key: ""
+    timeout: 30
+  prowlarr:
+    api_key: ""
+    timeout: 30
+  grafana:
+    username: "admin"
+    password: "admin"
+    timeout: 30
+
+global:
+  base_url: "http://localhost"
+  verify_ssl: false
+  quick_mode: true

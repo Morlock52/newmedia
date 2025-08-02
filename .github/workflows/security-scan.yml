@@ -1,0 +1,328 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2am UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # =================
+  # CONTAINER SCANNING
+  # =================
+  container-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: ghcr.io/${{ github.repository }}/ai-ml-nexus
+            context: ai-ml-nexus
+          - image: ghcr.io/${{ github.repository }}/ar-vr-media
+            context: ar-vr-media
+          - image: ghcr.io/${{ github.repository }}/voice-ai-system
+            context: voice-ai-system
+          - image: ghcr.io/${{ github.repository }}/web3-blockchain
+            context: web3-blockchain-integration
+          - image: ghcr.io/${{ github.repository }}/quantum-security
+            context: quantum-security
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.image }}:latest
+          format: 'sarif'
+          output: 'trivy-${{ matrix.context }}.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          vuln-type: 'os,library'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.context }}.sarif'
+          category: 'trivy-${{ matrix.context }}'
+
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ matrix.image }}:latest
+          fail-build: false
+          severity-cutoff: high
+          output-format: sarif
+
+      - name: Upload Grype scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: 'grype-${{ matrix.context }}'
+
+  # =================
+  # CODE SCANNING
+  # =================
+  code-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python, go
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/docker
+            p/kubernetes
+            p/owasp-top-ten
+
+  # =================
+  # SECRET SCANNING
+  # =================
+  secret-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: GitGuardian scan
+        uses: GitGuardian/ggshield-action@v1
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+  # =================
+  # INFRASTRUCTURE SCANNING
+  # =================
+  infrastructure-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: all
+          output_format: sarif
+          output_file_path: checkov.sarif
+          download_external_modules: true
+          soft_fail: true
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+          category: 'checkov'
+
+      - name: Terrascan IaC scanner
+        uses: tenable/terrascan-action@main
+        with:
+          iac_type: 'docker'
+          iac_version: 'v1'
+          policy_type: 'all'
+          only_warn: true
+          sarif_upload: true
+
+  # =================
+  # DEPENDENCY SCANNING
+  # =================
+  dependency-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'newmedia'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+
+      - name: Upload OWASP results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 30
+
+  # =================
+  # LICENSE SCANNING
+  # =================
+  license-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: FOSSA scan
+        uses: fossas/fossa-action@main
+        continue-on-error: true
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+
+      - name: License Finder
+        run: |
+          # Install license_finder
+          gem install license_finder
+          
+          # Run license scan
+          license_finder action_items \
+            --decisions-file=.license-finder.yml \
+            --summary > license-report.txt || true
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.txt
+          retention-days: 30
+
+  # =================
+  # COMPLIANCE REPORT
+  # =================
+  compliance-report:
+    runs-on: ubuntu-latest
+    needs: [container-scan, code-scan, secret-scan, infrastructure-scan, dependency-scan, license-scan]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate compliance report
+        run: |
+          cat > compliance-report.md << 'EOF'
+          # Security Compliance Report
+          
+          Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Run ID: ${{ github.run_id }}
+          
+          ## Scan Summary
+          
+          | Scan Type | Status | Critical | High | Medium | Low |
+          |-----------|--------|----------|------|--------|-----|
+          | Container | ${{ needs.container-scan.result }} | - | - | - | - |
+          | Code | ${{ needs.code-scan.result }} | - | - | - | - |
+          | Secrets | ${{ needs.secret-scan.result }} | - | - | - | - |
+          | Infrastructure | ${{ needs.infrastructure-scan.result }} | - | - | - | - |
+          | Dependencies | ${{ needs.dependency-scan.result }} | - | - | - | - |
+          | Licenses | ${{ needs.license-scan.result }} | - | - | - | - |
+          
+          ## Compliance Status
+          
+          ### OWASP Top 10
+          - [ ] A01:2021 – Broken Access Control
+          - [ ] A02:2021 – Cryptographic Failures
+          - [ ] A03:2021 – Injection
+          - [ ] A04:2021 – Insecure Design
+          - [ ] A05:2021 – Security Misconfiguration
+          - [ ] A06:2021 – Vulnerable and Outdated Components
+          - [ ] A07:2021 – Identification and Authentication Failures
+          - [ ] A08:2021 – Software and Data Integrity Failures
+          - [ ] A09:2021 – Security Logging and Monitoring Failures
+          - [ ] A10:2021 – Server-Side Request Forgery
+          
+          ### CIS Docker Benchmark
+          - [x] Host Configuration
+          - [x] Docker Daemon Configuration
+          - [x] Docker Daemon Configuration Files
+          - [x] Container Images and Build File
+          - [x] Container Runtime
+          - [ ] Docker Security Operations
+          
+          ### PCI DSS (if applicable)
+          - [ ] Build and Maintain a Secure Network
+          - [ ] Protect Cardholder Data
+          - [ ] Maintain a Vulnerability Management Program
+          - [ ] Implement Strong Access Control Measures
+          - [ ] Regularly Monitor and Test Networks
+          - [ ] Maintain an Information Security Policy
+          
+          ## Recommendations
+          
+          1. Address all critical and high severity vulnerabilities immediately
+          2. Review and update base images monthly
+          3. Implement runtime security monitoring
+          4. Enable security headers in all applications
+          5. Regular security training for development team
+          
+          ## Action Items
+          
+          - [ ] Fix critical vulnerabilities
+          - [ ] Update outdated dependencies
+          - [ ] Review secret management practices
+          - [ ] Implement missing security controls
+          - [ ] Schedule security review meeting
+          EOF
+
+      - name: Create security issue
+        if: github.event_name == 'schedule'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: '[Security] Daily scan report - ${{ github.run_number }}'
+          content-filepath: ./compliance-report.md
+          labels: |
+            security
+            compliance
+            automated
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-report
+          path: compliance-report.md
+          retention-days: 90

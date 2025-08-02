@@ -1,0 +1,190 @@
+# Homepage Services Configuration - Production Media Stack
+# ========================================================
+# Dashboard layout and service definitions
+
+---
+# Media Services
+- Media:
+    - Jellyfin:
+        href: https://jellyfin.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Media Server
+        icon: jellyfin.png
+        server: jellyfin
+        container: media_jellyfin
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: {{HOMEPAGE_VAR_JELLYFIN_API_KEY}}
+          enableBlocks: true
+          enableNowPlaying: true
+
+    - Overseerr:
+        href: https://overseerr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Request Management
+        icon: overseerr.png
+        server: overseerr
+        container: media_overseerr
+        widget:
+          type: overseerr
+          url: http://overseerr:5055
+          key: {{HOMEPAGE_VAR_OVERSEERR_API_KEY}}
+
+    - Tautulli:
+        href: https://tautulli.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Media Analytics
+        icon: tautulli.png
+        server: tautulli
+        container: media_tautulli
+        widget:
+          type: tautulli
+          url: http://tautulli:8181
+          key: {{HOMEPAGE_VAR_TAUTULLI_API_KEY}}
+
+# Media Management
+- Media Management:
+    - Sonarr:
+        href: https://sonarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: TV Show Manager
+        icon: sonarr.png
+        server: sonarr
+        container: media_sonarr
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: {{HOMEPAGE_VAR_SONARR_API_KEY}}
+
+    - Radarr:
+        href: https://radarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Movie Manager
+        icon: radarr.png
+        server: radarr
+        container: media_radarr
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: {{HOMEPAGE_VAR_RADARR_API_KEY}}
+
+    - Lidarr:
+        href: https://lidarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Music Manager
+        icon: lidarr.png
+        server: lidarr
+        container: media_lidarr
+        widget:
+          type: lidarr
+          url: http://lidarr:8686
+          key: {{HOMEPAGE_VAR_LIDARR_API_KEY}}
+
+    - Readarr:
+        href: https://readarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Book Manager
+        icon: readarr.png
+        server: readarr
+        container: media_readarr
+        widget:
+          type: readarr
+          url: http://readarr:8787
+          key: {{HOMEPAGE_VAR_READARR_API_KEY}}
+
+    - Prowlarr:
+        href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Indexer Manager
+        icon: prowlarr.png
+        server: prowlarr
+        container: media_prowlarr
+        widget:
+          type: prowlarr
+          url: http://prowlarr:9696
+          key: {{HOMEPAGE_VAR_PROWLARR_API_KEY}}
+
+    - Bazarr:
+        href: https://bazarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Subtitle Manager
+        icon: bazarr.png
+        server: bazarr
+        container: media_bazarr
+        widget:
+          type: bazarr
+          url: http://bazarr:6767
+          key: {{HOMEPAGE_VAR_BAZARR_API_KEY}}
+
+# Downloads
+- Downloads:
+    - qBittorrent:
+        href: https://qbittorrent.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Torrent Client
+        icon: qbittorrent.png
+        server: qbittorrent
+        container: media_qbittorrent
+        widget:
+          type: qbittorrent
+          url: http://vpn:8080
+          username: {{HOMEPAGE_VAR_QBT_USERNAME}}
+          password: {{HOMEPAGE_VAR_QBT_PASSWORD}}
+
+    - SABnzbd:
+        href: https://sabnzbd.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Usenet Client
+        icon: sabnzbd.png
+        server: sabnzbd
+        container: media_sabnzbd
+        widget:
+          type: sabnzbd
+          url: http://sabnzbd:8080
+          key: {{HOMEPAGE_VAR_SABNZBD_API_KEY}}
+
+# Monitoring
+- Monitoring:
+    - Grafana:
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Metrics Dashboard
+        icon: grafana.png
+        server: grafana
+        container: media_grafana
+        widget:
+          type: grafana
+          url: http://grafana:3000
+          username: {{HOMEPAGE_VAR_GRAFANA_USERNAME}}
+          password: {{HOMEPAGE_VAR_GRAFANA_PASSWORD}}
+
+    - Prometheus:
+        href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Metrics Collection
+        icon: prometheus.png
+        server: prometheus
+        container: media_prometheus
+
+    - Traefik:
+        href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Reverse Proxy
+        icon: traefik.png
+        server: traefik
+        container: media_traefik
+
+# Management
+- Management:
+    - Portainer:
+        href: https://portainer.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Container Management
+        icon: portainer.png
+        server: portainer
+        container: media_portainer
+        widget:
+          type: portainer
+          url: https://portainer:9443
+          env: 1
+          key: {{HOMEPAGE_VAR_PORTAINER_API_KEY}}
+
+    - Duplicati:
+        href: https://backup.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Backup Manager
+        icon: duplicati.png
+        server: duplicati
+        container: media_duplicati
+
+    - Authelia:
+        href: https://auth.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Authentication
+        icon: authelia.png
+        server: authelia
+        container: media_authelia

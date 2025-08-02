@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # Homarr Dashboard - Main Landing Page
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - homarr_configs:/app/data/configs
+      - homarr_icons:/app/public/icons
+      - homarr_data:/data
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    networks:
+      - traefik_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homarr-web.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-web.entrypoints=web"
+      - "traefik.http.services.homarr.loadbalancer.server.port=7575"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.homarr-secure.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.homarr-secure.tls=true"
+
+  # Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.middlewares=default-headers@docker
+      - --entrypoints.web.forwardedHeaders.insecure=true
+      - --accesslog=true
+      - --log.level=INFO
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.forwardingTimeouts.responseHeaderTimeout=30s
+      - --serversTransport.forwardingTimeouts.idleConnTimeout=90s
+      - --entrypoints.web.forwardedHeaders.trustedIPs=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,172.25.0.0/24
+      - --entrypoints.websecure.forwardedHeaders.trustedIPs=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,172.25.0.0/24
+      - --entrypoints.web.forwardedHeaders.insecure=true
+      - --serversTransport.insecureSkipVerify=true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/letsencrypt
+    networks:
+      traefik_network:
+        ipv4_address: 172.25.0.2
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-web.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-web.entrypoints=web"
+      - "traefik.http.routers.traefik-web.service=api@internal"
+      - "traefik.http.routers.api.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.api.entrypoints=traefik"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.tls=true"
+    secrets:
+      - traefik_dashboard_auth
+
+  # All other services from the complete stack...
+  # (Including all the services from docker-compose-complete.yml)
+
+networks:
+  traefik_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+          gateway: 172.25.0.1
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
+  download_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.32.0.0/24
+          gateway: 172.32.0.1
+
+secrets:
+  traefik_dashboard_auth:
+    file: ./secrets/traefik_dashboard_auth.txt
+  wg_private_key:
+    file: ./secrets/wg_private_key.txt
+  photoprism_admin_password:
+    file: ./secrets/photoprism_admin_password.txt
+
+volumes:
+  homarr_configs:
+  homarr_icons:
+  homarr_data:
+  traefik_data:
+  gluetun_data:
+  jellyfin_config:
+  sonarr_config:
+  radarr_config:
+  lidarr_config:
+  readarr_config:
+  bazarr_config:
+  prowlarr_config:
+  overseerr_config:
+  qbittorrent_config:
+  tautulli_config:
+  mylar_config:
+  podgrab_config:
+  youtube-dl-config:
+  youtube-dl-db:
+  photoprism_originals:
+  photoprism_storage:
+  photoprism_db:
+  media_data:

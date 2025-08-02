@@ -1,0 +1,913 @@
+{
+  "timestamp": "2025-08-02T05:46:02.122Z",
+  "summary": {
+    "totalTests": 44,
+    "passedTests": 25,
+    "failedTests": 19,
+    "successRate": 56.8,
+    "duration": 44010,
+    "grade": "F",
+    "status": "REQUIRES MAJOR FIXES"
+  },
+  "categoryStats": [
+    {
+      "category": "Infrastructure",
+      "passed": 2,
+      "total": 4,
+      "rate": "50.0"
+    },
+    {
+      "category": "Service Health",
+      "passed": 13,
+      "total": 16,
+      "rate": "81.3"
+    },
+    {
+      "category": "API Functionality",
+      "passed": 2,
+      "total": 5,
+      "rate": "40.0"
+    },
+    {
+      "category": "Integration",
+      "passed": 2,
+      "total": 4,
+      "rate": "50.0"
+    },
+    {
+      "category": "Performance",
+      "passed": 2,
+      "total": 4,
+      "rate": "50.0"
+    },
+    {
+      "category": "Load Testing",
+      "passed": 1,
+      "total": 3,
+      "rate": "33.3"
+    },
+    {
+      "category": "Security",
+      "passed": 0,
+      "total": 4,
+      "rate": "0.0"
+    },
+    {
+      "category": "User Workflows",
+      "passed": 3,
+      "total": 4,
+      "rate": "75.0"
+    }
+  ],
+  "detailedResults": [
+    {
+      "category": "Infrastructure",
+      "result": {
+        "name": "Docker Container Status",
+        "success": true,
+        "duration": 294.09583399999997,
+        "details": {
+          "runningContainers": 16,
+          "expectedContainers": 16,
+          "containers": [
+            "jellyfin      Up 2 minutes (healthy)   0.0.0.0:8096->8096/tcp, [::]:8096->8096/tcp",
+            "lidarr        Up 2 minutes             0.0.0.0:8686->8686/tcp, [::]:8686->8686/tcp",
+            "sonarr        Up 2 minutes             0.0.0.0:8989->8989/tcp, [::]:8989->8989/tcp",
+            "radarr        Up 2 minutes             0.0.0.0:7878->7878/tcp, [::]:7878->7878/tcp",
+            "sabnzbd       Up 2 minutes             0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp",
+            "bazarr        Up 2 minutes             0.0.0.0:6767->6767/tcp, [::]:6767->6767/tcp",
+            "qbittorrent   Up 2 minutes             0.0.0.0:6881->6881/tcp, [::]:6881->6881/tcp, 0.0.0.0:8080->8080/tcp, 0.0.0.0:6881->6881/udp, [::]:8080->8080/tcp, [::]:6881->6881/udp",
+            "postgres      Up 5 minutes             5432/tcp",
+            "prometheus    Up 5 minutes             0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp",
+            "grafana       Up 5 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp",
+            "overseerr     Up 5 minutes             0.0.0.0:5055->5055/tcp, [::]:5055->5055/tcp",
+            "redis         Up 5 minutes             6379/tcp",
+            "loki          Up 5 minutes             3100/tcp",
+            "homepage      Up 5 minutes (healthy)   0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp",
+            "prowlarr      Up 5 minutes             0.0.0.0:9696->9696/tcp, [::]:9696->9696/tcp",
+            "tautulli      Up 5 minutes             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp",
+            "portainer     Up 5 minutes             0.0.0.0:9000->9000/tcp, [::]:9000->9000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp"
+          ]
+        }
+      }
+    },
+    {
+      "category": "Infrastructure",
+      "result": {
+        "name": "Docker Network Connectivity",
+        "success": false,
+        "duration": 209.65745800000002,
+        "details": {
+          "availableNetworks": 0,
+          "networks": []
+        }
+      }
+    },
+    {
+      "category": "Infrastructure",
+      "result": {
+        "name": "Volume Storage",
+        "success": true,
+        "duration": 209.30358300000006,
+        "details": {
+          "availableVolumes": 9,
+          "volumes": [
+            "local     ai-document-processor_postgres_data",
+            "local     document-processor_postgres_data",
+            "local     localai_langfuse_postgres_data",
+            "local     newmedia_grafana_data",
+            "local     newmedia_postgres_data",
+            "local     newmedia_prometheus_data",
+            "local     psscript2_postgres_data",
+            "local     psscript3_postgres_data",
+            "local     psscript4_postgres_data"
+          ]
+        }
+      }
+    },
+    {
+      "category": "Infrastructure",
+      "result": {
+        "name": "Environment Variables",
+        "success": false,
+        "duration": 0.9126249999999914,
+        "details": {
+          "envFileExists": false,
+          "missingVariables": [
+            "TZ",
+            "MEDIA_PATH",
+            "DOWNLOADS_PATH"
+          ],
+          "configuredVariables": []
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Jellyfin Media Server Health Check",
+        "success": true,
+        "duration": 267.9369160000001,
+        "details": {
+          "service": "jellyfin",
+          "url": "http://localhost:8096",
+          "status": 200,
+          "responseTime": 267.93983300000014,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Sonarr TV Automation Health Check",
+        "success": true,
+        "duration": 264.34962500000006,
+        "details": {
+          "service": "sonarr",
+          "url": "http://localhost:8989",
+          "status": 200,
+          "responseTime": 264.351416,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Radarr Movie Automation Health Check",
+        "success": true,
+        "duration": 284.591417,
+        "details": {
+          "service": "radarr",
+          "url": "http://localhost:7878",
+          "status": 200,
+          "responseTime": 284.59412499999996,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Lidarr Music Automation Health Check",
+        "success": true,
+        "duration": 263.07845900000007,
+        "details": {
+          "service": "lidarr",
+          "url": "http://localhost:8686",
+          "status": 200,
+          "responseTime": 263.08120899999994,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Bazarr Subtitles Health Check",
+        "success": true,
+        "duration": 137.80333299999995,
+        "details": {
+          "service": "bazarr",
+          "url": "http://localhost:6767",
+          "status": 200,
+          "responseTime": 137.809208,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Prowlarr Indexer Manager Health Check",
+        "duration": 10004.330167,
+        "details": {
+          "service": "prowlarr",
+          "url": "http://localhost:9696",
+          "error": "timeout of 10000ms exceeded",
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "qBittorrent Health Check",
+        "success": true,
+        "duration": 109.78016600000001,
+        "details": {
+          "service": "qbittorrent",
+          "url": "http://localhost:8080",
+          "status": 200,
+          "responseTime": 109.78391599999998,
+          "vpnRequired": true
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "SABnzbd Usenet Health Check",
+        "success": true,
+        "duration": 108.83441700000003,
+        "details": {
+          "service": "sabnzbd",
+          "url": "http://localhost:8081",
+          "status": 403,
+          "responseTime": 108.83920799999999,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Overseerr Request Manager Health Check",
+        "success": true,
+        "duration": 793.8807499999999,
+        "details": {
+          "service": "overseerr",
+          "url": "http://localhost:5055",
+          "status": 200,
+          "responseTime": 793.883375,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Tautulli Analytics Health Check",
+        "success": true,
+        "duration": 215.14870900000005,
+        "details": {
+          "service": "tautulli",
+          "url": "http://localhost:8181",
+          "status": 200,
+          "responseTime": 215.15058399999998,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Prometheus Metrics Health Check",
+        "success": true,
+        "duration": 104.22762499999999,
+        "details": {
+          "service": "prometheus",
+          "url": "http://localhost:9090",
+          "status": 200,
+          "responseTime": 104.23504200000002,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Grafana Dashboard Health Check",
+        "success": true,
+        "duration": 212.8259999999999,
+        "details": {
+          "service": "grafana",
+          "url": "http://localhost:3000",
+          "status": 200,
+          "responseTime": 212.82841599999995,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Homepage Dashboard Health Check",
+        "success": true,
+        "duration": 182.83358299999998,
+        "details": {
+          "service": "homepage",
+          "url": "http://localhost:3001",
+          "status": 200,
+          "responseTime": 182.836,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Portainer Container Manager Health Check",
+        "success": true,
+        "duration": 151.57266600000003,
+        "details": {
+          "service": "portainer",
+          "url": "http://localhost:9000",
+          "status": 200,
+          "responseTime": 151.57579099999998,
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Traefik Reverse Proxy Health Check",
+        "duration": 6.024792000000048,
+        "details": {
+          "service": "traefik",
+          "url": "http://localhost:8082",
+          "error": "",
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "Service Health",
+      "result": {
+        "name": "Media Server API Health Check",
+        "duration": 6.840915999999993,
+        "details": {
+          "service": "api",
+          "url": "http://localhost:3002",
+          "error": "",
+          "vpnRequired": false
+        }
+      }
+    },
+    {
+      "category": "API Functionality",
+      "result": {
+        "name": "Media Server API",
+        "success": false,
+        "duration": 1.9380420000015874,
+        "error": ""
+      }
+    },
+    {
+      "category": "API Functionality",
+      "result": {
+        "name": "Jellyfin API",
+        "success": true,
+        "duration": 40.52154100000007,
+        "details": {
+          "systemStatus": 200,
+          "healthStatus": 200,
+          "version": "10.10.7",
+          "serverName": "5f05bff8be1c"
+        }
+      }
+    },
+    {
+      "category": "API Functionality",
+      "result": {
+        "name": "Sonarr API",
+        "success": false,
+        "duration": 31.233541999999943,
+        "error": "Request failed with status code 401"
+      }
+    },
+    {
+      "category": "API Functionality",
+      "result": {
+        "name": "Radarr API",
+        "success": false,
+        "duration": 26.208583000001454,
+        "error": "Request failed with status code 401"
+      }
+    },
+    {
+      "category": "API Functionality",
+      "result": {
+        "name": "Overseerr API",
+        "success": true,
+        "duration": 230.62837500000023,
+        "details": {
+          "status": 200,
+          "version": "1.34.0"
+        }
+      }
+    },
+    {
+      "category": "Integration",
+      "result": {
+        "name": "Service Discovery",
+        "success": false,
+        "duration": 4.137958999999682,
+        "error": ""
+      }
+    },
+    {
+      "category": "Integration",
+      "result": {
+        "name": "WebSocket Connections",
+        "success": false,
+        "duration": 3.928749999999127,
+        "error": ""
+      }
+    },
+    {
+      "category": "Integration",
+      "result": {
+        "name": "Prometheus Metrics",
+        "success": true,
+        "duration": 11.923667000000933,
+        "details": {
+          "status": 200,
+          "totalMetrics": 1,
+          "activeMetrics": 1
+        }
+      }
+    },
+    {
+      "category": "Integration",
+      "result": {
+        "name": "Database Connections",
+        "success": true,
+        "duration": 128.5513749999991,
+        "details": {
+          "postgresReady": true,
+          "output": "/var/run/postgresql:5432 - accepting connections"
+        }
+      }
+    },
+    {
+      "category": "Performance",
+      "result": {
+        "name": "API Response Times",
+        "success": false,
+        "duration": 153.324333999999,
+        "details": {
+          "results": [
+            {
+              "url": "http://localhost:3002/health",
+              "averageTime": 5000,
+              "p95Time": 5000,
+              "target": 100,
+              "meetsTarget": false
+            },
+            {
+              "url": "http://localhost:8096/health",
+              "averageTime": 10.5051000999998,
+              "p95Time": 27.10254200000054,
+              "target": 200,
+              "meetsTarget": true
+            },
+            {
+              "url": "http://localhost:3002/api/services",
+              "averageTime": 5000,
+              "p95Time": 5000,
+              "target": 500,
+              "meetsTarget": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "Performance",
+      "result": {
+        "name": "Memory Usage",
+        "success": false,
+        "duration": 2992.414167000001,
+        "details": {
+          "averageMemoryUsage": null,
+          "highMemoryContainers": [],
+          "containerStats": [
+            {
+              "container": "5f05bff8be1c",
+              "memUsage": "136.8MiB",
+              "memPerc": null
+            },
+            {
+              "container": "faeebbfae96c",
+              "memUsage": "166.3MiB",
+              "memPerc": null
+            },
+            {
+              "container": "6957bfb23d78",
+              "memUsage": "194.7MiB",
+              "memPerc": null
+            },
+            {
+              "container": "ad581e09e40d",
+              "memUsage": "176.8MiB",
+              "memPerc": null
+            },
+            {
+              "container": "b437376131de",
+              "memUsage": "50.44MiB",
+              "memPerc": null
+            },
+            {
+              "container": "95d8e6028631",
+              "memUsage": "206.4MiB",
+              "memPerc": null
+            },
+            {
+              "container": "08589bf120ce",
+              "memUsage": "59.4MiB",
+              "memPerc": null
+            },
+            {
+              "container": "30a43796f190",
+              "memUsage": "27.13MiB",
+              "memPerc": null
+            },
+            {
+              "container": "b584aa2c24b5",
+              "memUsage": "39.75MiB",
+              "memPerc": null
+            },
+            {
+              "container": "6ff27bb4f869",
+              "memUsage": "122.2MiB",
+              "memPerc": null
+            },
+            {
+              "container": "df9e00c05cf9",
+              "memUsage": "251MiB",
+              "memPerc": null
+            },
+            {
+              "container": "5bd9045d5b7b",
+              "memUsage": "19.39MiB",
+              "memPerc": null
+            },
+            {
+              "container": "b320d1f8e6b3",
+              "memUsage": "59.49MiB",
+              "memPerc": null
+            },
+            {
+              "container": "e33c57acb3c8",
+              "memUsage": "104.6MiB",
+              "memPerc": null
+            },
+            {
+              "container": "a495529236db",
+              "memUsage": "161.3MiB",
+              "memPerc": null
+            },
+            {
+              "container": "f03078e7d01e",
+              "memUsage": "89.24MiB",
+              "memPerc": null
+            },
+            {
+              "container": "df13120b8c54",
+              "memUsage": "14.25MiB",
+              "memPerc": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "Performance",
+      "result": {
+        "name": "CPU Usage",
+        "success": true,
+        "duration": 2991.1034169999984,
+        "details": {
+          "averageCPUUsage": 0.11294117647058824,
+          "highCPUContainers": [],
+          "containerStats": [
+            {
+              "container": "5f05bff8be1c",
+              "cpuPerc": 0.04
+            },
+            {
+              "container": "faeebbfae96c",
+              "cpuPerc": 0.11
+            },
+            {
+              "container": "6957bfb23d78",
+              "cpuPerc": 0.17
+            },
+            {
+              "container": "ad581e09e40d",
+              "cpuPerc": 0.18
+            },
+            {
+              "container": "b437376131de",
+              "cpuPerc": 0.03
+            },
+            {
+              "container": "95d8e6028631",
+              "cpuPerc": 0.15
+            },
+            {
+              "container": "08589bf120ce",
+              "cpuPerc": 0.12
+            },
+            {
+              "container": "30a43796f190",
+              "cpuPerc": 0
+            },
+            {
+              "container": "b584aa2c24b5",
+              "cpuPerc": 0
+            },
+            {
+              "container": "6ff27bb4f869",
+              "cpuPerc": 0.11
+            },
+            {
+              "container": "df9e00c05cf9",
+              "cpuPerc": 0.01
+            },
+            {
+              "container": "5bd9045d5b7b",
+              "cpuPerc": 0.38
+            },
+            {
+              "container": "b320d1f8e6b3",
+              "cpuPerc": 0.55
+            },
+            {
+              "container": "e33c57acb3c8",
+              "cpuPerc": 0
+            },
+            {
+              "container": "a495529236db",
+              "cpuPerc": 0.04
+            },
+            {
+              "container": "f03078e7d01e",
+              "cpuPerc": 0.03
+            },
+            {
+              "container": "df13120b8c54",
+              "cpuPerc": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "Performance",
+      "result": {
+        "name": "Disk I/O Performance",
+        "success": true,
+        "duration": 2970.089958999999,
+        "details": {
+          "diskUsage": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          49        20        33.78GB   26.34GB (77%)\nContainers      20        20        6.631MB   0B (0%)\nLocal Volumes   157       21        7.35GB    7.203GB (97%)\nBuild Cache     99        0         18.68GB   18.68GB\n",
+          "optimized": false
+        }
+      }
+    },
+    {
+      "category": "Load Testing",
+      "result": {
+        "name": "Concurrent Users Load Test",
+        "success": true,
+        "duration": 74.64408300000105,
+        "details": {
+          "results": [
+            {
+              "userCount": 5,
+              "successRate": 1,
+              "avgResponseTime": 20.265875199999208,
+              "totalDuration": 25.28491699999904
+            },
+            {
+              "userCount": 10,
+              "successRate": 1,
+              "avgResponseTime": 10.544670900000892,
+              "totalDuration": 23.581583000001046
+            },
+            {
+              "userCount": 25,
+              "successRate": 1,
+              "avgResponseTime": 13.261533240000864,
+              "totalDuration": 25.742583000001105
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "Load Testing",
+      "result": {
+        "name": "Sustained Load Test",
+        "success": false,
+        "duration": 30125.657917000004,
+        "details": {
+          "totalRequests": 30,
+          "successRate": 0,
+          "avgResponseTime": 5000,
+          "duration": 30
+        }
+      }
+    },
+    {
+      "category": "Load Testing",
+      "result": {
+        "name": "Spike Load Test",
+        "success": false,
+        "duration": 15.295457999998689,
+        "details": {
+          "concurrentRequests": 50,
+          "successRate": 0,
+          "maxResponseTime": 15.258083000000624,
+          "spikeDuration": 15.303458000000319
+        }
+      }
+    },
+    {
+      "category": "Security",
+      "result": {
+        "name": "HTTPS Redirection",
+        "success": false,
+        "duration": 40.14041599999473,
+        "error": ""
+      }
+    },
+    {
+      "category": "Security",
+      "result": {
+        "name": "Rate Limiting",
+        "success": false,
+        "duration": 56.71112500000163,
+        "details": {
+          "totalRequests": 120,
+          "rateLimitedRequests": 0,
+          "successfulRequests": 0
+        }
+      }
+    },
+    {
+      "category": "Security",
+      "result": {
+        "name": "Security Headers",
+        "success": false,
+        "duration": 31.80391700000473,
+        "error": ""
+      }
+    },
+    {
+      "category": "Security",
+      "result": {
+        "name": "VPN Isolation",
+        "success": false,
+        "duration": 34.00941700000112,
+        "details": {
+          "vpnIsolated": false,
+          "message": "VPN service accessible without VPN"
+        }
+      }
+    },
+    {
+      "category": "User Workflows",
+      "result": {
+        "name": "Media Request Workflow",
+        "success": false,
+        "duration": 121.49741699999868,
+        "details": {
+          "totalSteps": 3,
+          "successfulSteps": 1,
+          "steps": [
+            {
+              "step": "Overseerr Status",
+              "success": true
+            },
+            {
+              "step": "Sonarr Connection",
+              "success": false
+            },
+            {
+              "step": "Radarr Connection",
+              "success": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "User Workflows",
+      "result": {
+        "name": "Media Discovery Workflow",
+        "success": true,
+        "duration": 57.94629200000054,
+        "details": {
+          "totalSteps": 2,
+          "successfulSteps": 2,
+          "steps": [
+            {
+              "step": "Jellyfin Web Access",
+              "success": true
+            },
+            {
+              "step": "System Information",
+              "success": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "User Workflows",
+      "result": {
+        "name": "Monitoring Workflow",
+        "success": true,
+        "duration": 92.47933300000295,
+        "details": {
+          "totalSteps": 3,
+          "successfulSteps": 3,
+          "steps": [
+            {
+              "step": "Grafana Dashboard",
+              "success": true
+            },
+            {
+              "step": "Prometheus Metrics",
+              "success": true
+            },
+            {
+              "step": "Tautulli Analytics",
+              "success": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "category": "User Workflows",
+      "result": {
+        "name": "Management Workflow",
+        "success": true,
+        "duration": 79.42445800000132,
+        "details": {
+          "totalSteps": 3,
+          "successfulSteps": 2,
+          "steps": [
+            {
+              "step": "Homepage Dashboard",
+              "success": true
+            },
+            {
+              "step": "Portainer Access",
+              "success": true
+            },
+            {
+              "step": "API Management",
+              "success": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "recommendations": [
+    "CRITICAL: Address failing tests before production deployment",
+    "Review Docker container configuration and resource allocation",
+    "Verify API endpoints and authentication mechanisms",
+    "Review inter-service communication and network configuration",
+    "Optimize resource usage and response times",
+    "Implement load balancing and auto-scaling",
+    "Strengthen security configuration and access controls",
+    "Improve user experience and workflow integration"
+  ]
+}

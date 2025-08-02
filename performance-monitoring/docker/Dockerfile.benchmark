@@ -1,0 +1,84 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for benchmarking
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    gcc \
+    g++ \
+    libc6-dev \
+    make \
+    procps \
+    net-tools \
+    iputils-ping \
+    dnsutils \
+    htop \
+    iotop \
+    stress-ng \
+    sysbench \
+    fio \
+    iperf3 \
+    hdparm \
+    smartmontools \
+    lshw \
+    dmidecode \
+    pciutils \
+    usbutils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r benchmark && useradd -r -g benchmark benchmark
+
+# Copy requirements
+COPY requirements.txt /app/
+
+# Install Python dependencies with additional packages for benchmarking
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir \
+    matplotlib \
+    seaborn \
+    scipy \
+    scikit-learn \
+    pandas \
+    numpy
+
+# Copy application code
+COPY benchmarks/ /app/benchmarks/
+COPY core/ /app/core/
+COPY config/ /app/config/
+COPY scripts/ /app/scripts/
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs /app/tmp /app/results && \
+    chown -R benchmark:benchmark /app
+
+# Create benchmark data directory with proper permissions
+RUN mkdir -p /tmp/benchmark-workspace && \
+    chown -R benchmark:benchmark /tmp/benchmark-workspace
+
+# Copy benchmark startup script
+COPY docker/scripts/start-benchmark.sh /app/start-benchmark.sh
+RUN chmod +x /app/start-benchmark.sh
+
+# Switch to non-root user
+USER benchmark
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV CONFIG_PATH=/app/config/monitoring.yml
+ENV BENCHMARK_DATA_PATH=/app/data/benchmarks
+ENV BENCHMARK_WORKSPACE=/tmp/benchmark-workspace
+ENV LOG_LEVEL=INFO
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+    CMD python -c "import psutil; print(f'CPU: {psutil.cpu_percent()}%')" || exit 1
+
+# Default command
+CMD ["/app/start-benchmark.sh"]

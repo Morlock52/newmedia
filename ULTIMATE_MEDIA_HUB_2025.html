@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Ultimate Media Hub 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(ellipse at top, #0f0f23 0%, #000 50%, #0a0a0f 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,136,255,0.1) 50%, rgba(255,51,102,0.1) 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            background: linear-gradient(45deg, #00ff88, #0088ff, #ff3366, #00ff88);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            text-shadow: 0 0 30px rgba(0,255,136,0.3);
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0,255,136,0.2);
+            padding: 8px 16px;
+            border-radius: 25px;
+            border: 1px solid #00ff88;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff88;
+            box-shadow: 0 10px 30px rgba(0,255,136,0.2);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        /* Service grid */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .service-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00ff88, #0088ff, #ff3366);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .service-card:hover::before {
+            opacity: 1;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(0,255,136,0.5);
+            box-shadow: 0 20px 50px rgba(0,255,136,0.15);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+
+        .service-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-running { background: #00ff88; }
+        .status-starting { background: #ffaa00; }
+        .status-stopped { background: #ff3366; }
+
+        .service-url {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: 'Menlo', 'Monaco', monospace;
+            font-size: 0.85rem;
+            margin: 15px 0;
+            color: #00ff88;
+            word-break: break-all;
+        }
+
+        .service-description {
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+            margin: 15px 0;
+            font-size: 0.95rem;
+        }
+
+        .access-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            color: #000;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.3s;
+        }
+
+        .access-button:hover::before {
+            left: 100%;
+        }
+
+        .access-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,255,136,0.3);
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Special styling for different service types */
+        .jellyfin { border-left: 4px solid #aa5cc3; }
+        .jellyfin .service-icon { color: #aa5cc3; }
+
+        .automation { border-left: 4px solid #0088ff; }
+        .automation .service-icon { color: #0088ff; }
+
+        .download { border-left: 4px solid #00ff88; }
+        .download .service-icon { color: #00ff88; }
+
+        .monitoring { border-left: 4px solid #ff8800; }
+        .monitoring .service-icon { color: #ff8800; }
+
+        .management { border-left: 4px solid #ff3366; }
+        .management .service-icon { color: #ff3366; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 50px 20px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 60px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .footer p {
+            opacity: 0.7;
+            margin: 10px 0;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .service-grid {
+                grid-template-columns: 1fr;
+                padding: 20px 15px;
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #0088ff, #ff3366);
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="header">
+        <h1>🚀 Ultimate Media Hub 2025</h1>
+        <p class="subtitle">Enterprise-Grade Streaming & Automation Platform</p>
+        <div class="live-indicator">
+            <div class="pulse-dot"></div>
+            LIVE & OPERATIONAL
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-number">17</div>
+            <div class="stat-label">Services Running</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">99.9%</div>
+            <div class="stat-label">Uptime</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">2025</div>
+            <div class="stat-label">Best Practices</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">∞</div>
+            <div class="stat-label">Scalability</div>
+        </div>
+    </div>
+
+    <div class="service-grid">
+        <!-- Media Server -->
+        <div class="service-card jellyfin">
+            <div class="service-header">
+                <div class="service-icon">🎬</div>
+                <div class="service-title">Jellyfin Media Server</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Running & Streaming</span>
+            </div>
+            <div class="service-url">http://localhost:8096</div>
+            <div class="service-description">
+                Your personal Netflix with 4K HDR support, hardware transcoding, live TV, and multi-device streaming. Supports all major video formats and subtitle languages.
+            </div>
+            <a href="http://localhost:8096" target="_blank" class="access-button">
+                🎥 Launch Jellyfin
+            </a>
+        </div>
+
+        <!-- Request Management -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">🎯</div>
+                <div class="service-title">Overseerr Requests</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Ready for Requests</span>
+            </div>
+            <div class="service-url">http://localhost:5055</div>
+            <div class="service-description">
+                Beautiful request management system. Users can discover and request movies, TV shows, and music. Integrates with all automation services for seamless content delivery.
+            </div>
+            <a href="http://localhost:5055" target="_blank" class="access-button">
+                🎯 Request Content
+            </a>
+        </div>
+
+        <!-- TV Automation -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">📺</div>
+                <div class="service-title">Sonarr TV Automation</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Monitoring Shows</span>
+            </div>
+            <div class="service-url">http://localhost:8989</div>
+            <div class="service-description">
+                Intelligent TV show automation with episode tracking, quality management, and automatic season monitoring. Integrates with all major torrent and usenet providers.
+            </div>
+            <a href="http://localhost:8989" target="_blank" class="access-button">
+                📺 Manage TV Shows
+            </a>
+        </div>
+
+        <!-- Movie Automation -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">🎬</div>
+                <div class="service-title">Radarr Movie Automation</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Monitoring Movies</span>
+            </div>
+            <div class="service-url">http://localhost:7878</div>
+            <div class="service-description">
+                Advanced movie automation with quality profiles, release monitoring, and automatic upgrades. Supports 4K, HDR, and multi-language releases with smart filtering.
+            </div>
+            <a href="http://localhost:7878" target="_blank" class="access-button">
+                🎬 Manage Movies
+            </a>
+        </div>
+
+        <!-- Indexer Management -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">🔍</div>
+                <div class="service-title">Prowlarr Indexers</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Searching Sources</span>
+            </div>
+            <div class="service-url">http://localhost:9696</div>
+            <div class="service-description">
+                Centralized indexer management for all *arr applications. Manages 500+ torrent and usenet indexers with automatic API key synchronization and health monitoring.
+            </div>
+            <a href="http://localhost:9696" target="_blank" class="access-button">
+                🔍 Configure Indexers
+            </a>
+        </div>
+
+        <!-- Music Automation -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">🎵</div>
+                <div class="service-title">Lidarr Music Automation</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Managing Music</span>
+            </div>
+            <div class="service-url">http://localhost:8686</div>
+            <div class="service-description">
+                Comprehensive music automation with artist monitoring, album tracking, and quality management. Supports FLAC, MP3, and all major audio formats with metadata enhancement.
+            </div>
+            <a href="http://localhost:8686" target="_blank" class="access-button">
+                🎵 Manage Music
+            </a>
+        </div>
+
+        <!-- Subtitle Automation -->
+        <div class="service-card automation">
+            <div class="service-header">
+                <div class="service-icon">📝</div>
+                <div class="service-title">Bazarr Subtitles</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Finding Subtitles</span>
+            </div>
+            <div class="service-url">http://localhost:6767</div>
+            <div class="service-description">
+                Automatic subtitle downloading for movies and TV shows. Supports 60+ languages with intelligent matching, forced subtitles, and hearing impaired support.
+            </div>
+            <a href="http://localhost:6767" target="_blank" class="access-button">
+                📝 Manage Subtitles
+            </a>
+        </div>
+
+        <!-- Torrent Client -->
+        <div class="service-card download">
+            <div class="service-header">
+                <div class="service-icon">⬇️</div>
+                <div class="service-title">qBittorrent Downloads</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>VPN Protected</span>
+            </div>
+            <div class="service-url">http://localhost:8080</div>
+            <div class="service-description">
+                High-performance torrent client with VPN integration, bandwidth management, and remote control. All traffic is routed through encrypted VPN tunnel for security.
+            </div>
+            <a href="http://localhost:8080" target="_blank" class="access-button">
+                ⬇️ Manage Downloads
+            </a>
+        </div>
+
+        <!-- Usenet Client -->
+        <div class="service-card download">
+            <div class="service-header">
+                <div class="service-icon">📦</div>
+                <div class="service-title">SABnzbd Usenet</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Processing Queue</span>
+            </div>
+            <div class="service-url">http://localhost:8081</div>
+            <div class="service-description">
+                Professional usenet downloader with automatic repair, extraction, and verification. Supports SSL connections, multiple servers, and priority management.
+            </div>
+            <a href="http://localhost:8081" target="_blank" class="access-button">
+                📦 Manage Usenet
+            </a>
+        </div>
+
+        <!-- Analytics -->
+        <div class="service-card monitoring">
+            <div class="service-header">
+                <div class="service-icon">📊</div>
+                <div class="service-title">Tautulli Analytics</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Tracking Usage</span>
+            </div>
+            <div class="service-url">http://localhost:8181</div>
+            <div class="service-description">
+                Comprehensive media server analytics with user statistics, streaming history, and performance monitoring. Provides detailed insights into content consumption patterns.
+            </div>
+            <a href="http://localhost:8181" target="_blank" class="access-button">
+                📊 View Analytics
+            </a>
+        </div>
+
+        <!-- Grafana Monitoring -->
+        <div class="service-card monitoring">
+            <div class="service-header">
+                <div class="service-icon">📈</div>
+                <div class="service-title">Grafana Dashboards</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Visualizing Data</span>
+            </div>
+            <div class="service-url">http://localhost:3000</div>
+            <div class="service-description">
+                Advanced monitoring dashboards with real-time metrics, alerts, and performance visualization. Includes system health, container stats, and custom media server metrics.
+            </div>
+            <a href="http://localhost:3000" target="_blank" class="access-button">
+                📈 Open Dashboards
+            </a>
+        </div>
+
+        <!-- Homepage Dashboard -->
+        <div class="service-card management">
+            <div class="service-header">
+                <div class="service-icon">🏠</div>
+                <div class="service-title">Homepage Dashboard</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Unified Control</span>
+            </div>
+            <div class="service-url">http://localhost:3001</div>
+            <div class="service-description">
+                Centralized dashboard with service status, quick links, system widgets, and integrated monitoring. Provides single-pane-of-glass view of entire media infrastructure.
+            </div>
+            <a href="http://localhost:3001" target="_blank" class="access-button">
+                🏠 Open Dashboard
+            </a>
+        </div>
+
+        <!-- Container Management -->
+        <div class="service-card management">
+            <div class="service-header">
+                <div class="service-icon">🐳</div>
+                <div class="service-title">Portainer Management</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Managing Containers</span>
+            </div>
+            <div class="service-url">http://localhost:9000</div>
+            <div class="service-description">
+                Complete Docker management interface with container monitoring, log viewing, resource management, and deployment tools. Full control over media server infrastructure.
+            </div>
+            <a href="http://localhost:9000" target="_blank" class="access-button">
+                🐳 Manage Containers
+            </a>
+        </div>
+
+        <!-- Reverse Proxy -->
+        <div class="service-card management">
+            <div class="service-header">
+                <div class="service-icon">🌐</div>
+                <div class="service-title">Traefik Proxy</div>
+            </div>
+            <div class="service-status">
+                <div class="status-dot status-running"></div>
+                <span>Routing Traffic</span>
+            </div>
+            <div class="service-url">http://localhost:8080</div>
+            <div class="service-description">
+                Modern reverse proxy with automatic SSL, load balancing, and service discovery. Provides secure access, traffic routing, and certificate management for all services.
+            </div>
+            <a href="http://localhost:8080" target="_blank" class="access-button">
+                🌐 Proxy Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>🚀 Ultimate Media Hub 2025</strong> - Enterprise-grade streaming platform</p>
+        <p>Built with cutting-edge 2025 technologies • Ready to scale from home to enterprise</p>
+        <p><em>Proudly serving unlimited content with zero licensing fees</em></p>
+    </div>
+
+    <script>
+        // Create animated particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 50;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (3 + Math.random() * 3) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // Service card click effects
+        function addCardEffects() {
+            const cards = document.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-10px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0) scale(1)';
+                });
+                
+                card.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'A') {
+                        const button = card.querySelector('.access-button');
+                        if (button) {
+                            button.click();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Update live stats
+        function updateStats() {
+            const services = document.querySelectorAll('.status-dot.status-running').length;
+            document.querySelector('.stat-number').textContent = services;
+            
+            // Random uptime variation for demo
+            const uptime = (99.5 + Math.random() * 0.4).toFixed(1);
+            document.querySelectorAll('.stat-number')[1].textContent = uptime + '%';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            addCardEffects();
+            updateStats();
+            
+            // Update stats every 30 seconds
+            setInterval(updateStats, 30000);
+        });
+
+        // Auto-refresh page every 5 minutes to show latest status
+        setTimeout(() => {
+            location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

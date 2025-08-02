@@ -1,0 +1,31 @@
+# Authelia Users Database - Production Template
+# ============================================
+# SECURITY WARNING: This file contains password hashes
+# Generate passwords with: authelia hash-password 'your-password'
+
+users:
+  admin:
+    displayname: "Administrator"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$CHANGEME_GENERATE_HASH"
+    email: admin@morloksmaze.com
+    groups:
+      - admins
+      - users
+
+  media_user:
+    displayname: "Media User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$CHANGEME_GENERATE_HASH"
+    email: user@morloksmaze.com
+    groups:
+      - users
+
+  family_member:
+    displayname: "Family Member"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$CHANGEME_GENERATE_HASH"
+    email: family@morloksmaze.com
+    groups:
+      - family
+      - users
+
+# Password generation command:
+# docker run --rm authelia/authelia:latest authelia hash-password 'your-password-here'

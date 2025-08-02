@@ -1,0 +1,193 @@
+graph TB
+    subgraph "User Access Layer"
+        Users[Users]
+        Web[Web Browser]
+        Mobile[Mobile Apps]
+        TV[Smart TV Apps]
+        Voice[Voice Assistant]
+        API[API Clients]
+    end
+
+    subgraph "Edge Services"
+        CF[Cloudflare CDN/WAF]
+        LB[Global Load Balancer]
+        Tunnel[Cloudflare Tunnel]
+    end
+
+    subgraph "API Gateway & BFF"
+        Kong[Kong API Gateway]
+        GraphQL[GraphQL Federation]
+        WebBFF[Web BFF]
+        MobileBFF[Mobile BFF]
+        TVBFF[TV BFF]
+    end
+
+    subgraph "Authentication Layer"
+        Authelia[Authelia SSO]
+        Keycloak[Keycloak]
+        LDAP[LDAP/AD]
+        OAuth[OAuth2/OIDC]
+    end
+
+    subgraph "Service Mesh"
+        Istio[Istio Control Plane]
+        Envoy[Envoy Proxies]
+        mTLS[mTLS Encryption]
+        CB[Circuit Breakers]
+    end
+
+    subgraph "Media Services"
+        subgraph "Video/TV"
+            Jellyfin[Jellyfin]
+            Plex[Plex]
+            Emby[Emby]
+            TubeArchivist[Tube Archivist]
+        end
+        
+        subgraph "Audio"
+            Navidrome[Navidrome]
+            AudioBookshelf[AudioBookshelf]
+            Funkwhale[Funkwhale]
+        end
+        
+        subgraph "Images"
+            Immich[Immich]
+            PhotoPrism[PhotoPrism]
+        end
+        
+        subgraph "Books"
+            CalibreWeb[Calibre-Web]
+            Kavita[Kavita]
+            Komga[Komga]
+        end
+    end
+
+    subgraph "Content Management"
+        Sonarr[Sonarr]
+        Radarr[Radarr]
+        Lidarr[Lidarr]
+        Readarr[Readarr]
+        Mylar[Mylar3]
+        Prowlarr[Prowlarr]
+        Bazarr[Bazarr]
+        Overseerr[Overseerr]
+    end
+
+    subgraph "Download Services"
+        VPN[Gluetun VPN]
+        qBittorrent[qBittorrent]
+        SABnzbd[SABnzbd]
+        JDownloader[JDownloader2]
+    end
+
+    subgraph "Processing Services"
+        Tdarr[Tdarr]
+        FileFlows[FileFlows]
+        HandBrake[HandBrake]
+    end
+
+    subgraph "Event Streaming"
+        Kafka[Apache Kafka]
+        Schema[Schema Registry]
+        KSQL[KSQL]
+        Connect[Kafka Connect]
+    end
+
+    subgraph "Data Layer"
+        subgraph "Databases"
+            Postgres[PostgreSQL Cluster]
+            Redis[Redis Cluster]
+            Elastic[Elasticsearch]
+            TimescaleDB[TimescaleDB]
+        end
+        
+        subgraph "Storage"
+            MinIO[MinIO Object Storage]
+            NAS[NAS Storage]
+            Backup[Backup Storage]
+        end
+    end
+
+    subgraph "Monitoring & Observability"
+        Prometheus[Prometheus]
+        Grafana[Grafana]
+        Loki[Loki]
+        Jaeger[Jaeger]
+        AlertManager[AlertManager]
+    end
+
+    subgraph "Infrastructure"
+        K8s[Kubernetes]
+        Docker[Docker]
+        GPU[GPU Compute]
+        Network[Network Infrastructure]
+    end
+
+    %% Connections
+    Users --> Web
+    Users --> Mobile
+    Users --> TV
+    Users --> Voice
+    Users --> API
+
+    Web --> CF
+    Mobile --> CF
+    TV --> CF
+    Voice --> CF
+    API --> CF
+
+    CF --> LB
+    LB --> Kong
+    Kong --> Authelia
+    Authelia --> Keycloak
+    Authelia --> LDAP
+
+    Kong --> GraphQL
+    GraphQL --> WebBFF
+    GraphQL --> MobileBFF
+    GraphQL --> TVBFF
+
+    WebBFF --> Istio
+    MobileBFF --> Istio
+    TVBFF --> Istio
+
+    Istio --> Envoy
+    Envoy --> mTLS
+    Envoy --> CB
+
+    Istio --> Jellyfin
+    Istio --> Navidrome
+    Istio --> Immich
+    Istio --> CalibreWeb
+
+    Overseerr --> Sonarr
+    Overseerr --> Radarr
+    Sonarr --> Prowlarr
+    Radarr --> Prowlarr
+    Prowlarr --> qBittorrent
+    qBittorrent --> VPN
+
+    Jellyfin --> Kafka
+    Sonarr --> Kafka
+    Kafka --> KSQL
+    KSQL --> Connect
+
+    All services --> Postgres
+    All services --> Redis
+    Logs --> Elastic
+    Metrics --> TimescaleDB
+
+    Media --> MinIO
+    Media --> NAS
+    All data --> Backup
+
+    All services --> Prometheus
+    Prometheus --> Grafana
+    Logs --> Loki
+    Traces --> Jaeger
+    Alerts --> AlertManager
+
+    All containers --> K8s
+    K8s --> Docker
+    Transcoding --> GPU
+    All traffic --> Network

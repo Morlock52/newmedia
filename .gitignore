@@ -30,3 +30,4 @@ logs/
 # Status pages (generated)
 status.html
 arm64-status.html
+node_modules

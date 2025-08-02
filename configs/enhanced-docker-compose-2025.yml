@@ -1,0 +1,522 @@
+# Enhanced Docker Compose Configuration with 2025 Best Practices
+# Based on Media Server Integration Research - August 2025
+
+version: '3.9'
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+x-resource-limits: &resource-limits
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+        cpus: '1.0'
+      reservations:
+        memory: 512M
+        cpus: '0.25'
+
+x-healthcheck-web: &healthcheck-web
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 60s
+
+networks:
+  media-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  vpn-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+  proxy-net:
+    driver: bridge
+
+volumes:
+  media-data:
+    driver: local
+  downloads:
+    driver: local
+  socket-proxy-data:
+    driver: local
+
+services:
+  # ==================== SECURITY LAYER ====================
+  
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: socket-proxy
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      SERVICES: 1
+      SWARM: 0
+      SYSTEM: 0
+      IMAGES: 1
+      AUTH: 1
+      SECRETS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - socket-proxy-data:/data
+    ports:
+      - "2375:2375"
+    networks:
+      - proxy-net
+    restart: unless-stopped
+    <<: *resource-limits
+
+  # ==================== ENHANCED MEDIA SERVERS ====================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      <<: *common-variables
+      JELLYFIN_PublishedServerUrl: ${JELLYFIN_SERVER_URL:-http://localhost:8096}
+    volumes:
+      - jellyfin-config:/config
+      - media-data:/media
+      - /dev/dri:/dev/dri
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+      - "7359:7359/udp"
+      - "1900:1900/udp"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Jellyfin"
+      - "homepage.icon=jellyfin.png"
+      - "homepage.href=http://jellyfin:8096"
+      - "homepage.description=Free Media Server"
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN:-localhost}`)"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    environment:
+      <<: *common-variables
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+      ADVERTISE_IP: ${ADVERTISE_IP:-}
+      PLEX_UID: ${PUID:-1000}
+      PLEX_GID: ${PGID:-1000}
+    volumes:
+      - plex-config:/config
+      - media-data:/media
+      - /dev/dri:/dev/dri
+    ports:
+      - "32400:32400"
+      - "1900:1900/udp"
+      - "3005:3005"
+      - "5353:5353/udp"
+      - "8324:8324"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
+      - "32469:32469"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:32400/identity"]
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Plex"
+      - "homepage.icon=plex.png"
+      - "homepage.href=http://plex:32400/web"
+      - "homepage.description=Premium Media Server"
+
+  # ==================== ENHANCED *ARR SERVICES ====================
+  
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      <<: *common-variables
+      PROWLARR__AUTHENTICATION__METHOD: Forms
+      PROWLARR__AUTHENTICATION__REQUIRED: DisabledForLocalAddresses
+    volumes:
+      - prowlarr-config:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Prowlarr"
+      - "homepage.icon=prowlarr.png"
+      - "homepage.href=http://prowlarr:9696"
+      - "homepage.description=Indexer Management"
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - sonarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "8989:8989"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Sonarr"
+      - "homepage.icon=sonarr.png"
+      - "homepage.href=http://sonarr:8989"
+      - "homepage.description=TV Show Management"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - radarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "7878:7878"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Radarr"
+      - "homepage.icon=radarr.png"
+      - "homepage.href=http://radarr:7878"
+      - "homepage.description=Movie Management"
+
+  # ==================== ENHANCED REQUEST SERVICES ====================
+  
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      <<: *common-variables
+      LOG_LEVEL: info
+      PORT: 5055
+    volumes:
+      - ./jellyseerr-config:/app/config
+    ports:
+      - "5055:5055"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck-web
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+    depends_on:
+      jellyfin:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+      radarr:
+        condition: service_healthy
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Request"
+      - "homepage.name=Jellyseerr"
+      - "homepage.icon=jellyseerr.png"
+      - "homepage.href=http://jellyseerr:5055"
+      - "homepage.description=Media Requests for Jellyfin"
+
+  # ==================== ENHANCED DOWNLOAD SERVICES ====================
+  
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    environment:
+      <<: *common-variables
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-nordvpn}
+      VPN_TYPE: ${VPN_TYPE:-openvpn}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_COUNTRY:-Switzerland}
+      FIREWALL_OUTBOUND_SUBNETS: 172.20.0.0/16
+      HEALTH_SERVER_ADDRESS: 0.0.0.0:9999
+    volumes:
+      - ./gluetun-config:/gluetun
+    ports:
+      - "8888:8888/tcp"
+      - "8388:8388/tcp"
+      - "8388:8388/udp"
+      - "8080:8080"
+      - "9091:9091"
+      - "9999:9999" # Health check
+    networks:
+      - vpn-net
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=Gluetun VPN"
+      - "homepage.icon=gluetun.png"
+      - "homepage.href=http://gluetun:9999"
+      - "homepage.description=VPN Container"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      <<: *common-variables
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent-config:/config
+      - downloads:/downloads
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=qBittorrent"
+      - "homepage.icon=qbittorrent.png"
+      - "homepage.href=http://localhost:8080"
+      - "homepage.description=Torrent Client"
+
+  # ==================== ENHANCED MONITORING ====================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./prometheus-config:/etc/prometheus
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Prometheus"
+      - "homepage.icon=prometheus.png"
+      - "homepage.href=http://prometheus:9090"
+      - "homepage.description=Metrics Collection"
+
+  # ==================== ENHANCED MANAGEMENT ====================
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    command: -H tcp://socket-proxy:2375
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+    volumes:
+      - ./portainer-data:/data
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    networks:
+      - media-net
+      - proxy-net
+    depends_on:
+      - socket-proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    <<: *resource-limits
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Portainer"
+      - "homepage.icon=portainer.png"
+      - "homepage.href=https://portainer:9443"
+      - "homepage.description=Docker Management"
+
+  # ==================== REVERSE PROXY ====================
+  
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8088:8080"
+    volumes:
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - media-net
+      - proxy-net
+    depends_on:
+      - socket-proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "homepage.group=Management"
+      - "homepage.name=Traefik"
+      - "homepage.icon=traefik.png"
+      - "homepage.href=http://traefik:8080"
+      - "homepage.description=Reverse Proxy"
+
+  # ==================== DATABASES WITH ENHANCED HEALTH CHECKS ====================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_MULTIPLE_DATABASES: immich,paperless,nextcloud,gitea
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} && psql -U ${POSTGRES_USER:-postgres} -c 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+volumes:
+  jellyfin-config:
+  plex-config:
+  prowlarr-config:
+  sonarr-config:
+  radarr-config:
+  qbittorrent-config:
+  prometheus-data:
+  postgres-data:
+  redis-data:

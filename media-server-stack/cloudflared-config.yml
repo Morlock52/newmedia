@@ -1,0 +1,19 @@
+tunnel: morloksmaze-media-tunnel
+
+ingress:
+  - hostname: auth.morloksmaze.com
+    service: http://traefik:80
+  - hostname: jellyfin.morloksmaze.com
+    service: http://traefik:80
+  - hostname: sonarr.morloksmaze.com
+    service: http://traefik:80
+  - hostname: radarr.morloksmaze.com
+    service: http://traefik:80
+  - hostname: prowlarr.morloksmaze.com
+    service: http://traefik:80
+  - hostname: overseerr.morloksmaze.com
+    service: http://traefik:80
+  - hostname: traefik.morloksmaze.com
+    service: http://traefik:80
+  # Catch-all rule
+  - service: http_status:404

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS AI/ML Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Futuristic Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            animation: grid-move 20s linear infinite;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 2rem;
+            border-bottom: 2px solid #00ffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            text-align: center;
+            color: #00ffff;
+            margin-top: 0.5rem;
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .nav-item {
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: #00ffff;
+            transition: left 0.3s;
+            z-index: -1;
+        }
+
+        .nav-item:hover::before {
+            left: 0;
+        }
+
+        .nav-item:hover {
+            color: #000;
+        }
+
+        .nav-item.active {
+            background: #00ffff;
+            color: #000;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(22, 33, 62, 0.9) 100%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+            border-radius: 15px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+            animation: gradient-rotate 3s linear infinite;
+        }
+
+        @keyframes gradient-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .card h2 {
+            color: #00ffff;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        /* Status Indicators */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .status-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .status-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .status-value {
+            color: #00ffff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            transition: width 0.3s;
+            animation: progress-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        /* Buttons */
+        .btn {
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            color: #000;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Voice Interface */
+        .voice-interface {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .voice-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 3px solid #00ffff;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+            margin: 0 auto;
+        }
+
+        .voice-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .voice-button.active {
+            animation: voice-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes voice-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(0, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+        }
+
+        .voice-icon {
+            width: 50px;
+            height: 50px;
+            margin: 25px;
+        }
+
+        /* Recommendation Grid */
+        .recommendation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .recommendation-item {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .recommendation-item:hover {
+            transform: translateY(-3px);
+            border-color: #00ffff;
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Real-time Metrics */
+        .metrics-display {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        /* Console */
+        .console {
+            background: #000;
+            border: 1px solid #00ffff;
+            border-radius: 10px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .console-entry {
+            margin: 0.5rem 0;
+            opacity: 0;
+            animation: fade-in 0.3s forwards;
+        }
+
+        @keyframes fade-in {
+            to { opacity: 1; }
+        }
+
+        .console-entry.info { color: #00ffff; }
+        .console-entry.success { color: #00ff00; }
+        .console-entry.warning { color: #ffff00; }
+        .console-entry.error { color: #ff0000; }
+
+        /* Loading Animation */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top-color: #00ffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .dashboard { grid-template-columns: 1fr; }
+            .nav { flex-wrap: wrap; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>NEXUS AI/ML System</h1>
+        <p>Neural Media Intelligence Platform</p>
+    </div>
+
+    <nav class="nav">
+        <button class="nav-item active" data-section="overview">Overview</button>
+        <button class="nav-item" data-section="recommendations">Recommendations</button>
+        <button class="nav-item" data-section="analysis">Content Analysis</button>
+        <button class="nav-item" data-section="voice">Voice Control</button>
+        <button class="nav-item" data-section="emotions">Emotion Insights</button>
+        <button class="nav-item" data-section="compression">Neural Compression</button>
+    </nav>
+
+    <div class="container">
+        <!-- Overview Section -->
+        <section id="overview" class="dashboard">
+            <div class="card">
+                <h2>System Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">AI Services</div>
+                        <div class="status-value" id="service-count">5/5</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Active Users</div>
+                        <div class="status-value" id="active-users">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Processing Queue</div>
+                        <div class="status-value" id="queue-size">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">GPU Usage</div>
+                        <div class="status-value" id="gpu-usage">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Real-time Performance</h2>
+                <div class="metrics-display">
+                    <div class="metric">
+                        <div class="metric-value" id="inference-speed">0ms</div>
+                        <div class="metric-label">Avg. Inference</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="accuracy">0%</div>
+                        <div class="metric-label">Model Accuracy</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="throughput">0/s</div>
+                        <div class="metric-label">Throughput</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="performance-bar" style="width: 75%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>System Console</h2>
+                <div class="console" id="console"></div>
+            </div>
+        </section>
+
+        <!-- Recommendations Section -->
+        <section id="recommendations" class="dashboard" style="display: none;">
+            <div class="card">
+                <h2>Neural Recommendations</h2>
+                <button class="btn" onclick="generateRecommendations()">Generate Recommendations</button>
+                <div class="recommendation-grid" id="recommendation-grid">
+                    <div class="loader"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>User Preferences</h2>
+                <div id="user-preferences"></div>
+            </div>
+        </section>
+
+        <!-- Content Analysis Section -->
+        <section id="analysis" class="dashboard" style="display: none;">
+            <div class="card">
+                <h2>Upload Media for Analysis</h2>
+                <input type="file" id="media-upload" accept="video/*,image/*" style="display: none;">
+                <button class="btn" onclick="document.getElementById('media-upload').click()">
+                    Select Media File
+                </button>
+                <div id="analysis-results" style="margin-top: 2rem;"></div>
+            </div>
+
+            <div class="card">
+                <h2>Analysis Queue</h2>
+                <div id="analysis-queue"></div>
+            </div>
+        </section>
+
+        <!-- Voice Control Section -->
+        <section id="voice" class="dashboard" style="display: none;">
+            <div class="card">
+                <h2>Voice Command Interface</h2>
+                <div class="voice-interface">
+                    <div class="voice-button" id="voice-button">
+                        <svg class="voice-icon" viewBox="0 0 24 24" fill="#00ffff">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                    </div>
+                    <p style="margin-top: 1rem; color: #888;">Click to start voice command</p>
+                    <div id="voice-transcript" style="margin-top: 2rem;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Voice Command History</h2>
+                <div id="voice-history"></div>
+            </div>
+        </section>
+
+        <!-- Emotion Insights Section -->
+        <section id="emotions" class="dashboard" style="display: none;">
+            <div class="card">
+                <h2>Current Emotional State</h2>
+                <div id="emotion-display"></div>
+            </div>
+
+            <div class="card">
+                <h2>Mood Patterns</h2>
+                <div id="mood-patterns"></div>
+            </div>
+
+            <div class="card">
+                <h2>Adaptive UI Settings</h2>
+                <div id="adaptive-ui"></div>
+            </div>
+        </section>
+
+        <!-- Neural Compression Section -->
+        <section id="compression" class="dashboard" style="display: none;">
+            <div class="card">
+                <h2>Neural Video Compression</h2>
+                <button class="btn" onclick="selectVideoForCompression()">Select Video</button>
+                <div id="compression-settings" style="margin-top: 1rem;">
+                    <label>Quality:
+                        <select id="compression-quality">
+                            <option value="ultra-low">Ultra Low (90% reduction)</option>
+                            <option value="low">Low (70% reduction)</option>
+                            <option value="balanced" selected>Balanced (50% reduction)</option>
+                            <option value="high">High (30% reduction)</option>
+                            <option value="lossless">Near Lossless (10% reduction)</option>
+                        </select>
+                    </label>
+                </div>
+                <div id="compression-progress" style="margin-top: 2rem;"></div>
+            </div>
+
+            <div class="card">
+                <h2>Compression Results</h2>
+                <div id="compression-results"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let ws = null;
+        const userId = 'demo-user-' + Math.random().toString(36).substr(2, 9);
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            ws = new WebSocket(`ws://localhost:8080/api/ws?userId=${userId}`);
+            
+            ws.onopen = () => {
+                addConsoleEntry('Connected to AI/ML System', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onerror = (error) => {
+                addConsoleEntry('WebSocket error: ' + error.message, 'error');
+            };
+            
+            ws.onclose = () => {
+                addConsoleEntry('Disconnected from AI/ML System', 'warning');
+                // Reconnect after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'insights_update':
+                    updateInsights(data.data);
+                    break;
+                case 'emotion_update':
+                    updateEmotionDisplay(data.data);
+                    break;
+                case 'processing_update':
+                    updateProcessingStatus(data.data);
+                    break;
+            }
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const section = e.target.dataset.section;
+                document.querySelectorAll('.dashboard').forEach(s => s.style.display = 'none');
+                document.getElementById(section).style.display = 'grid';
+            });
+        });
+
+        // Console logging
+        function addConsoleEntry(message, type = 'info') {
+            const console = document.getElementById('console');
+            const entry = document.createElement('div');
+            entry.className = `console-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Generate recommendations
+        async function generateRecommendations() {
+            const grid = document.getElementById('recommendation-grid');
+            grid.innerHTML = '<div class="loader"></div>';
+            
+            try {
+                const response = await fetch(`/api/recommend/${userId}?limit=10&includeReasons=true`);
+                const data = await response.json();
+                
+                grid.innerHTML = '';
+                data.recommendations.forEach(rec => {
+                    const item = document.createElement('div');
+                    item.className = 'recommendation-item';
+                    item.innerHTML = `
+                        <h3>${rec.item.title}</h3>
+                        <p>${rec.item.genre}</p>
+                        <p style="color: #888; font-size: 0.9rem;">${rec.reasons.join(', ')}</p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${rec.score * 100}%"></div>
+                        </div>
+                    `;
+                    grid.appendChild(item);
+                });
+                
+                addConsoleEntry('Generated 10 personalized recommendations', 'success');
+            } catch (error) {
+                addConsoleEntry('Failed to generate recommendations: ' + error.message, 'error');
+            }
+        }
+
+        // Voice control
+        let isRecording = false;
+        const voiceButton = document.getElementById('voice-button');
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        voiceButton.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        audioChunks = [];
+                        await processVoiceCommand(audioBlob);
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    voiceButton.classList.add('active');
+                    addConsoleEntry('Voice recording started', 'info');
+                } catch (error) {
+                    addConsoleEntry('Microphone access denied', 'error');
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                voiceButton.classList.remove('active');
+                addConsoleEntry('Voice recording stopped', 'info');
+            }
+        });
+
+        async function processVoiceCommand(audioBlob) {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Audio = reader.result.split(',')[1];
+                
+                try {
+                    const response = await fetch('/api/voice', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ audio: base64Audio, userId })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.detected) {
+                        document.getElementById('voice-transcript').innerHTML = `
+                            <p>Transcript: ${result.transcript}</p>
+                            <p>Command: ${result.command}</p>
+                            <p>Intent: ${result.intent.intent} (${Math.round(result.intent.confidence * 100)}%)</p>
+                        `;
+                        addConsoleEntry(`Voice command: ${result.command}`, 'success');
+                    }
+                } catch (error) {
+                    addConsoleEntry('Voice processing failed: ' + error.message, 'error');
+                }
+            };
+        }
+
+        // Media upload and analysis
+        document.getElementById('media-upload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                addConsoleEntry(`Uploading ${file.name} for analysis...`, 'info');
+                
+                // In a real implementation, you would upload the file
+                // For demo, we'll simulate the analysis
+                const resultsDiv = document.getElementById('analysis-results');
+                resultsDiv.innerHTML = '<div class="loader"></div>';
+                
+                setTimeout(() => {
+                    resultsDiv.innerHTML = `
+                        <h3>Analysis Complete</h3>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <div class="status-label">Objects Detected</div>
+                                <div class="status-value">24</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">Faces Found</div>
+                                <div class="status-value">3</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">Scene Type</div>
+                                <div class="status-value">Indoor</div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-label">Content Rating</div>
+                                <div class="status-value">PG</div>
+                            </div>
+                        </div>
+                    `;
+                    addConsoleEntry('Content analysis completed', 'success');
+                }, 3000);
+            }
+        });
+
+        // Update system metrics
+        function updateSystemMetrics() {
+            // Simulate metric updates
+            document.getElementById('active-users').textContent = Math.floor(Math.random() * 100);
+            document.getElementById('queue-size').textContent = Math.floor(Math.random() * 20);
+            document.getElementById('gpu-usage').textContent = Math.floor(Math.random() * 100) + '%';
+            document.getElementById('inference-speed').textContent = Math.floor(Math.random() * 50 + 10) + 'ms';
+            document.getElementById('accuracy').textContent = (Math.random() * 5 + 95).toFixed(1) + '%';
+            document.getElementById('throughput').textContent = Math.floor(Math.random() * 100 + 50) + '/s';
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initWebSocket();
+            addConsoleEntry('NEXUS AI/ML System initialized', 'success');
+            addConsoleEntry('All neural networks loaded', 'info');
+            addConsoleEntry('GPU acceleration enabled', 'info');
+            
+            // Update metrics periodically
+            setInterval(updateSystemMetrics, 2000);
+        });
+
+        // Compression functionality
+        function selectVideoForCompression() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'video/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    startCompression(file);
+                }
+            };
+            input.click();
+        }
+
+        async function startCompression(file) {
+            const quality = document.getElementById('compression-quality').value;
+            const progressDiv = document.getElementById('compression-progress');
+            
+            progressDiv.innerHTML = `
+                <p>Compressing: ${file.name}</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="compression-bar" style="width: 0%"></div>
+                </div>
+                <p id="compression-status">Initializing neural compression...</p>
+            `;
+            
+            // Simulate compression progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 100) progress = 100;
+                
+                document.getElementById('compression-bar').style.width = progress + '%';
+                document.getElementById('compression-status').textContent = 
+                    `Processing: ${Math.floor(progress)}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    showCompressionResults(file, quality);
+                }
+            }, 500);
+        }
+
+        function showCompressionResults(file, quality) {
+            const resultsDiv = document.getElementById('compression-results');
+            const reduction = {
+                'ultra-low': 90,
+                'low': 70,
+                'balanced': 50,
+                'high': 30,
+                'lossless': 10
+            }[quality];
+            
+            resultsDiv.innerHTML = `
+                <h3>Compression Complete</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Original Size</div>
+                        <div class="status-value">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Compressed Size</div>
+                        <div class="status-value">${(file.size * (1 - reduction/100) / 1024 / 1024).toFixed(2)} MB</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Reduction</div>
+                        <div class="status-value">${reduction}%</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Quality Score</div>
+                        <div class="status-value">${(100 - reduction/2).toFixed(1)}%</div>
+                    </div>
+                </div>
+            `;
+            
+            addConsoleEntry(`Neural compression completed: ${reduction}% size reduction`, 'success');
+        }
+
+        // Emotion display updates
+        function updateEmotionDisplay(data) {
+            const emotionDiv = document.getElementById('emotion-display');
+            if (emotionDiv && data.emotion) {
+                emotionDiv.innerHTML = `
+                    <h3>Current Emotion: ${data.emotion.primary}</h3>
+                    <p>Confidence: ${Math.round(data.emotion.confidence * 100)}%</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${data.emotion.confidence * 100}%"></div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Manager - Holographic Dashboard</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/holographic.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    
+    <style>
+        /* Configuration Manager Specific Styles */
+        .config-manager {
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 1.5rem;
+            background: linear-gradient(180deg, var(--bg-primary) 0%, transparent 100%);
+            backdrop-filter: blur(20px);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Main Content */
+        .config-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            padding: 0 2rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Environment Variables Section */
+        .env-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .env-group {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .env-group:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+        }
+
+        .env-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .env-group-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--holo-cyan);
+        }
+
+        .env-group-icon {
+            font-size: 1.5rem;
+        }
+
+        .env-group-count {
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--holo-cyan);
+        }
+
+        .env-group-body {
+            padding: 1.5rem;
+            display: none;
+        }
+
+        .env-group.active .env-group-body {
+            display: block;
+        }
+
+        .env-item {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .env-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .env-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .env-key {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.875rem;
+            color: var(--holo-magenta);
+            letter-spacing: 0.05em;
+        }
+
+        .env-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .env-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .env-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .env-input.modified {
+            border-color: var(--holo-yellow);
+            background: rgba(255, 255, 0, 0.02);
+        }
+
+        .env-input.error {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.02);
+        }
+
+        .env-description {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+
+        .env-error {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #ff4444;
+        }
+
+        /* Services Panel */
+        .services-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .service-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-magenta));
+            border-radius: 12px;
+            font-size: 1.5rem;
+        }
+
+        .service-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.running {
+            background: #00ff88;
+        }
+
+        .status-indicator.stopped {
+            background: #ff4444;
+        }
+
+        .status-indicator.restarting {
+            background: var(--holo-yellow);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .service-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--holo-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .service-controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .service-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .service-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .service-btn.primary {
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-blue));
+            border: none;
+        }
+
+        .service-btn.danger {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .action-bar.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-magenta));
+            border: none;
+        }
+
+        /* Logs Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: var(--glass-bg);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            max-height: calc(80vh - 80px);
+            overflow-y: auto;
+        }
+
+        .log-viewer {
+            background: #000;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #00ff00;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--holo-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            margin-bottom: 0.5rem;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .config-content {
+                grid-template-columns: 1fr;
+            }
+
+            .services-panel {
+                grid-row: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .config-content {
+                padding: 0 1rem 1rem;
+            }
+
+            .service-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .action-bar {
+                width: calc(100% - 2rem);
+                left: 1rem;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="config-manager">
+        <!-- Header -->
+        <header class="holo-header">
+            <div class="header-content">
+                <h1 class="holo-title">
+                    <span class="glitch" data-text="Configuration Manager">Configuration Manager</span>
+                    <span class="subtitle">System Settings & Service Control</span>
+                </h1>
+            </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search configuration settings..." id="searchInput">
+        </div>
+
+        <!-- Main Content -->
+        <div class="config-content">
+            <!-- Environment Variables -->
+            <div class="env-section">
+                <!-- General Settings -->
+                <div class="env-group active" data-group="general">
+                    <div class="env-group-header">
+                        <div class="env-group-title">
+                            <span class="env-group-icon">⚙️</span>
+                            <span>General Settings</span>
+                        </div>
+                        <span class="env-group-count">6 items</span>
+                    </div>
+                    <div class="env-group-body">
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">PUID</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="PUID" value="1000">
+                            <div class="env-description">User ID for container processes</div>
+                        </div>
+                        
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">PGID</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="PGID" value="1000">
+                            <div class="env-description">Group ID for container processes</div>
+                        </div>
+                        
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">TZ</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="TZ" value="America/New_York">
+                            <div class="env-description">System timezone</div>
+                        </div>
+                        
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">DOMAIN</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="DOMAIN" value="example.com">
+                            <div class="env-description">Your domain name for external access</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">MEDIA_PATH</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="MEDIA_PATH" value="/path/to/your/media">
+                            <div class="env-description">Media storage path (absolute)</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">DOWNLOADS_PATH</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="DOWNLOADS_PATH" value="/path/to/your/downloads">
+                            <div class="env-description">Downloads path (absolute)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authentication -->
+                <div class="env-group" data-group="auth">
+                    <div class="env-group-header">
+                        <div class="env-group-title">
+                            <span class="env-group-icon">🔐</span>
+                            <span>Authentication</span>
+                        </div>
+                        <span class="env-group-count">5 items</span>
+                    </div>
+                    <div class="env-group-body">
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">AUTHELIA_JWT_SECRET</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Secure</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="AUTHELIA_JWT_SECRET" value="65ac068a62356750b3dff73d0fc783b3b89fd322a3a2b4bb35653dfe3e434417">
+                            <div class="env-description">JWT secret for authentication tokens</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">AUTHELIA_SESSION_SECRET</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Secure</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="AUTHELIA_SESSION_SECRET" value="7ccc83d96448637e1132031b00b5d8e0f05d7b17d83be2f2b71c4c8a8e4d43ff">
+                            <div class="env-description">Session encryption secret</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">AUTHELIA_STORAGE_ENCRYPTION_KEY</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Secure</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="AUTHELIA_STORAGE_ENCRYPTION_KEY" value="b369a2675cddb587336f5847d7736f6e8d969c092d929fc69330f1d8df47182d">
+                            <div class="env-description">Storage encryption key</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">AUTHELIA_DEFAULT_USER</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="AUTHELIA_DEFAULT_USER" value="admin">
+                            <div class="env-description">Default admin username</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">AUTHELIA_DEFAULT_PASSWORD_HASH</span>
+                                <span class="env-status tooltip" data-tooltip="Generate with: docker run authelia/authelia:latest authelia hash-password 'your-password'">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="AUTHELIA_DEFAULT_PASSWORD_HASH" value="" placeholder="Generate password hash">
+                            <div class="env-description">Default admin password (hashed)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Keys -->
+                <div class="env-group" data-group="api">
+                    <div class="env-group-header">
+                        <div class="env-group-title">
+                            <span class="env-group-icon">🔑</span>
+                            <span>API Keys</span>
+                        </div>
+                        <span class="env-group-count">4 items</span>
+                    </div>
+                    <div class="env-group-body">
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">SONARR_API_KEY</span>
+                                <span class="env-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="SONARR_API_KEY" value="" placeholder="Get from Sonarr settings">
+                            <div class="env-description">Sonarr API key for integration</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">RADARR_API_KEY</span>
+                                <span class="env-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="RADARR_API_KEY" value="" placeholder="Get from Radarr settings">
+                            <div class="env-description">Radarr API key for integration</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">PROWLARR_API_KEY</span>
+                                <span class="env-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="PROWLARR_API_KEY" value="" placeholder="Get from Prowlarr settings">
+                            <div class="env-description">Prowlarr API key for integration</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">JELLYFIN_API_KEY</span>
+                                <span class="env-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="JELLYFIN_API_KEY" value="" placeholder="Get from Jellyfin settings">
+                            <div class="env-description">Jellyfin API key for integration</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloudflare -->
+                <div class="env-group" data-group="cloudflare">
+                    <div class="env-group-header">
+                        <div class="env-group-title">
+                            <span class="env-group-icon">☁️</span>
+                            <span>Cloudflare</span>
+                        </div>
+                        <span class="env-group-count">2 items</span>
+                    </div>
+                    <div class="env-group-body">
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">CLOUDFLARE_EMAIL</span>
+                                <span class="env-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="email" class="env-input" data-key="CLOUDFLARE_EMAIL" value="" placeholder="your-email@example.com">
+                            <div class="env-description">Cloudflare account email</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">CLOUDFLARE_API_TOKEN</span>
+                                <span class="env-status tooltip" data-tooltip="Create at https://dash.cloudflare.com/profile/api-tokens">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Not Set</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="CLOUDFLARE_API_TOKEN" value="" placeholder="Create API token">
+                            <div class="env-description">Cloudflare API token for DNS management</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring -->
+                <div class="env-group" data-group="monitoring">
+                    <div class="env-group-header">
+                        <div class="env-group-title">
+                            <span class="env-group-icon">📊</span>
+                            <span>Monitoring</span>
+                        </div>
+                        <span class="env-group-count">2 items</span>
+                    </div>
+                    <div class="env-group-body">
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">GRAFANA_USER</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="text" class="env-input" data-key="GRAFANA_USER" value="admin">
+                            <div class="env-description">Grafana admin username</div>
+                        </div>
+
+                        <div class="env-item">
+                            <div class="env-label">
+                                <span class="env-key">GRAFANA_PASSWORD</span>
+                                <span class="env-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Active</span>
+                                </span>
+                            </div>
+                            <input type="password" class="env-input" data-key="GRAFANA_PASSWORD" value="changeme">
+                            <div class="env-description">Grafana admin password</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services Panel -->
+            <div class="services-panel">
+                <!-- Service Cards -->
+                <div class="service-card" data-service="jellyfin">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">🎬</div>
+                            <div>
+                                <div class="service-name">Jellyfin</div>
+                                <div class="service-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">45%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">2.1GB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">8h</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn" onclick="restartService('jellyfin')">Restart</button>
+                        <button class="service-btn danger" onclick="stopService('jellyfin')">Stop</button>
+                        <button class="service-btn" onclick="viewLogs('jellyfin')">Logs</button>
+                    </div>
+                </div>
+
+                <div class="service-card" data-service="sonarr">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">📺</div>
+                            <div>
+                                <div class="service-name">Sonarr</div>
+                                <div class="service-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">12%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">512MB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">3d</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn" onclick="restartService('sonarr')">Restart</button>
+                        <button class="service-btn danger" onclick="stopService('sonarr')">Stop</button>
+                        <button class="service-btn" onclick="viewLogs('sonarr')">Logs</button>
+                    </div>
+                </div>
+
+                <div class="service-card" data-service="radarr">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">🎥</div>
+                            <div>
+                                <div class="service-name">Radarr</div>
+                                <div class="service-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">8%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">487MB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">3d</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn" onclick="restartService('radarr')">Restart</button>
+                        <button class="service-btn danger" onclick="stopService('radarr')">Stop</button>
+                        <button class="service-btn" onclick="viewLogs('radarr')">Logs</button>
+                    </div>
+                </div>
+
+                <div class="service-card" data-service="qbittorrent">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">⬇️</div>
+                            <div>
+                                <div class="service-name">qBittorrent</div>
+                                <div class="service-status">
+                                    <span class="status-indicator running"></span>
+                                    <span>Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">25%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">1.8GB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">12h</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn" onclick="restartService('qbittorrent')">Restart</button>
+                        <button class="service-btn danger" onclick="stopService('qbittorrent')">Stop</button>
+                        <button class="service-btn" onclick="viewLogs('qbittorrent')">Logs</button>
+                    </div>
+                </div>
+
+                <div class="service-card" data-service="prowlarr">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">🔍</div>
+                            <div>
+                                <div class="service-name">Prowlarr</div>
+                                <div class="service-status">
+                                    <span class="status-indicator stopped"></span>
+                                    <span>Stopped</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">0%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">0MB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">-</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn primary" onclick="startService('prowlarr')">Start</button>
+                        <button class="service-btn" onclick="viewLogs('prowlarr')">Logs</button>
+                    </div>
+                </div>
+
+                <div class="service-card" data-service="overseerr">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">🎯</div>
+                            <div>
+                                <div class="service-name">Overseerr</div>
+                                <div class="service-status">
+                                    <span class="status-indicator restarting"></span>
+                                    <span>Restarting</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="service-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">5%</div>
+                            <div class="stat-label">CPU</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">256MB</div>
+                            <div class="stat-label">Memory</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">0m</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                    <div class="service-controls">
+                        <button class="service-btn" disabled>Restart</button>
+                        <button class="service-btn danger" disabled>Stop</button>
+                        <button class="service-btn" onclick="viewLogs('overseerr')">Logs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar" id="actionBar">
+            <button class="action-btn" onclick="discardChanges()">Discard Changes</button>
+            <button class="action-btn primary" onclick="saveChanges()">Save Changes</button>
+        </div>
+
+        <!-- Logs Modal -->
+        <div class="modal" id="logsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTitle">Service Logs</h3>
+                    <button class="modal-close" onclick="closeLogs()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="log-viewer" id="logViewer">
+                        Loading logs...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Manager JavaScript
+        
+        // State management
+        const state = {
+            originalValues: {},
+            modifiedValues: {},
+            services: {},
+            wsClient: null,
+            autoSaveTimeout: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeConfigManager();
+            setupEventListeners();
+            connectWebSocket();
+            loadInitialData();
+        });
+
+        function initializeConfigManager() {
+            // Store original values
+            document.querySelectorAll('.env-input').forEach(input => {
+                state.originalValues[input.dataset.key] = input.value;
+            });
+
+            // Initialize service states
+            updateServiceStates();
+        }
+
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+
+            // Environment group toggles
+            document.querySelectorAll('.env-group-header').forEach(header => {
+                header.addEventListener('click', toggleGroup);
+            });
+
+            // Input change detection
+            document.querySelectorAll('.env-input').forEach(input => {
+                input.addEventListener('input', handleInputChange);
+                input.addEventListener('blur', validateInput);
+            });
+
+            // Modal close on outside click
+            document.getElementById('logsModal').addEventListener('click', (e) => {
+                if (e.target.id === 'logsModal') {
+                    closeLogs();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+
+        function connectWebSocket() {
+            // In production, this would connect to your actual WebSocket server
+            // For demo purposes, we'll simulate it
+            console.log('Connecting to WebSocket server...');
+            
+            // Simulate WebSocket updates
+            setInterval(updateServiceStats, 5000);
+            setInterval(simulateServiceChanges, 15000);
+        }
+
+        function loadInitialData() {
+            // In production, this would fetch from your API
+            console.log('Loading configuration data...');
+        }
+
+        // Search functionality
+        function handleSearch(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            document.querySelectorAll('.env-item').forEach(item => {
+                const key = item.querySelector('.env-key').textContent.toLowerCase();
+                const description = item.querySelector('.env-description').textContent.toLowerCase();
+                
+                if (key.includes(searchTerm) || description.includes(searchTerm)) {
+                    item.style.display = 'block';
+                    // Ensure parent group is visible
+                    const group = item.closest('.env-group');
+                    if (group && !group.classList.contains('active')) {
+                        group.classList.add('active');
+                    }
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Update group counts
+            document.querySelectorAll('.env-group').forEach(group => {
+                const visibleItems = group.querySelectorAll('.env-item:not([style*="display: none"])').length;
+                const countElement = group.querySelector('.env-group-count');
+                countElement.textContent = `${visibleItems} items`;
+            });
+        }
+
+        // Group toggle
+        function toggleGroup(e) {
+            const group = e.currentTarget.closest('.env-group');
+            group.classList.toggle('active');
+        }
+
+        // Input handling
+        function handleInputChange(e) {
+            const input = e.target;
+            const key = input.dataset.key;
+            const originalValue = state.originalValues[key];
+            const currentValue = input.value;
+
+            if (currentValue !== originalValue) {
+                input.classList.add('modified');
+                state.modifiedValues[key] = currentValue;
+            } else {
+                input.classList.remove('modified');
+                delete state.modifiedValues[key];
+            }
+
+            updateActionBar();
+            
+            // Auto-save draft after 2 seconds of inactivity
+            clearTimeout(state.autoSaveTimeout);
+            state.autoSaveTimeout = setTimeout(saveDraft, 2000);
+        }
+
+        function validateInput(e) {
+            const input = e.target;
+            const key = input.dataset.key;
+            
+            // Add validation logic based on key type
+            let isValid = true;
+            let errorMessage = '';
+
+            if (key === 'PUID' || key === 'PGID') {
+                const value = parseInt(input.value);
+                if (isNaN(value) || value < 0) {
+                    isValid = false;
+                    errorMessage = 'Must be a positive number';
+                }
+            } else if (key === 'CLOUDFLARE_EMAIL') {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (input.value && !emailRegex.test(input.value)) {
+                    isValid = false;
+                    errorMessage = 'Invalid email format';
+                }
+            } else if (key.includes('_PATH')) {
+                if (input.value && !input.value.startsWith('/')) {
+                    isValid = false;
+                    errorMessage = 'Path must be absolute (start with /)';
+                }
+            }
+
+            if (!isValid) {
+                input.classList.add('error');
+                showError(input, errorMessage);
+            } else {
+                input.classList.remove('error');
+                clearError(input);
+            }
+        }
+
+        function showError(input, message) {
+            let errorElement = input.parentElement.querySelector('.env-error');
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'env-error';
+                input.parentElement.appendChild(errorElement);
+            }
+            errorElement.textContent = message;
+        }
+
+        function clearError(input) {
+            const errorElement = input.parentElement.querySelector('.env-error');
+            if (errorElement) {
+                errorElement.remove();
+            }
+        }
+
+        // Action bar
+        function updateActionBar() {
+            const hasChanges = Object.keys(state.modifiedValues).length > 0;
+            const actionBar = document.getElementById('actionBar');
+            
+            if (hasChanges) {
+                actionBar.classList.add('visible');
+            } else {
+                actionBar.classList.remove('visible');
+            }
+        }
+
+        function saveChanges() {
+            const changes = state.modifiedValues;
+            
+            // Show loading state
+            const saveButton = document.querySelector('.action-btn.primary');
+            saveButton.innerHTML = '<span class="loading"></span> Saving...';
+            saveButton.disabled = true;
+
+            // In production, this would send to your API
+            setTimeout(() => {
+                // Update original values
+                Object.keys(changes).forEach(key => {
+                    state.originalValues[key] = changes[key];
+                    const input = document.querySelector(`[data-key="${key}"]`);
+                    input.classList.remove('modified');
+                });
+
+                // Clear modified values
+                state.modifiedValues = {};
+
+                // Reset button
+                saveButton.innerHTML = 'Save Changes';
+                saveButton.disabled = false;
+
+                // Hide action bar
+                updateActionBar();
+
+                // Show success notification
+                showNotification('Configuration saved successfully', 'success');
+            }, 1500);
+        }
+
+        function discardChanges() {
+            // Restore original values
+            Object.keys(state.modifiedValues).forEach(key => {
+                const input = document.querySelector(`[data-key="${key}"]`);
+                input.value = state.originalValues[key];
+                input.classList.remove('modified', 'error');
+                clearError(input);
+            });
+
+            // Clear modified values
+            state.modifiedValues = {};
+
+            // Hide action bar
+            updateActionBar();
+        }
+
+        function saveDraft() {
+            if (Object.keys(state.modifiedValues).length > 0) {
+                localStorage.setItem('config-draft', JSON.stringify({
+                    values: state.modifiedValues,
+                    timestamp: Date.now()
+                }));
+                console.log('Draft saved');
+            }
+        }
+
+        // Service management
+        function updateServiceStates() {
+            // In production, this would fetch from Docker API
+            const services = ['jellyfin', 'sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'overseerr'];
+            services.forEach(service => {
+                state.services[service] = {
+                    status: 'running',
+                    cpu: Math.random() * 50,
+                    memory: Math.random() * 2048,
+                    uptime: Math.random() * 86400
+                };
+            });
+        }
+
+        function updateServiceStats() {
+            Object.keys(state.services).forEach(service => {
+                const card = document.querySelector(`[data-service="${service}"]`);
+                if (!card) return;
+
+                const stats = state.services[service];
+                
+                // Update CPU
+                const cpuElement = card.querySelector('.stat-value');
+                if (cpuElement) {
+                    cpuElement.textContent = `${Math.round(stats.cpu)}%`;
+                }
+
+                // Add slight variations to simulate real-time updates
+                stats.cpu = Math.max(0, Math.min(100, stats.cpu + (Math.random() - 0.5) * 10));
+            });
+        }
+
+        function simulateServiceChanges() {
+            // Randomly change a service status for demo
+            const services = Object.keys(state.services);
+            const randomService = services[Math.floor(Math.random() * services.length)];
+            
+            // Don't change if user is interacting
+            if (document.querySelector('.service-btn:active')) return;
+            
+            const statuses = ['running', 'stopped', 'restarting'];
+            const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            updateServiceStatus(randomService, newStatus);
+        }
+
+        function updateServiceStatus(serviceName, status) {
+            const card = document.querySelector(`[data-service="${serviceName}"]`);
+            if (!card) return;
+
+            const statusElement = card.querySelector('.service-status span:last-child');
+            const indicator = card.querySelector('.status-indicator');
+            
+            // Update status text
+            statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            
+            // Update indicator
+            indicator.className = `status-indicator ${status}`;
+            
+            // Update controls
+            const controls = card.querySelectorAll('.service-btn');
+            if (status === 'running') {
+                controls[0].textContent = 'Restart';
+                controls[0].classList.remove('primary');
+                controls[0].disabled = false;
+                controls[1].textContent = 'Stop';
+                controls[1].classList.add('danger');
+                controls[1].disabled = false;
+            } else if (status === 'stopped') {
+                controls[0].textContent = 'Start';
+                controls[0].classList.add('primary');
+                controls[0].disabled = false;
+                controls[1].style.display = 'none';
+            } else if (status === 'restarting') {
+                controls[0].disabled = true;
+                controls[1].disabled = true;
+            }
+        }
+
+        // Service actions
+        function startService(serviceName) {
+            updateServiceStatus(serviceName, 'restarting');
+            showNotification(`Starting ${serviceName}...`, 'info');
+            
+            setTimeout(() => {
+                updateServiceStatus(serviceName, 'running');
+                showNotification(`${serviceName} started successfully`, 'success');
+            }, 3000);
+        }
+
+        function stopService(serviceName) {
+            if (confirm(`Are you sure you want to stop ${serviceName}?`)) {
+                updateServiceStatus(serviceName, 'stopped');
+                showNotification(`${serviceName} stopped`, 'warning');
+            }
+        }
+
+        function restartService(serviceName) {
+            updateServiceStatus(serviceName, 'restarting');
+            showNotification(`Restarting ${serviceName}...`, 'info');
+            
+            setTimeout(() => {
+                updateServiceStatus(serviceName, 'running');
+                showNotification(`${serviceName} restarted successfully`, 'success');
+            }, 3000);
+        }
+
+        // Logs viewer
+        function viewLogs(serviceName) {
+            const modal = document.getElementById('logsModal');
+            const title = document.getElementById('modalTitle');
+            const viewer = document.getElementById('logViewer');
+            
+            title.textContent = `${serviceName} Logs`;
+            viewer.innerHTML = '<span class="loading"></span> Loading logs...';
+            
+            modal.classList.add('active');
+            
+            // Simulate loading logs
+            setTimeout(() => {
+                viewer.innerHTML = generateSampleLogs(serviceName);
+                // Auto-scroll to bottom
+                viewer.scrollTop = viewer.scrollHeight;
+            }, 1000);
+        }
+
+        function generateSampleLogs(serviceName) {
+            const timestamps = [];
+            const now = new Date();
+            
+            for (let i = 20; i >= 0; i--) {
+                const time = new Date(now - i * 60000);
+                timestamps.push(time.toISOString());
+            }
+
+            const logTypes = [
+                { level: 'INFO', messages: [
+                    'Service started successfully',
+                    'Configuration loaded',
+                    'Database connection established',
+                    'API endpoint registered',
+                    'Health check passed'
+                ]},
+                { level: 'WARN', messages: [
+                    'High memory usage detected',
+                    'Slow response time',
+                    'Rate limit approaching'
+                ]},
+                { level: 'ERROR', messages: [
+                    'Failed to connect to external service',
+                    'Invalid configuration parameter'
+                ]}
+            ];
+
+            let logs = '';
+            timestamps.forEach(timestamp => {
+                const logType = logTypes[Math.floor(Math.random() * logTypes.length)];
+                const message = logType.messages[Math.floor(Math.random() * logType.messages.length)];
+                
+                let color = '#00ff00';
+                if (logType.level === 'WARN') color = '#ffff00';
+                if (logType.level === 'ERROR') color = '#ff4444';
+                
+                logs += `<span style="color: #666">${timestamp}</span> <span style="color: ${color}">[${logType.level}]</span> ${message}\n`;
+            });
+
+            return logs;
+        }
+
+        function closeLogs() {
+            document.getElementById('logsModal').classList.remove('active');
+        }
+
+        // Notifications
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                background: ${type === 'success' ? 'rgba(0, 255, 136, 0.2)' : 
+                            type === 'warning' ? 'rgba(255, 255, 0, 0.2)' :
+                            type === 'error' ? 'rgba(255, 68, 68, 0.2)' :
+                            'rgba(0, 255, 255, 0.2)'};
+                border: 1px solid ${type === 'success' ? '#00ff88' : 
+                                   type === 'warning' ? '#ffff00' :
+                                   type === 'error' ? '#ff4444' :
+                                   '#00ffff'};
+                border-radius: 8px;
+                color: #fff;
+                font-size: 0.9rem;
+                z-index: 2000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        function handleKeyboardShortcuts(e) {
+            // Ctrl/Cmd + S to save
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (Object.keys(state.modifiedValues).length > 0) {
+                    saveChanges();
+                }
+            }
+            
+            // Escape to close modal
+            if (e.key === 'Escape') {
+                const modal = document.querySelector('.modal.active');
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+            }
+        }
+
+        // Add animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

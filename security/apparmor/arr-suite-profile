@@ -1,0 +1,147 @@
+# AppArmor profile for Arr suite containers (Sonarr, Radarr, etc.)
+# Path: /etc/apparmor.d/arr-suite-profile
+
+#include <tunables/global>
+
+profile arr-suite-profile flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  #include <abstractions/ssl_certs>
+  
+  # Network access
+  network inet tcp,
+  network inet udp,
+  network inet6 tcp,
+  network inet6 udp,
+  
+  # Deny network raw
+  deny network raw,
+  
+  # Process capabilities
+  capability dac_override,
+  capability chown,
+  capability setuid,
+  capability setgid,
+  capability fowner,
+  capability fsetid,
+  
+  # Deny dangerous capabilities
+  deny capability sys_admin,
+  deny capability sys_boot,
+  deny capability sys_module,
+  deny capability sys_time,
+  deny capability sys_rawio,
+  deny capability mknod,
+  deny capability audit_write,
+  
+  # File access patterns
+  # Configuration directory
+  /config/ r,
+  /config/** rwk,
+  
+  # Media directories
+  /media/ r,
+  /media/** rw,
+  
+  # Download directories
+  /downloads/ r,
+  /downloads/** rw,
+  
+  # Temporary files
+  /tmp/ r,
+  /tmp/** rwk,
+  owner /tmp/** rwk,
+  
+  # Logs
+  /var/log/** w,
+  
+  # Process and system files
+  /proc/sys/kernel/osrelease r,
+  /proc/sys/kernel/random/uuid r,
+  /proc/self/** r,
+  /proc/*/stat r,
+  /proc/*/status r,
+  /proc/*/cmdline r,
+  /proc/meminfo r,
+  /proc/cpuinfo r,
+  
+  # System files for timezone
+  /etc/localtime r,
+  /etc/timezone r,
+  /usr/share/zoneinfo/** r,
+  
+  # DNS resolution
+  /etc/hosts r,
+  /etc/host.conf r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+  /etc/gai.conf r,
+  
+  # SSL certificates
+  /etc/ssl/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # System libraries
+  /usr/lib/** mr,
+  /lib/** mr,
+  /lib64/** mr,
+  
+  # Binary execution
+  /usr/bin/* ix,
+  /bin/* ix,
+  /usr/local/bin/* ix,
+  
+  # .NET runtime files
+  /usr/share/dotnet/** r,
+  /usr/lib/dotnet/** mr,
+  
+  # Standard devices
+  /dev/null rw,
+  /dev/zero rw,
+  /dev/full rw,
+  /dev/random r,
+  /dev/urandom r,
+  /dev/tty rw,
+  /dev/pts/* rw,
+  
+  # Shared memory
+  /dev/shm/ r,
+  /dev/shm/** rwk,
+  /run/shm/ r,
+  /run/shm/** rwk,
+  
+  # Deny access to sensitive areas
+  deny /proc/*/mem rwx,
+  deny /proc/*/kmem rwx,
+  deny /proc/kcore rwx,
+  deny /sys/kernel/** w,
+  deny /boot/** rwx,
+  deny /etc/passwd w,
+  deny /etc/shadow rwx,
+  deny /etc/sudoers rwx,
+  deny /root/** rwx,
+  deny /home/** rwx,
+  
+  # SQLite databases
+  /config/**.db rwk,
+  /config/**.db-journal rwk,
+  /config/**.db-wal rwk,
+  /config/**.db-shm rwk,
+  
+  # Signal permissions
+  signal send set=(term, kill, hup) peer=unconfined,
+  signal receive set=(term, kill, hup) peer=unconfined,
+  
+  # Unix socket access
+  unix (connect, receive, send) type=stream addr=none,
+  unix (connect, receive, send) type=dgram addr=none,
+  
+  # Ptrace (denied)
+  deny ptrace,
+  
+  # Mount operations (denied)
+  deny mount,
+  deny umount,
+  deny pivot_root,
+}

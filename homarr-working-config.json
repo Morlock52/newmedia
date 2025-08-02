@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "configProperties": {
+    "name": "Ultimate Media Server 2025"
+  },
+  "categories": [
+    {
+      "id": "media-servers",
+      "name": "🎬 Media Servers",
+      "position": 0
+    },
+    {
+      "id": "media-management",
+      "name": "📊 Media Management",
+      "position": 1
+    },
+    {
+      "id": "downloads",
+      "name": "⬇️ Downloads",
+      "position": 2
+    },
+    {
+      "id": "requests",
+      "name": "🎯 Requests",
+      "position": 3
+    },
+    {
+      "id": "monitoring",
+      "name": "📈 Monitoring",
+      "position": 4
+    },
+    {
+      "id": "management",
+      "name": "🔧 Management",
+      "position": 5
+    },
+    {
+      "id": "libraries",
+      "name": "📚 Libraries",
+      "position": 6
+    },
+    {
+      "id": "utilities",
+      "name": "🛠️ Utilities",
+      "position": 7
+    }
+  ],
+  "wrappers": [
+    {
+      "id": "default",
+      "position": 0
+    }
+  ],
+  "apps": [
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "url": "http://localhost:8096",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyfin.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8096"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "plex",
+      "name": "Plex",
+      "url": "http://localhost:32400/web",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/plex.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:32400/web"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200", "401"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "emby",
+      "name": "Emby",
+      "url": "http://localhost:8097",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/emby.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8097"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "sonarr",
+      "name": "Sonarr",
+      "url": "http://localhost:8989",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sonarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8989"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 2,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 2
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "radarr",
+      "name": "Radarr",
+      "url": "http://localhost:7878",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/radarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:7878"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 2,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 2
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "lidarr",
+      "name": "Lidarr",
+      "url": "http://localhost:8686",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/lidarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8686"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 2,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 2
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "readarr",
+      "name": "Readarr",
+      "url": "http://localhost:8787",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/readarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8787"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 4,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 4
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "bazarr",
+      "name": "Bazarr",
+      "url": "http://localhost:6767",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/bazarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:6767"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 4,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 4
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "prowlarr",
+      "name": "Prowlarr",
+      "url": "http://localhost:9696",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prowlarr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9696"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 4,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 4
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "url": "http://localhost:8080",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/qbittorrent.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8080"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 6,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 6
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "sabnzbd",
+      "name": "SABnzbd",
+      "url": "http://localhost:8081",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sabnzbd.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8081"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 6,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 6
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "jellyseerr",
+      "name": "Jellyseerr",
+      "url": "http://localhost:5055",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyseerr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:5055"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 6,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 6
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "overseerr",
+      "name": "Overseerr",
+      "url": "http://localhost:5056",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/overseerr.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:5056"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 8,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 8
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "portainer",
+      "name": "Portainer",
+      "url": "https://localhost:9443",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/portainer.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "https://localhost:9443"
+      },
+      "network": {
+        "enabledStatusChecker": false
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 8,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 8
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "nginx-proxy",
+      "name": "Nginx Proxy Manager",
+      "url": "http://localhost:81",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/nginx-proxy-manager.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:81"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 8,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 8
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "url": "http://localhost:3000",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/grafana.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:3000"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 10,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 10
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "prometheus",
+      "name": "Prometheus",
+      "url": "http://localhost:9090",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prometheus.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9090"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 10,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 2,
+            "y": 10
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "uptime-kuma",
+      "name": "Uptime Kuma",
+      "url": "http://localhost:3001",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/uptime-kuma.svg"
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:3001"
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": ["200"]
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 10,
+            "w": 2,
+            "h": 2
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 4,
+            "y": 10
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "id": "welcome-widget",
+      "type": "text",
+      "properties": {
+        "text": "Welcome to your Ultimate Media Server 2025 Dashboard!"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 12,
+            "w": 6,
+            "h": 1
+          }
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 12
+          },
+          "size": {
+            "width": 6,
+            "height": 1
+          }
+        }
+      }
+    }
+  ],
+  "settings": {
+    "common": {
+      "searchEngine": {
+        "type": "google",
+        "properties": {}
+      }
+    },
+    "customization": {
+      "layout": {
+        "enabledLeftSidebar": false,
+        "enabledRightSidebar": false,
+        "enabledDocker": true,
+        "enabledPing": true,
+        "enabledSearchbar": true
+      },
+      "pageTitle": "Ultimate Media Server 2025",
+      "logoImageUrl": "",
+      "faviconUrl": "",
+      "backgroundImageUrl": "",
+      "customCss": "",
+      "colors": {
+        "primary": "#fa5252",
+        "secondary": "#272727",
+        "shade": "800"
+      }
+    },
+    "access": {
+      "allowGuests": true
+    }
+  }
+}

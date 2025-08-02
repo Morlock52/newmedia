@@ -1,0 +1,71 @@
+# Grafana Datasources - Production Media Stack
+# =============================================
+# Automated provisioning of monitoring data sources
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - Primary metrics source
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "300s"
+      httpMethod: "POST"
+      manageAlerts: true
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
+
+  # Loki - Log aggregation
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - matcherRegex: "trace_id=(\\w+)"
+          name: "trace_id"
+          url: "$${__value.raw}"
+          datasourceUid: jaeger
+
+  # PostgreSQL - Direct database access
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: mediastack
+    user: ${DB_USERNAME}
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    jsonData:
+      sslmode: "disable"
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+
+  # Redis - Cache metrics
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis:6379
+    secureJsonData:
+      password: ${REDIS_PASSWORD}
+    jsonData:
+      client: "standalone"
+      poolSize: 5
+      timeout: 10
+      pingInterval: 30
+
+  # TestData - For dashboard testing
+  - name: TestData
+    type: testdata
+    access: proxy
+    isDefault: false
+    editable: true

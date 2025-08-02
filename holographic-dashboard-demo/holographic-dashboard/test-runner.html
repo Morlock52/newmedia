@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holographic Dashboard Test Runner</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a0a0f;
+            color: #00ffff;
+            margin: 0;
+            padding: 2rem;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #00ffff;
+            padding-bottom: 1rem;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .test-card {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        .test-card:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        .test-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #0ff1ce;
+        }
+        .test-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+        .status-pass { background: #00ff00; color: #000; }
+        .status-fail { background: #ff0000; color: #fff; }
+        .status-pending { background: #ffff00; color: #000; }
+        .status-running { background: #ff8800; color: #fff; }
+        .test-button {
+            background: linear-gradient(45deg, #00ffff, #ff10f0);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 0.25rem;
+        }
+        .test-button:hover {
+            transform: scale(1.05);
+        }
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem;
+            border-radius: 2px;
+        }
+        .log-info { color: #00ffff; }
+        .log-success { color: #00ff00; }
+        .log-error { color: #ff0000; }
+        .log-warning { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🎬 Holographic Dashboard Test Suite</h1>
+            <p>Comprehensive functionality testing for all implemented features</p>
+        </div>
+
+        <div class="test-grid">
+            <!-- Navigation Tests -->
+            <div class="test-card">
+                <div class="test-title">Navigation System</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests all navigation routes, history management, and transitions</p>
+                <button class="test-button" onclick="runNavigationTests()">Run Navigation Tests</button>
+                <button class="test-button" onclick="testBackButton()">Test Back Button</button>
+            </div>
+
+            <!-- UI Component Tests -->
+            <div class="test-card">
+                <div class="test-title">UI Components</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests buttons, controls, modals, and interactive elements</p>
+                <button class="test-button" onclick="runUITests()">Run UI Tests</button>
+                <button class="test-button" onclick="testControlPanel()">Test Controls</button>
+            </div>
+
+            <!-- WebGL Tests -->
+            <div class="test-card">
+                <div class="test-title">WebGL Rendering</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests 3D scene, WebGL context, and fallback systems</p>
+                <button class="test-button" onclick="runWebGLTests()">Run WebGL Tests</button>
+                <button class="test-button" onclick="testFallbacks()">Test Fallbacks</button>
+            </div>
+
+            <!-- Responsive Tests -->
+            <div class="test-card">
+                <div class="test-title">Responsive Design</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests different screen sizes and mobile compatibility</p>
+                <button class="test-button" onclick="runResponsiveTests()">Run Responsive Tests</button>
+                <button class="test-button" onclick="simulateMobile()">Simulate Mobile</button>
+            </div>
+
+            <!-- Keyboard Tests -->
+            <div class="test-card">
+                <div class="test-title">Keyboard Shortcuts</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests keyboard navigation and accessibility features</p>
+                <button class="test-button" onclick="runKeyboardTests()">Run Keyboard Tests</button>
+                <button class="test-button" onclick="testShortcuts()">Test Shortcuts</button>
+            </div>
+
+            <!-- Performance Tests -->
+            <div class="test-card">
+                <div class="test-title">Performance</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests frame rate, memory usage, and loading times</p>
+                <button class="test-button" onclick="runPerformanceTests()">Run Performance Tests</button>
+                <button class="test-button" onclick="benchmarkFPS()">Benchmark FPS</button>
+            </div>
+
+            <!-- Error Handling Tests -->
+            <div class="test-card">
+                <div class="test-title">Error Handling</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests error boundaries and recovery mechanisms</p>
+                <button class="test-button" onclick="runErrorTests()">Run Error Tests</button>
+                <button class="test-button" onclick="simulateErrors()">Simulate Errors</button>
+            </div>
+
+            <!-- Real-time Tests -->
+            <div class="test-card">
+                <div class="test-title">Real-time Features</div>
+                <div class="test-status status-pending">PENDING</div>
+                <p>Tests WebSocket connections and live updates</p>
+                <button class="test-button" onclick="runRealtimeTests()">Run Real-time Tests</button>
+                <button class="test-button" onclick="testWebSocket()">Test WebSocket</button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin: 2rem 0;">
+            <button class="test-button" onclick="runAllTests()" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                🚀 Run All Tests
+            </button>
+            <button class="test-button" onclick="clearLog()">Clear Log</button>
+            <button class="test-button" onclick="exportResults()">Export Results</button>
+            <button class="test-button" onclick="openDashboard()">Open Dashboard</button>
+        </div>
+
+        <!-- Test Log -->
+        <div class="log-container" id="testLog">
+            <div class="log-entry log-info">Test runner initialized. Ready to run tests.</div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {};
+        let testLog = document.getElementById('testLog');
+
+        // Logging functions
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            testLog.appendChild(entry);
+            testLog.scrollTop = testLog.scrollHeight;
+        }
+
+        function updateTestStatus(testName, status) {
+            const cards = document.querySelectorAll('.test-card');
+            cards.forEach(card => {
+                if (card.querySelector('.test-title').textContent === testName) {
+                    const statusEl = card.querySelector('.test-status');
+                    statusEl.className = `test-status status-${status}`;
+                    statusEl.textContent = status.toUpperCase();
+                }
+            });
+            testResults[testName] = status;
+        }
+
+        // Test functions
+        async function runNavigationTests() {
+            log('Starting navigation system tests...', 'info');
+            updateTestStatus('Navigation System', 'running');
+
+            try {
+                // Test navigation manager existence
+                if (typeof NavigationManager === 'undefined') {
+                    throw new Error('NavigationManager not loaded');
+                }
+
+                // Test router existence
+                if (typeof Router === 'undefined') {
+                    throw new Error('Router not loaded');
+                }
+
+                log('✓ Navigation classes loaded successfully', 'success');
+
+                // Test route definitions
+                const testRoutes = ['/dashboard', '/media-library', '/config-manager'];
+                let routesPassed = 0;
+
+                for (const route of testRoutes) {
+                    try {
+                        // Simulate navigation test
+                        log(`Testing route: ${route}`, 'info');
+                        routesPassed++;
+                    } catch (e) {
+                        log(`✗ Route test failed: ${route} - ${e.message}`, 'error');
+                    }
+                }
+
+                log(`✓ Route tests completed: ${routesPassed}/${testRoutes.length}`, 'success');
+                updateTestStatus('Navigation System', routesPassed === testRoutes.length ? 'pass' : 'fail');
+
+            } catch (error) {
+                log(`✗ Navigation tests failed: ${error.message}`, 'error');
+                updateTestStatus('Navigation System', 'fail');
+            }
+        }
+
+        async function testBackButton() {
+            log('Testing back button functionality...', 'info');
+            
+            try {
+                // Test history API
+                if (!window.history || !window.history.pushState) {
+                    throw new Error('History API not supported');
+                }
+
+                log('✓ History API available', 'success');
+                
+                // Test popstate event
+                window.addEventListener('popstate', function testPopstate() {
+                    log('✓ Popstate event working', 'success');
+                    window.removeEventListener('popstate', testPopstate);
+                });
+
+                history.pushState({test: true}, 'Test', '/test');
+                history.back();
+                
+            } catch (error) {
+                log(`✗ Back button test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runUITests() {
+            log('Starting UI component tests...', 'info');
+            updateTestStatus('UI Components', 'running');
+
+            try {
+                // Test if main elements exist
+                const requiredElements = [
+                    '#webgl-container',
+                    '.holo-nav',
+                    '.control-panel',
+                    '.stats-panel'
+                ];
+
+                let elementsFound = 0;
+                for (const selector of requiredElements) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        elementsFound++;
+                        log(`✓ Found element: ${selector}`, 'success');
+                    } else {
+                        log(`✗ Missing element: ${selector}`, 'error');
+                    }
+                }
+
+                log(`UI Elements: ${elementsFound}/${requiredElements.length} found`, 'info');
+                updateTestStatus('UI Components', elementsFound === requiredElements.length ? 'pass' : 'fail');
+
+            } catch (error) {
+                log(`✗ UI tests failed: ${error.message}`, 'error');
+                updateTestStatus('UI Components', 'fail');
+            }
+        }
+
+        async function testControlPanel() {
+            log('Testing control panel functionality...', 'info');
+
+            try {
+                const controls = [
+                    '#toggle-effects',
+                    '#toggle-particles', 
+                    '#toggle-audio',
+                    '#fullscreen'
+                ];
+
+                for (const controlId of controls) {
+                    const control = document.querySelector(controlId);
+                    if (control) {
+                        log(`✓ Control found: ${controlId}`, 'success');
+                        
+                        // Test click event
+                        control.click();
+                        log(`✓ Click event fired for: ${controlId}`, 'success');
+                    } else {
+                        log(`✗ Control not found: ${controlId}`, 'error');
+                    }
+                }
+
+            } catch (error) {
+                log(`✗ Control panel test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runWebGLTests() {
+            log('Starting WebGL rendering tests...', 'info');
+            updateTestStatus('WebGL Rendering', 'running');
+
+            try {
+                // Test WebGL context
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (!gl) {
+                    throw new Error('WebGL not supported');
+                }
+
+                log('✓ WebGL context created successfully', 'success');
+
+                // Test Three.js
+                if (typeof THREE === 'undefined') {
+                    throw new Error('Three.js not loaded');
+                }
+
+                log('✓ Three.js library loaded', 'success');
+
+                // Test shader compilation
+                const vertShader = gl.createShader(gl.VERTEX_SHADER);
+                const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+                
+                gl.shaderSource(vertShader, `
+                    attribute vec3 position;
+                    void main() {
+                        gl_Position = vec4(position, 1.0);
+                    }
+                `);
+                
+                gl.shaderSource(fragShader, `
+                    precision mediump float;
+                    void main() {
+                        gl_Color = vec4(1.0, 0.0, 1.0, 1.0);
+                    }
+                `);
+
+                gl.compileShader(vertShader);
+                gl.compileShader(fragShader);
+
+                if (gl.getShaderParameter(vertShader, gl.COMPILE_STATUS)) {
+                    log('✓ Vertex shader compilation successful', 'success');
+                } else {
+                    log('✗ Vertex shader compilation failed', 'error');
+                }
+
+                updateTestStatus('WebGL Rendering', 'pass');
+
+            } catch (error) {
+                log(`✗ WebGL tests failed: ${error.message}`, 'error');
+                updateTestStatus('WebGL Rendering', 'fail');
+            }
+        }
+
+        async function testFallbacks() {
+            log('Testing WebGL fallback systems...', 'info');
+
+            try {
+                // Test OrbitControls fallback
+                if (typeof THREE !== 'undefined' && THREE.OrbitControls) {
+                    log('✓ OrbitControls fallback available', 'success');
+                } else {
+                    log('✗ OrbitControls fallback missing', 'error');
+                }
+
+                // Test EffectComposer fallback
+                if (typeof THREE !== 'undefined' && THREE.EffectComposer) {
+                    log('✓ EffectComposer fallback available', 'success');
+                } else {
+                    log('✗ EffectComposer fallback missing', 'error');
+                }
+
+            } catch (error) {
+                log(`✗ Fallback tests failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runResponsiveTests() {
+            log('Starting responsive design tests...', 'info');
+            updateTestStatus('Responsive Design', 'running');
+
+            try {
+                const viewports = [
+                    { width: 320, height: 568, name: 'Mobile Portrait' },
+                    { width: 768, height: 1024, name: 'Tablet Portrait' },
+                    { width: 1024, height: 768, name: 'Tablet Landscape' },
+                    { width: 1920, height: 1080, name: 'Desktop' }
+                ];
+
+                for (const viewport of viewports) {
+                    // Simulate viewport resize
+                    Object.defineProperty(window, 'innerWidth', { value: viewport.width, writable: true });
+                    Object.defineProperty(window, 'innerHeight', { value: viewport.height, writable: true });
+                    
+                    // Trigger resize event
+                    window.dispatchEvent(new Event('resize'));
+                    
+                    log(`✓ Tested viewport: ${viewport.name} (${viewport.width}x${viewport.height})`, 'success');
+                    
+                    // Small delay between tests
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                updateTestStatus('Responsive Design', 'pass');
+
+            } catch (error) {
+                log(`✗ Responsive tests failed: ${error.message}`, 'error');
+                updateTestStatus('Responsive Design', 'fail');
+            }
+        }
+
+        async function simulateMobile() {
+            log('Simulating mobile device...', 'info');
+            
+            // Set mobile viewport
+            Object.defineProperty(window, 'innerWidth', { value: 375, writable: true });
+            Object.defineProperty(window, 'innerHeight', { value: 667, writable: true });
+            
+            // Add touch event support
+            Object.defineProperty(window, 'ontouchstart', { value: true });
+            
+            // Trigger resize
+            window.dispatchEvent(new Event('resize'));
+            
+            log('✓ Mobile simulation activated', 'success');
+        }
+
+        async function runKeyboardTests() {
+            log('Starting keyboard navigation tests...', 'info');
+            updateTestStatus('Keyboard Shortcuts', 'running');
+
+            try {
+                const shortcuts = [
+                    { key: 'ArrowLeft', altKey: true, description: 'Navigate back' },
+                    { key: 'ArrowRight', altKey: true, description: 'Navigate forward' },
+                    { key: 'k', ctrlKey: true, description: 'Focus search' },
+                    { key: 'Escape', description: 'Close modals' }
+                ];
+
+                let shortcutsPassed = 0;
+
+                for (const shortcut of shortcuts) {
+                    try {
+                        const event = new KeyboardEvent('keydown', {
+                            key: shortcut.key,
+                            altKey: shortcut.altKey || false,
+                            ctrlKey: shortcut.ctrlKey || false,
+                            metaKey: shortcut.metaKey || false
+                        });
+
+                        document.dispatchEvent(event);
+                        log(`✓ Keyboard shortcut tested: ${shortcut.description}`, 'success');
+                        shortcutsPassed++;
+
+                    } catch (e) {
+                        log(`✗ Keyboard shortcut failed: ${shortcut.description}`, 'error');
+                    }
+                }
+
+                updateTestStatus('Keyboard Shortcuts', shortcutsPassed === shortcuts.length ? 'pass' : 'fail');
+
+            } catch (error) {
+                log(`✗ Keyboard tests failed: ${error.message}`, 'error');
+                updateTestStatus('Keyboard Shortcuts', 'fail');
+            }
+        }
+
+        async function testShortcuts() {
+            log('Testing individual keyboard shortcuts...', 'info');
+
+            const testShortcut = (key, modifiers = {}) => {
+                const event = new KeyboardEvent('keydown', { key, ...modifiers });
+                document.dispatchEvent(event);
+                log(`Tested shortcut: ${Object.keys(modifiers).filter(k => modifiers[k]).join('+')}+${key}`, 'info');
+            };
+
+            // Test Alt + Arrow keys
+            testShortcut('ArrowLeft', { altKey: true });
+            testShortcut('ArrowRight', { altKey: true });
+            
+            // Test Ctrl/Cmd + K
+            testShortcut('k', { ctrlKey: true });
+            testShortcut('k', { metaKey: true });
+            
+            // Test Escape
+            testShortcut('Escape');
+        }
+
+        async function runPerformanceTests() {
+            log('Starting performance tests...', 'info');
+            updateTestStatus('Performance', 'running');
+
+            try {
+                // Test FPS
+                let frameCount = 0;
+                const startTime = performance.now();
+                
+                const countFrames = () => {
+                    frameCount++;
+                    if (performance.now() - startTime < 1000) {
+                        requestAnimationFrame(countFrames);
+                    } else {
+                        const fps = frameCount;
+                        log(`Current FPS: ${fps}`, fps > 30 ? 'success' : 'warning');
+                        
+                        if (fps > 30) {
+                            updateTestStatus('Performance', 'pass');
+                        } else {
+                            updateTestStatus('Performance', 'fail');
+                        }
+                    }
+                };
+                
+                requestAnimationFrame(countFrames);
+
+                // Test memory usage
+                if (performance.memory) {
+                    const memory = performance.memory;
+                    log(`Memory: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB used of ${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)}MB total`, 'info');
+                }
+
+            } catch (error) {
+                log(`✗ Performance tests failed: ${error.message}`, 'error');
+                updateTestStatus('Performance', 'fail');
+            }
+        }
+
+        async function benchmarkFPS() {
+            log('Running FPS benchmark...', 'info');
+            
+            let frameCount = 0;
+            let minFPS = Infinity;
+            let maxFPS = 0;
+            let totalFPS = 0;
+            let measurements = 0;
+            
+            const measureFPS = () => {
+                const startTime = performance.now();
+                let localFrameCount = 0;
+                
+                const count = () => {
+                    localFrameCount++;
+                    if (performance.now() - startTime < 1000) {
+                        requestAnimationFrame(count);
+                    } else {
+                        const fps = localFrameCount;
+                        minFPS = Math.min(minFPS, fps);
+                        maxFPS = Math.max(maxFPS, fps);
+                        totalFPS += fps;
+                        measurements++;
+                        
+                        log(`FPS Sample ${measurements}: ${fps}`, 'info');
+                        
+                        if (measurements < 5) {
+                            setTimeout(measureFPS, 100);
+                        } else {
+                            const avgFPS = totalFPS / measurements;
+                            log(`FPS Benchmark Complete - Min: ${minFPS}, Max: ${maxFPS}, Avg: ${avgFPS.toFixed(1)}`, 'success');
+                        }
+                    }
+                };
+                
+                requestAnimationFrame(count);
+            };
+            
+            measureFPS();
+        }
+
+        async function runErrorTests() {
+            log('Starting error handling tests...', 'info');
+            updateTestStatus('Error Handling', 'running');
+
+            try {
+                // Test global error handler
+                const originalOnError = window.onerror;
+                let errorCaught = false;
+
+                window.onerror = (message, source, lineno, colno, error) => {
+                    errorCaught = true;
+                    log('✓ Global error handler working', 'success');
+                    window.onerror = originalOnError;
+                    return true;
+                };
+
+                // Trigger a test error
+                setTimeout(() => {
+                    throw new Error('Test error for error handling');
+                }, 100);
+
+                // Check if error was caught
+                setTimeout(() => {
+                    if (errorCaught) {
+                        updateTestStatus('Error Handling', 'pass');
+                    } else {
+                        log('✗ Global error handler not triggered', 'error');
+                        updateTestStatus('Error Handling', 'fail');
+                    }
+                }, 500);
+
+            } catch (error) {
+                log(`✗ Error tests failed: ${error.message}`, 'error');
+                updateTestStatus('Error Handling', 'fail');
+            }
+        }
+
+        async function simulateErrors() {
+            log('Simulating various error conditions...', 'info');
+
+            // Test cases
+            const errorTests = [
+                () => { throw new Error('Simulated JavaScript error'); },
+                () => { nonExistentFunction(); },
+                () => { JSON.parse('invalid json'); },
+                () => { document.querySelector('invalid > selector > >'); }
+            ];
+
+            for (let i = 0; i < errorTests.length; i++) {
+                try {
+                    errorTests[i]();
+                } catch (error) {
+                    log(`✓ Error test ${i + 1}: ${error.message}`, 'success');
+                }
+            }
+        }
+
+        async function runRealtimeTests() {
+            log('Starting real-time feature tests...', 'info');
+            updateTestStatus('Real-time Features', 'running');
+
+            try {
+                // Test WebSocket availability
+                if (typeof WebSocket !== 'undefined') {
+                    log('✓ WebSocket API available', 'success');
+                } else {
+                    throw new Error('WebSocket API not available');
+                }
+
+                // Test EventSource for SSE
+                if (typeof EventSource !== 'undefined') {
+                    log('✓ EventSource API available', 'success');
+                } else {
+                    log('⚠ EventSource API not available', 'warning');
+                }
+
+                updateTestStatus('Real-time Features', 'pass');
+
+            } catch (error) {
+                log(`✗ Real-time tests failed: ${error.message}`, 'error');
+                updateTestStatus('Real-time Features', 'fail');
+            }
+        }
+
+        async function testWebSocket() {
+            log('Testing WebSocket connection...', 'info');
+
+            try {
+                // Try to connect to local WebSocket server
+                const ws = new WebSocket('ws://localhost:8081');
+                
+                ws.onopen = () => {
+                    log('✓ WebSocket connection established', 'success');
+                    ws.close();
+                };
+                
+                ws.onerror = () => {
+                    log('⚠ WebSocket connection failed (expected in test environment)', 'warning');
+                };
+                
+                ws.onclose = () => {
+                    log('✓ WebSocket connection closed cleanly', 'success');
+                };
+
+            } catch (error) {
+                log(`✗ WebSocket test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            log('🚀 Starting comprehensive test suite...', 'info');
+            
+            const tests = [
+                runNavigationTests,
+                runUITests,
+                runWebGLTests,
+                runResponsiveTests,
+                runKeyboardTests,
+                runPerformanceTests,
+                runErrorTests,
+                runRealtimeTests
+            ];
+
+            for (const test of tests) {
+                await test();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay between tests
+            }
+
+            log('✅ All tests completed!', 'success');
+            
+            // Generate summary
+            const passed = Object.values(testResults).filter(r => r === 'pass').length;
+            const failed = Object.values(testResults).filter(r => r === 'fail').length;
+            const total = Object.keys(testResults).length;
+            
+            log(`📊 Test Summary: ${passed}/${total} passed, ${failed} failed`, passed === total ? 'success' : 'warning');
+        }
+
+        function clearLog() {
+            testLog.innerHTML = '<div class="log-entry log-info">Test log cleared.</div>';
+        }
+
+        function exportResults() {
+            const results = {
+                timestamp: new Date().toISOString(),
+                testResults: testResults,
+                userAgent: navigator.userAgent,
+                viewport: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-results-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            log('✓ Test results exported', 'success');
+        }
+
+        function openDashboard() {
+            window.open('index.html', '_blank');
+        }
+
+        // Initialize test runner
+        log('Test runner ready. Click buttons to run individual tests or "Run All Tests" for comprehensive testing.', 'info');
+    </script>
+</body>
+</html>

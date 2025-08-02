@@ -1,0 +1,674 @@
+# Enhanced Media Server Stack - Complete Configuration
+# This includes all media types and supporting services
+
+version: '3.9'
+
+services:
+  # =============================================================================
+  # CORE INFRASTRUCTURE
+  # =============================================================================
+  
+  # Reverse Proxy and Load Balancer
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--metrics.prometheus=true"
+      - "--tracing.jaeger=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik/letsencrypt:/letsencrypt
+      - ./config/traefik/dynamic:/dynamic
+    networks:
+      - proxy_network
+      - media_network
+      - admin_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=authelia@docker"
+
+  # Authentication Provider
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    environment:
+      - TZ=${TZ}
+      - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY=${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+    volumes:
+      - ./config/authelia:/config
+    networks:
+      - proxy_network
+      - admin_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN}`)"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+
+  # =============================================================================
+  # MEDIA SERVERS
+  # =============================================================================
+  
+  # Jellyfin - Movies & TV (Existing, Enhanced)
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - JELLYFIN_FFmpeg__probesize=50000000
+      - JELLYFIN_FFmpeg__analyzeduration=50000000
+    volumes:
+      - ./config/jellyfin:/config
+      - ./data/media/movies:/media/movies:ro
+      - ./data/media/tv:/media/tv:ro
+      - ./data/media/music:/media/music:ro
+      - /tmp/jellyfin:/transcode
+    devices:
+      - /dev/dri:/dev/dri  # Intel QuickSync
+      # - /dev/nvidia0:/dev/nvidia0  # NVIDIA GPU
+    ports:
+      - "8096:8096"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.middlewares=authelia@docker"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  # Navidrome - Music Server
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_BASEURL=/
+      - ND_ENABLETRANSCODINGCONFIG=true
+      - ND_ENABLESHARING=true
+      - ND_ENABLESTARRATING=true
+    volumes:
+      - ./config/navidrome:/data
+      - ./data/media/music:/music:ro
+    ports:
+      - "4533:4533"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=Host(`music.${DOMAIN}`)"
+      - "traefik.http.routers.navidrome.middlewares=authelia@docker"
+
+  # AudioBookshelf - Audiobooks & Podcasts
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/audiobookshelf:/config
+      - ./data/media/audiobooks:/audiobooks
+      - ./data/media/podcasts:/podcasts
+      - ./metadata/audiobookshelf:/metadata
+    ports:
+      - "13378:80"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN}`)"
+      - "traefik.http.routers.audiobookshelf.middlewares=authelia@docker"
+
+  # Immich - Photo Management with AI
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    environment:
+      - DB_HOSTNAME=immich-postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=immich-redis
+      - UPLOAD_LOCATION=/usr/src/app/upload
+      - IMMICH_MACHINE_LEARNING_URL=http://immich-ml:3003
+    volumes:
+      - ./data/media/photos:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - media_network
+      - data_network
+    depends_on:
+      - immich-postgres
+      - immich-redis
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(`photos.${DOMAIN}`)"
+      - "traefik.http.routers.immich.middlewares=authelia@docker"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+
+  # Immich Machine Learning
+  immich-ml:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-ml
+    volumes:
+      - ./cache/immich:/cache
+    networks:
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+  # Kavita - Books & Comics
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/kavita:/kavita/config
+      - ./data/media/books:/books
+      - ./data/media/comics:/comics
+      - ./data/media/manga:/manga
+    ports:
+      - "5000:5000"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.rule=Host(`books.${DOMAIN}`)"
+      - "traefik.http.routers.kavita.middlewares=authelia@docker"
+
+  # Calibre-Web - E-book Server
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    volumes:
+      - ./config/calibre-web:/config
+      - ./data/media/books:/books
+    ports:
+      - "8083:8083"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calibre.rule=Host(`ebooks.${DOMAIN}`)"
+      - "traefik.http.routers.calibre.middlewares=authelia@docker"
+
+  # =============================================================================
+  # CONTENT MANAGEMENT
+  # =============================================================================
+  
+  # Lidarr - Music Management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/lidarr:/config
+      - ./data/media/music:/music
+      - ./data/torrents:/downloads
+    ports:
+      - "8686:8686"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker"
+    depends_on:
+      - qbittorrent
+      - prowlarr
+
+  # Readarr - Book Management
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/readarr:/config
+      - ./data/media/books:/books
+      - ./data/torrents:/downloads
+    ports:
+      - "8787:8787"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr.middlewares=authelia@docker"
+    depends_on:
+      - qbittorrent
+      - prowlarr
+
+  # Mylar3 - Comic Management
+  mylar3:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar3
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/mylar3:/config
+      - ./data/media/comics:/comics
+      - ./data/torrents:/downloads
+    ports:
+      - "8090:8090"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mylar.rule=Host(`mylar.${DOMAIN}`)"
+      - "traefik.http.routers.mylar.middlewares=authelia@docker"
+
+  # =============================================================================
+  # SEARCH & DISCOVERY
+  # =============================================================================
+  
+  # Elasticsearch for Unified Search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    volumes:
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - data_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  # Meilisearch - Fast Search Alternative
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meilisearch
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_ENV=production
+    volumes:
+      - ./data/meilisearch:/meili_data
+    ports:
+      - "7700:7700"
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # =============================================================================
+  # MONITORING & ANALYTICS
+  # =============================================================================
+  
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - ./data/prometheus:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./config/grafana:/etc/grafana
+      - ./data/grafana:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - admin_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.middlewares=authelia@docker"
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./config/loki:/etc/loki
+      - ./data/loki:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+  # Promtail - Log Collector
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./config/promtail:/etc/promtail
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+  # =============================================================================
+  # DATABASES & CACHE
+  # =============================================================================
+  
+  # PostgreSQL for Services
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=mediaserver
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=mediaserver
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # Immich PostgreSQL
+  immich-postgres:
+    image: postgres:16-alpine
+    container_name: immich-postgres
+    environment:
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD}
+      - POSTGRES_DB=immich
+    volumes:
+      - ./data/immich-postgres:/var/lib/postgresql/data
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # Immich Redis
+  immich-redis:
+    image: redis:7-alpine
+    container_name: immich-redis
+    networks:
+      - data_network
+    restart: unless-stopped
+
+  # =============================================================================
+  # BACKUP & SYNC
+  # =============================================================================
+  
+  # Duplicati - Backup Solution
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/duplicati:/config
+      - ./data:/source
+      - ./backups:/backups
+    ports:
+      - "8200:8200"
+    networks:
+      - admin_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker"
+
+  # Syncthing - File Synchronization
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/syncthing:/config
+      - ./data:/data
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp"
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+  # =============================================================================
+  # VPN & SECURITY
+  # =============================================================================
+  
+  # WireGuard VPN
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - SERVERURL=${DOMAIN}
+      - SERVERPORT=51820
+      - PEERS=10
+      - PEERDNS=auto
+    volumes:
+      - ./config/wireguard:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - proxy_network
+    restart: unless-stopped
+
+  # CrowdSec - Security Engine
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    environment:
+      - COLLECTIONS=crowdsecurity/linux crowdsecurity/traefik
+      - GID=1000
+    volumes:
+      - ./config/crowdsec:/etc/crowdsec
+      - ./data/crowdsec:/var/lib/crowdsec/data
+      - /var/log:/var/log:ro
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+  # =============================================================================
+  # UTILITIES
+  # =============================================================================
+  
+  # Organizr - Unified Dashboard
+  organizr:
+    image: organizr/organizr:latest
+    container_name: organizr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/organizr:/config
+    ports:
+      - "9983:80"
+    networks:
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.organizr.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.organizr.middlewares=authelia@docker"
+
+  # Heimdall - Alternative Dashboard
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ./config/heimdall:/config
+    ports:
+      - "8443:443"
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # Watchtower - Container Updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    command: --cleanup --schedule "0 0 4 * * *"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${EMAIL_FROM}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${EMAIL_TO}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=${SMTP_SERVER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=${SMTP_PORT}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${SMTP_USER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${SMTP_PASSWORD}
+    networks:
+      - admin_network
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  proxy_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+  
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.1.0/24
+  
+  admin_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.2.0/24
+  
+  data_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.3.0/24
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  media_data:
+    driver: local
+  config_data:
+    driver: local
+  backup_data:
+    driver: local

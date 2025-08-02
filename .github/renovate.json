@@ -1,0 +1,196 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":preserveSemverRanges",
+    "docker:enableMajor",
+    "docker:pinDigests",
+    ":automergePatch",
+    ":automergeMinor",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "platform": "github",
+  "repositories": ["$GITHUB_REPOSITORY"],
+  "labels": ["dependencies", "renovate"],
+  "timezone": "UTC",
+  "schedule": ["after 10pm every weekday", "before 5am every weekday", "every weekend"],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 10,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 5am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": ["minor", "patch", "digest", "lockFileMaintenance"],
+      "automerge": true
+    },
+    {
+      "description": "Security updates",
+      "matchDatasources": ["npm", "pypi", "docker"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "security updates",
+      "groupSlug": "security",
+      "prPriority": 5,
+      "automerge": true,
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "prPriority": -1
+    },
+    {
+      "description": "Group Docker updates",
+      "matchDatasources": ["docker"],
+      "groupName": "docker dependencies",
+      "groupSlug": "docker"
+    },
+    {
+      "description": "Group AWS SDK updates",
+      "matchPackagePatterns": ["^@aws-sdk/", "^aws-"],
+      "groupName": "AWS SDK",
+      "groupSlug": "aws-sdk"
+    },
+    {
+      "description": "Group React packages",
+      "matchPackagePatterns": ["^react", "^@types/react"],
+      "groupName": "React packages",
+      "groupSlug": "react"
+    },
+    {
+      "description": "Group testing packages",
+      "matchPackagePatterns": ["jest", "^@testing-library/", "playwright", "pytest", "mock"],
+      "groupName": "testing packages",
+      "groupSlug": "testing"
+    },
+    {
+      "description": "Pin Docker digests",
+      "matchDatasources": ["docker"],
+      "pinDigests": true
+    },
+    {
+      "description": "Disable updates for deprecated packages",
+      "matchPackagePatterns": ["request", "node-sass"],
+      "enabled": false
+    },
+    {
+      "description": "Group Kubernetes packages",
+      "matchPackagePatterns": ["^@kubernetes/", "kubectl", "helm"],
+      "groupName": "Kubernetes packages",
+      "groupSlug": "kubernetes"
+    },
+    {
+      "description": "Python security updates",
+      "matchDatasources": ["pypi"],
+      "matchPackagePatterns": ["django", "flask", "requests", "urllib3", "cryptography"],
+      "rangeStrategy": "update-lockfile",
+      "automerge": true
+    },
+    {
+      "description": "Node.js updates",
+      "matchPackageNames": ["node"],
+      "matchDatasources": ["docker"],
+      "versioning": "node"
+    },
+    {
+      "description": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "pinDigests": true,
+      "automerge": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "assignees": ["@security-team"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "transitiveRemediation": true,
+  "npm": {
+    "minimumReleaseAge": "3 days",
+    "stabilityDays": 3,
+    "rangeStrategy": "bump",
+    "packageRules": [
+      {
+        "matchDepTypes": ["devDependencies"],
+        "automerge": true
+      }
+    ]
+  },
+  "docker": {
+    "major": {
+      "enabled": true
+    },
+    "minor": {
+      "enabled": true
+    },
+    "pinDigests": true,
+    "automergeDigest": {
+      "enabled": true
+    }
+  },
+  "python": {
+    "rangeStrategy": "pin"
+  },
+  "golang": {
+    "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"]
+  },
+  "regexManagers": [
+    {
+      "description": "Update _VERSION variables in Dockerfiles",
+      "fileMatch": ["(^|/|\\.)Dockerfile$", "(^|/)Dockerfile\\.[^/]*$"],
+      "matchStrings": [
+        "ENV .+_VERSION=(?<currentValue>.+)\\s"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "description": "Update k8s manifests",
+      "fileMatch": ["\\.yaml$", "\\.yml$"],
+      "matchStrings": [
+        "image:\\s+(?<depName>[^:]+):(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "hostRules": [
+    {
+      "matchHost": "docker.io",
+      "concurrentRequestLimit": 2
+    },
+    {
+      "matchHost": "ghcr.io",
+      "concurrentRequestLimit": 3
+    }
+  ],
+  "prCreation": "not-pending",
+  "prBodyTemplate": "{{{header}}}{{{table}}}{{{notes}}}{{{changelogs}}}{{{configDescription}}}{{{controls}}}{{{footer}}}",
+  "prTitle": "{{#if isPin}}chore: pin {{depName}}{{else}}chore: update {{depName}}{{/if}}{{#if isRollback}} rollback{{/if}}{{#if isReplacement}} replacement{{/if}}{{#if newValue}}{{#unless isPin}} to {{newValue}}{{/unless}}{{/if}}",
+  "commitMessagePrefix": "chore:",
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": "to {{#if isSingleVersion}}v{{{newVersion}}}{{else}}{{{newValue}}}{{/if}}",
+  "commitMessageSuffix": "",
+  "rebaseWhen": "behind-base-branch",
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  "dependencyDashboardHeader": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.",
+  "suppressNotifications": ["prIgnoreNotification"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/tests/**",
+    "**/__fixtures__/**"
+  ]
+}

@@ -1,0 +1,426 @@
+---
+# Default deny all ingress and egress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: consensus-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Allow consensus nodes to communicate with each other
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: consensus-node-communication
+  namespace: consensus-system
+spec:
+  podSelector:
+    matchLabels:
+      app: consensus-node
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: consensus-system
+          podSelector:
+            matchLabels:
+              app: consensus-node
+      ports:
+        - protocol: TCP
+          port: 8545  # RPC
+        - protocol: TCP
+          port: 30303 # P2P
+        - protocol: TCP
+          port: 9090  # Metrics
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: consensus-system
+          podSelector:
+            matchLabels:
+              app: consensus-node
+      ports:
+        - protocol: TCP
+          port: 8545
+        - protocol: TCP
+          port: 30303
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# Allow ingress from security scanner
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-security-scanner
+  namespace: consensus-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: security
+          podSelector:
+            matchLabels:
+              app: trivy-scanner
+        - namespaceSelector:
+            matchLabels:
+              name: security
+          podSelector:
+            matchLabels:
+              app: falco
+      ports:
+        - protocol: TCP
+          port: 9090  # Metrics endpoint
+
+---
+# Allow egress to Vault for secrets
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vault-access
+  namespace: consensus-system
+spec:
+  podSelector:
+    matchLabels:
+      vault-access: "true"
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: security
+          podSelector:
+            matchLabels:
+              app: vault
+      ports:
+        - protocol: TCP
+          port: 8200
+
+---
+# Allow ingress from monitoring
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: consensus-system
+spec:
+  podSelector:
+    matchLabels:
+      prometheus-scrape: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 9090
+
+---
+# Cilium Network Policy for L7 filtering
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: consensus-l7-policy
+  namespace: consensus-system
+spec:
+  endpointSelector:
+    matchLabels:
+      app: consensus-node
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: consensus-api-gateway
+      toPorts:
+        - ports:
+            - port: "8545"
+              protocol: TCP
+          rules:
+            http:
+              - method: POST
+                path: "/consensus/v1/.*"
+                headers:
+                  - "X-Auth-Token"
+                  - "X-Request-ID"
+              - method: GET
+                path: "/consensus/v1/health"
+    - fromEndpoints:
+        - matchLabels:
+            app: consensus-node
+      toPorts:
+        - ports:
+            - port: "30303"
+              protocol: TCP
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: consensus-node
+      toPorts:
+        - ports:
+            - port: "30303"
+              protocol: TCP
+    - toServices:
+        - k8sService:
+            serviceName: vault
+            namespace: security
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
+          rules:
+            http:
+              - method: "GET"
+                path: "/v1/auth/kubernetes/login"
+              - method: "GET"
+                path: "/v1/secret/data/consensus/.*"
+    - toFQDNs:
+        - matchPattern: "*.consensus.local"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+
+---
+# Istio PeerAuthentication for mTLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: consensus-mtls
+  namespace: consensus-system
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# Istio AuthorizationPolicy
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: consensus-authz
+  namespace: consensus-system
+spec:
+  selector:
+    matchLabels:
+      app: consensus-node
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/consensus-system/sa/consensus-node"]
+        - source:
+            principals: ["cluster.local/ns/consensus-system/sa/consensus-api"]
+      to:
+        - operation:
+            methods: ["POST", "GET"]
+            paths: ["/consensus/*"]
+      when:
+        - key: source.ip
+          notValues: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    - from:
+        - source:
+            namespaces: ["monitoring"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/metrics", "/health"]
+
+---
+# Calico GlobalNetworkPolicy for advanced filtering
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: consensus-advanced-security
+spec:
+  tier: security
+  order: 100
+  selector: app == "consensus-node"
+  types:
+    - Ingress
+    - Egress
+  ingress:
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: app == "consensus-node"
+      destination:
+        ports:
+          - 30303
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: app == "consensus-api-gateway"
+      destination:
+        ports:
+          - 8545
+    - action: Log
+      protocol: TCP
+      source:
+        notSelector: app in {"consensus-node", "consensus-api-gateway", "prometheus"}
+    - action: Deny
+  egress:
+    - action: Allow
+      protocol: TCP
+      destination:
+        selector: app == "consensus-node"
+        ports:
+          - 30303
+    - action: Allow
+      protocol: TCP
+      destination:
+        selector: app == "vault"
+        namespaceSelector: name == "security"
+        ports:
+          - 8200
+    - action: Allow
+      protocol: UDP
+      destination:
+        selector: k8s-app == "kube-dns"
+        namespaceSelector: name == "kube-system"
+        ports:
+          - 53
+    - action: Allow
+      protocol: TCP
+      destination:
+        nets:
+          - 0.0.0.0/0
+        ports:
+          - 443
+    - action: Log
+    - action: Deny
+
+---
+# Network Security Policy for Database Access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-access-policy
+  namespace: consensus-system
+spec:
+  podSelector:
+    matchLabels:
+      tier: database
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: consensus-system
+          podSelector:
+            matchLabels:
+              database-access: "true"
+      ports:
+        - protocol: TCP
+          port: 5432  # PostgreSQL
+        - protocol: TCP
+          port: 6379  # Redis
+
+---
+# Egress policy for external API calls
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-api-access
+  namespace: consensus-system
+spec:
+  podSelector:
+    matchLabels:
+      external-api-access: "true"
+  policyTypes:
+    - Egress
+  egress:
+    # Allow HTTPS to any external service
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Service Mesh Traffic Policy
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-https-consensus
+  namespace: consensus-system
+spec:
+  hosts:
+    - "*.consensus.io"
+    - "api.consensus-external.com"
+  ports:
+    - number: 443
+      name: https
+      protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# Istio DestinationRule for circuit breaking
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: consensus-circuit-breaker
+  namespace: consensus-system
+spec:
+  host: consensus-node
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 3
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+      splitExternalLocalOriginErrors: true

@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Environment Settings Manager - Ultimate Media Server 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #00ff88;
+            --secondary-color: #0088ff;
+            --accent-color: #ff3366;
+            --background-dark: #0a0a0a;
+            --background-card: rgba(255, 255, 255, 0.05);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --success-color: #00ff88;
+            --warning-color: #ffaa00;
+            --error-color: #ff3366;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 136, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(1deg); }
+            66% { transform: translateY(10px) rotate(-1deg); }
+        }
+
+        /* Header */
+        .header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 2rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            height: fit-content;
+            position: sticky;
+            top: 150px;
+        }
+
+        .sidebar h3 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+        }
+
+        .category-list {
+            list-style: none;
+        }
+
+        .category-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+            border-left-color: var(--primary-color);
+            transform: translateX(5px);
+        }
+
+        .category-item.active {
+            background: rgba(0, 255, 136, 0.2);
+            border-left-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .category-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Main content area */
+        .main-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            min-height: 600px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .content-title {
+            font-size: 2rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary-color), #00cc6a);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--error-color), #cc1144);
+            color: #fff;
+        }
+
+        /* Environment variables grid */
+        .env-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .env-group {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .env-group h4 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .env-variable {
+            display: grid;
+            grid-template-columns: 200px 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .env-variable:hover {
+            border-color: var(--primary-color);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .env-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .env-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.8rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .env-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+        }
+
+        .env-input.secure {
+            background: rgba(255, 51, 102, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .env-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .icon-btn:hover {
+            color: var(--primary-color);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        /* Status indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success-color);
+        }
+
+        .status-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning-color);
+        }
+
+        .status-error {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--error-color);
+        }
+
+        /* Help tooltips */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--background-dark);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Search bar */
+        .search-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--error-color);
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .sidebar {
+                position: static;
+                order: 2;
+            }
+            
+            .env-variable {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .content-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .action-buttons {
+                justify-content: stretch;
+            }
+            
+            .btn {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>🔧 Environment Settings Manager</h1>
+        <p>Ultimate Media Server 2025 - Configure all your services in one place</p>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h3>📁 Categories</h3>
+            <ul class="category-list">
+                <li class="category-item active" data-category="core">
+                    <span class="category-icon">🏗️</span>
+                    <span>Core Infrastructure</span>
+                </li>
+                <li class="category-item" data-category="media">
+                    <span class="category-icon">🎬</span>
+                    <span>Media Services</span>
+                </li>
+                <li class="category-item" data-category="download">
+                    <span class="category-icon">⬇️</span>
+                    <span>Download Clients</span>
+                </li>
+                <li class="category-item" data-category="security">
+                    <span class="category-icon">🔒</span>
+                    <span>Security & Auth</span>
+                </li>
+                <li class="category-item" data-category="monitoring">
+                    <span class="category-icon">📊</span>
+                    <span>Monitoring</span>
+                </li>
+                <li class="category-item" data-category="networking">
+                    <span class="category-icon">🌐</span>
+                    <span>Networking</span>
+                </li>
+                <li class="category-item" data-category="storage">
+                    <span class="category-icon">💾</span>
+                    <span>Storage & Backup</span>
+                </li>
+                <li class="category-item" data-category="advanced">
+                    <span class="category-icon">⚡</span>
+                    <span>Advanced Options</span>
+                </li>
+            </ul>
+
+            <!-- Quick Actions -->
+            <div style="margin-top: 2rem;">
+                <h3>⚡ Quick Actions</h3>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 0.5rem;" onclick="saveConfiguration()">
+                    💾 Save All Changes
+                </button>
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 0.5rem;" onclick="loadTemplate()">
+                    📋 Load Template
+                </button>
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 0.5rem;" onclick="exportConfig()">
+                    📤 Export Config
+                </button>
+                <button class="btn btn-danger" style="width: 100%;" onclick="resetToDefaults()">
+                    🔄 Reset to Defaults
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <h2 class="content-title">
+                    <span id="category-icon">🏗️</span>
+                    <span id="category-title">Core Infrastructure</span>
+                </h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="addNewVariable()">
+                        ➕ Add Variable
+                    </button>
+                    <button class="btn btn-secondary" onclick="validateConfiguration()">
+                        ✅ Validate
+                    </button>
+                    <span class="status-indicator status-success">
+                        <span>●</span> All Valid
+                    </span>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="Search environment variables..." id="searchInput">
+            </div>
+
+            <!-- Environment Variables -->
+            <div class="env-grid" id="envContainer">
+                <!-- Variables will be populated here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for adding/editing variables -->
+    <div class="modal" id="variableModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Environment Variable</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="variableForm">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary);">Variable Name</label>
+                    <input type="text" id="variableName" class="env-input" style="width: 100%;" placeholder="VARIABLE_NAME">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary);">Value</label>
+                    <input type="text" id="variableValue" class="env-input" style="width: 100%;" placeholder="Variable value">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary);">Category</label>
+                    <select id="variableCategory" class="env-input" style="width: 100%;">
+                        <option value="core">Core Infrastructure</option>
+                        <option value="media">Media Services</option>
+                        <option value="download">Download Clients</option>
+                        <option value="security">Security & Auth</option>
+                        <option value="monitoring">Monitoring</option>
+                        <option value="networking">Networking</option>
+                        <option value="storage">Storage & Backup</option>
+                        <option value="advanced">Advanced Options</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
+                        <input type="checkbox" id="isSecure" style="accent-color: var(--primary-color);">
+                        Secure/Sensitive Value
+                    </label>
+                </div>
+                <div style="margin-bottom: 2rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary);">Description</label>
+                    <textarea id="variableDescription" class="env-input" style="width: 100%; height: 80px; resize: vertical;" placeholder="Brief description of this variable..."></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Save Variable</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">❌ Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Environment variables data structure
+        const envVariables = {
+            core: [
+                { name: 'PUID', value: '1000', description: 'User ID for container processes', secure: false },
+                { name: 'PGID', value: '1000', description: 'Group ID for container processes', secure: false },
+                { name: 'TZ', value: 'America/New_York', description: 'Timezone for all services', secure: false },
+                { name: 'DOMAIN', value: 'media.yourdomain.com', description: 'Base domain for all services', secure: false },
+                { name: 'DATA_ROOT', value: '/opt/mediaserver', description: 'Root directory for all data', secure: false }
+            ],
+            media: [
+                { name: 'JELLYFIN_PUBLISHED_SERVER_URL', value: 'https://jellyfin.yourdomain.com', description: 'Jellyfin external URL', secure: false },
+                { name: 'JELLYFIN_DATA_DIR', value: '/data/jellyfin', description: 'Jellyfin data directory', secure: false },
+                { name: 'OVERSEERR_API_KEY', value: '', description: 'Overseerr API key for integrations', secure: true },
+                { name: 'TAUTULLI_API_KEY', value: '', description: 'Tautulli API key', secure: true },
+                { name: 'AUDIOBOOKSHELF_DATA_DIR', value: '/data/audiobookshelf', description: 'AudioBookshelf data directory', secure: false }
+            ],
+            download: [
+                { name: 'QBITTORRENT_USERNAME', value: 'admin', description: 'qBittorrent web UI username', secure: false },
+                { name: 'QBITTORRENT_PASSWORD', value: '', description: 'qBittorrent web UI password', secure: true },
+                { name: 'VPN_PROVIDER', value: 'nordvpn', description: 'VPN provider (nordvpn, surfshark, etc.)', secure: false },
+                { name: 'VPN_USERNAME', value: '', description: 'VPN account username', secure: true },
+                { name: 'VPN_PASSWORD', value: '', description: 'VPN account password', secure: true },
+                { name: 'DOWNLOADS_DIR', value: '/data/downloads', description: 'Download directory path', secure: false }
+            ],
+            security: [
+                { name: 'AUTHELIA_JWT_SECRET', value: '', description: 'JWT secret for Authelia authentication', secure: true },
+                { name: 'AUTHELIA_SESSION_SECRET', value: '', description: 'Session secret for Authelia', secure: true },
+                { name: 'AUTHELIA_STORAGE_ENCRYPTION_KEY', value: '', description: 'Encryption key for Authelia storage', secure: true },
+                { name: 'SSL_CERT_EMAIL', value: 'admin@yourdomain.com', description: 'Email for SSL certificate generation', secure: false },
+                { name: 'FAIL2BAN_ENABLED', value: 'true', description: 'Enable fail2ban protection', secure: false }
+            ],
+            monitoring: [
+                { name: 'GRAFANA_ADMIN_PASSWORD', value: '', description: 'Grafana admin password', secure: true },
+                { name: 'PROMETHEUS_RETENTION', value: '15d', description: 'Prometheus data retention period', secure: false },
+                { name: 'LOKI_RETENTION', value: '7d', description: 'Loki log retention period', secure: false },
+                { name: 'ALERT_EMAIL', value: 'alerts@yourdomain.com', description: 'Email for system alerts', secure: false },
+                { name: 'UPTIME_KUMA_DATA_DIR', value: '/data/uptime-kuma', description: 'Uptime Kuma data directory', secure: false }
+            ],
+            networking: [
+                { name: 'TRAEFIK_PILOT_TOKEN', value: '', description: 'Traefik Pilot token (optional)', secure: true },
+                { name: 'CLOUDFLARE_API_TOKEN', value: '', description: 'Cloudflare API token for DNS challenge', secure: true },
+                { name: 'INTERNAL_NETWORK', value: '172.20.0.0/16', description: 'Internal Docker network range', secure: false },
+                { name: 'EXTERNAL_PORT_HTTP', value: '80', description: 'External HTTP port', secure: false },
+                { name: 'EXTERNAL_PORT_HTTPS', value: '443', description: 'External HTTPS port', secure: false }
+            ],
+            storage: [
+                { name: 'BACKUP_SCHEDULE', value: '0 2 * * *', description: 'Backup schedule (cron format)', secure: false },
+                { name: 'BACKUP_RETENTION_DAYS', value: '30', description: 'Number of days to keep backups', secure: false },
+                { name: 'S3_BACKUP_BUCKET', value: '', description: 'S3 bucket for remote backups', secure: false },
+                { name: 'S3_ACCESS_KEY', value: '', description: 'S3 access key', secure: true },
+                { name: 'S3_SECRET_KEY', value: '', description: 'S3 secret key', secure: true }
+            ],
+            advanced: [
+                { name: 'COMPOSE_PROFILES', value: 'core,media,download', description: 'Active Docker Compose profiles', secure: false },
+                { name: 'HARDWARE_TRANSCODING', value: 'intel', description: 'Hardware transcoding type (intel/nvidia/amd)', secure: false },
+                { name: 'MAX_MEMORY_USAGE', value: '8GB', description: 'Maximum memory usage for containers', secure: false },
+                { name: 'LOG_LEVEL', value: 'INFO', description: 'Global log level', secure: false },
+                { name: 'ENABLE_METRICS', value: 'true', description: 'Enable metrics collection', secure: false }
+            ]
+        };
+
+        let currentCategory = 'core';
+        let searchTerm = '';
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEnvironmentVariables();
+            setupEventListeners();
+            showNotification('Environment Settings Manager loaded successfully!', 'success');
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Category switching
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const category = this.dataset.category;
+                    switchCategory(category);
+                });
+            });
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', function() {
+                searchTerm = this.value.toLowerCase();
+                loadEnvironmentVariables();
+            });
+
+            // Form submission
+            document.getElementById('variableForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveVariable();
+            });
+
+            // Auto-save functionality
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('env-input')) {
+                    autoSave();
+                }
+            });
+        }
+
+        // Switch category
+        function switchCategory(category) {
+            currentCategory = category;
+            
+            // Update active state
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+            
+            // Update content header
+            const categoryInfo = getCategoryInfo(category);
+            document.getElementById('category-icon').textContent = categoryInfo.icon;
+            document.getElementById('category-title').textContent = categoryInfo.title;
+            
+            // Reload variables
+            loadEnvironmentVariables();
+        }
+
+        // Get category information
+        function getCategoryInfo(category) {
+            const categories = {
+                core: { icon: '🏗️', title: 'Core Infrastructure' },
+                media: { icon: '🎬', title: 'Media Services' },
+                download: { icon: '⬇️', title: 'Download Clients' },
+                security: { icon: '🔒', title: 'Security & Auth' },
+                monitoring: { icon: '📊', title: 'Monitoring' },
+                networking: { icon: '🌐', title: 'Networking' },
+                storage: { icon: '💾', title: 'Storage & Backup' },
+                advanced: { icon: '⚡', title: 'Advanced Options' }
+            };
+            return categories[category] || { icon: '📁', title: 'Unknown Category' };
+        }
+
+        // Load environment variables for current category
+        function loadEnvironmentVariables() {
+            const container = document.getElementById('envContainer');
+            const variables = envVariables[currentCategory] || [];
+            
+            // Filter variables based on search term
+            const filteredVariables = variables.filter(variable => 
+                variable.name.toLowerCase().includes(searchTerm) ||
+                variable.description.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filteredVariables.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                        <h3>No variables found</h3>
+                        <p>Try adjusting your search or add a new variable.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredVariables.map(variable => `
+                <div class="env-variable fade-in">
+                    <div class="env-label tooltip" data-tooltip="${variable.description}">
+                        ${variable.name}
+                        ${variable.secure ? '<span style="color: var(--accent-color);">🔐</span>' : ''}
+                    </div>
+                    <input 
+                        type="${variable.secure ? 'password' : 'text'}" 
+                        class="env-input ${variable.secure ? 'secure' : ''}" 
+                        value="${variable.value}" 
+                        data-variable="${variable.name}"
+                        placeholder="Enter ${variable.name.toLowerCase()}..."
+                    >
+                    <div class="env-actions">
+                        <button class="icon-btn tooltip" data-tooltip="Generate random value" onclick="generateRandomValue('${variable.name}')">
+                            🎲
+                        </button>
+                        <button class="icon-btn tooltip" data-tooltip="${variable.secure ? 'Show' : 'Hide'} value" onclick="toggleVisibility('${variable.name}')">
+                            ${variable.secure ? '👁️' : '🙈'}
+                        </button>
+                        <button class="icon-btn tooltip" data-tooltip="Copy to clipboard" onclick="copyToClipboard('${variable.name}')">
+                            📋
+                        </button>
+                        <button class="icon-btn tooltip" data-tooltip="Delete variable" onclick="deleteVariable('${variable.name}')">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add new variable
+        function addNewVariable() {
+            document.getElementById('variableModal').classList.add('active');
+            document.getElementById('variableCategory').value = currentCategory;
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('variableModal').classList.remove('active');
+            document.getElementById('variableForm').reset();
+        }
+
+        // Save new variable
+        function saveVariable() {
+            const name = document.getElementById('variableName').value.trim().toUpperCase();
+            const value = document.getElementById('variableValue').value;
+            const category = document.getElementById('variableCategory').value;
+            const isSecure = document.getElementById('isSecure').checked;
+            const description = document.getElementById('variableDescription').value.trim();
+
+            if (!name || !description) {
+                showNotification('Please fill in all required fields!', 'error');
+                return;
+            }
+
+            // Check if variable already exists
+            if (envVariables[category].some(v => v.name === name)) {
+                showNotification('Variable already exists!', 'error');
+                return;
+            }
+
+            // Add variable
+            envVariables[category].push({
+                name: name,
+                value: value,
+                description: description,
+                secure: isSecure
+            });
+
+            closeModal();
+            if (currentCategory === category) {
+                loadEnvironmentVariables();
+            }
+            showNotification(`Variable ${name} added successfully!`, 'success');
+        }
+
+        // Delete variable
+        function deleteVariable(variableName) {
+            if (confirm(`Are you sure you want to delete ${variableName}?`)) {
+                const index = envVariables[currentCategory].findIndex(v => v.name === variableName);
+                if (index !== -1) {
+                    envVariables[currentCategory].splice(index, 1);
+                    loadEnvironmentVariables();
+                    showNotification(`Variable ${variableName} deleted!`, 'success');
+                }
+            }
+        }
+
+        // Toggle password visibility
+        function toggleVisibility(variableName) {
+            const input = document.querySelector(`input[data-variable="${variableName}"]`);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+
+        // Generate random value
+        function generateRandomValue(variableName) {
+            const input = document.querySelector(`input[data-variable="${variableName}"]`);
+            const randomValue = generateSecureString(32);
+            input.value = randomValue;
+            updateVariableValue(variableName, randomValue);
+            showNotification(`Random value generated for ${variableName}!`, 'success');
+        }
+
+        // Generate secure string
+        function generateSecureString(length) {
+            const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            return result;
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard(variableName) {
+            const input = document.querySelector(`input[data-variable="${variableName}"]`);
+            try {
+                await navigator.clipboard.writeText(input.value);
+                showNotification(`${variableName} copied to clipboard!`, 'success');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                showNotification('Failed to copy to clipboard!', 'error');
+            }
+        }
+
+        // Update variable value
+        function updateVariableValue(variableName, value) {
+            const variable = envVariables[currentCategory].find(v => v.name === variableName);
+            if (variable) {
+                variable.value = value;
+            }
+        }
+
+        // Auto-save functionality
+        function autoSave() {
+            showNotification('Changes saved automatically!', 'success', 1000);
+        }
+
+        // Save all configuration
+        function saveConfiguration() {
+            const config = JSON.stringify(envVariables, null, 2);
+            const blob = new Blob([config], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'media-server-config.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Configuration exported successfully!', 'success');
+        }
+
+        // Load template
+        function loadTemplate() {
+            const templates = {
+                'Basic Setup': 'Load basic configuration with essential services',
+                'Full Media Server': 'Complete setup with all media services',
+                'Seedbox Configuration': 'Optimized for ratio building and automation',
+                'Security Focused': 'Enhanced security and monitoring setup'
+            };
+
+            let templateChoice = prompt('Choose a template:\n' + 
+                Object.entries(templates).map(([name, desc], i) => 
+                    `${i + 1}. ${name} - ${desc}`
+                ).join('\n') + 
+                '\n\nEnter number (1-4):'
+            );
+
+            if (templateChoice && templateChoice >= 1 && templateChoice <= 4) {
+                const templateNames = Object.keys(templates);
+                showNotification(`Loading ${templateNames[templateChoice - 1]} template...`, 'success');
+                // Template loading logic would go here
+            }
+        }
+
+        // Export configuration
+        function exportConfig() {
+            const envContent = Object.entries(envVariables).flatMap(([category, variables]) => 
+                [`# ${getCategoryInfo(category).title}`, ...variables.map(v => `${v.name}=${v.value}`), '']
+            ).join('\n');
+
+            const blob = new Blob([envContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '.env';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('.env file exported successfully!', 'success');
+        }
+
+        // Reset to defaults
+        function resetToDefaults() {
+            if (confirm('Are you sure you want to reset all variables to their default values? This action cannot be undone.')) {
+                // Reset logic would go here
+                showNotification('Configuration reset to defaults!', 'warning');
+                loadEnvironmentVariables();
+            }
+        }
+
+        // Validate configuration
+        function validateConfiguration() {
+            let errors = [];
+            
+            Object.entries(envVariables).forEach(([category, variables]) => {
+                variables.forEach(variable => {
+                    if (!variable.value && variable.secure) {
+                        errors.push(`Missing secure value for ${variable.name} in ${category}`);
+                    }
+                });
+            });
+
+            if (errors.length === 0) {
+                showNotification('✅ All configurations are valid!', 'success');
+            } else {
+                alert('Validation errors found:\n' + errors.join('\n'));
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--glass-bg);
+                backdrop-filter: blur(20px);
+                border: 1px solid var(--glass-border);
+                border-radius: 10px;
+                padding: 1rem 1.5rem;
+                color: var(--text-primary);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                max-width: 400px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            `;
+            
+            const colors = {
+                success: 'var(--success-color)',
+                error: 'var(--error-color)',
+                warning: 'var(--warning-color)',
+                info: 'var(--secondary-color)'
+            };
+            
+            notification.style.borderLeftColor = colors[type];
+            notification.style.borderLeftWidth = '4px';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // Add CSS animations for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

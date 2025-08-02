@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Hub - Simple Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-dark: #0A0E27;
+            --primary-light: #F8F9FA;
+            --accent-blue: #3B82F6;
+            --accent-green: #10B981;
+            --accent-yellow: #F59E0B;
+            --accent-red: #EF4444;
+            --dark-surface: #1A1F3A;
+            --dark-card: #242B47;
+            --dark-border: #2D3561;
+            --text-primary: #F8F9FA;
+            --text-secondary: #94A3B8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--dark-surface);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(26, 31, 58, 0.95);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mode-switcher {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .mode-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-left: 1rem;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Welcome Section */
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .server-health {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        .health-percentage {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        /* Gamification Bar */
+        .gamification-bar {
+            background: var(--dark-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.7s ease;
+        }
+
+        .streak-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .fire-emoji {
+            font-size: 1.5rem;
+            animation: flicker 2s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .level-info {
+            text-align: center;
+            flex: 1;
+        }
+
+        .level-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .xp-bar {
+            width: 300px;
+            height: 20px;
+            background: var(--dark-border);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 90%;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .xp-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .xp-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            max-width: 600px;
+        }
+
+        .action-card {
+            background: var(--dark-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Services */
+        .services-section {
+            margin-bottom: 2rem;
+        }
+
+        .service-card {
+            background: var(--dark-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 1px solid var(--dark-border);
+            animation: fadeInUp 0.9s ease;
+        }
+
+        .service-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .service-icon {
+            font-size: 2rem;
+        }
+
+        .service-details h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .service-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .service-stats {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .service-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            width: 60px;
+            height: 32px;
+            background: var(--dark-border);
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .toggle-switch.active {
+            background: var(--accent-green);
+        }
+
+        .toggle-thumb {
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 14px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .toggle-switch.active .toggle-thumb {
+            transform: translateX(28px);
+        }
+
+        /* Achievements */
+        .achievements-section {
+            background: var(--dark-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            animation: fadeInUp 1s ease;
+        }
+
+        .achievement-list {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .achievement-badge {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .achievement-badge:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .achievement-badge.locked {
+            background: var(--dark-border);
+            opacity: 0.5;
+        }
+
+        .next-achievement {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .mode-switcher {
+                gap: 0.5rem;
+            }
+
+            .mode-btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            .gamification-bar {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .xp-bar {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .action-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .service-card {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .service-controls {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            🏠 Media Server Hub
+        </div>
+        <div class="mode-switcher">
+            <button class="mode-btn active">Simple</button>
+            <button class="mode-btn">Advanced</button>
+            <div class="user-avatar">A</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Welcome Section -->
+        <section class="welcome-section">
+            <h1 class="welcome-title">Welcome back, Alex! 🎉</h1>
+            <p class="server-health">Your server is <span class="health-percentage">92% healthy</span></p>
+        </section>
+
+        <!-- Gamification Bar -->
+        <div class="gamification-bar">
+            <div class="streak-info">
+                <span class="fire-emoji">🔥</span>
+                <span>7 days</span>
+            </div>
+            <div class="level-info">
+                <div class="level-title">Level 5 Media Master</div>
+                <div class="xp-bar">
+                    <div class="xp-fill"></div>
+                </div>
+                <div class="xp-text">450/500 XP</div>
+            </div>
+            <div style="width: 60px;"></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <h2 class="section-title">Quick Actions</h2>
+            <div class="action-grid">
+                <div class="action-card">
+                    <div class="action-icon">📺</div>
+                    <div class="action-label">Watch</div>
+                </div>
+                <div class="action-card">
+                    <div class="action-icon">🎬</div>
+                    <div class="action-label">Download</div>
+                </div>
+                <div class="action-card">
+                    <div class="action-icon">📚</div>
+                    <div class="action-label">Organize</div>
+                </div>
+                <div class="action-card">
+                    <div class="action-icon">🎮</div>
+                    <div class="action-label">Play</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services -->
+        <section class="services-section">
+            <h2 class="section-title">Essential Services</h2>
+            
+            <div class="service-card">
+                <div class="service-info">
+                    <div class="service-icon">📺</div>
+                    <div class="service-details">
+                        <h3>Plex</h3>
+                        <p class="service-description">Stream anywhere</p>
+                        <p class="service-stats">CPU: 12% • MEM: 2.1GB</p>
+                    </div>
+                </div>
+                <div class="service-controls">
+                    <div class="service-status">
+                        <span class="status-dot"></span>
+                        <span>Running</span>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleService(this)">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-info">
+                    <div class="service-icon">📺</div>
+                    <div class="service-details">
+                        <h3>Sonarr</h3>
+                        <p class="service-description">TV Shows automated</p>
+                        <p class="service-stats">CPU: 8% • MEM: 512MB</p>
+                    </div>
+                </div>
+                <div class="service-controls">
+                    <div class="service-status">
+                        <span class="status-dot"></span>
+                        <span>Running</span>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleService(this)">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-info">
+                    <div class="service-icon">🎬</div>
+                    <div class="service-details">
+                        <h3>Radarr</h3>
+                        <p class="service-description">Movies automated</p>
+                        <p class="service-stats">CPU: 6% • MEM: 489MB</p>
+                    </div>
+                </div>
+                <div class="service-controls">
+                    <div class="service-status">
+                        <span class="status-dot"></span>
+                        <span>Running</span>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleService(this)">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Achievements -->
+        <section class="achievements-section">
+            <h2 class="section-title">Recent Achievements 🏆</h2>
+            <div class="achievement-list">
+                <div class="achievement-badge">🎬</div>
+                <div class="achievement-badge">📺</div>
+                <div class="achievement-badge">🔧</div>
+                <div class="achievement-badge">🚀</div>
+                <div class="achievement-badge locked">❓</div>
+                <div class="next-achievement">
+                    <span>→ Next: Download 10 movies</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function toggleService(toggle) {
+            toggle.classList.toggle('active');
+            
+            // Add animation feedback
+            const card = toggle.closest('.service-card');
+            card.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                card.style.transform = 'scale(1)';
+            }, 200);
+
+            // Update status
+            const statusDot = card.querySelector('.status-dot');
+            const statusText = card.querySelector('.service-status span:last-child');
+            
+            if (toggle.classList.contains('active')) {
+                statusDot.style.background = 'var(--accent-green)';
+                statusText.textContent = 'Running';
+            } else {
+                statusDot.style.background = 'var(--accent-red)';
+                statusText.textContent = 'Stopped';
+                statusDot.style.animation = 'none';
+            }
+        }
+
+        // Add hover effects to achievement badges
+        document.querySelectorAll('.achievement-badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('locked')) {
+                    this.style.transform = 'scale(1.1) rotate(5deg)';
+                }
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) rotate(0)';
+            });
+        });
+    </script>
+</body>
+</html>

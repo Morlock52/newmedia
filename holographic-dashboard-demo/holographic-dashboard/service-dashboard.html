@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Dashboard - Media Server Status</title>
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #00ff88;
+            --secondary-color: #ff0080;
+            --bg-primary: #0a0a0a;
+            --bg-secondary: rgba(255, 255, 255, 0.05);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.3);
+            --status-healthy: #00ff88;
+            --status-unhealthy: #ff4444;
+            --status-warning: #ffaa00;
+            --status-unknown: #666666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 36px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-header p {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #00cc6a);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .service-card.healthy::before {
+            background: var(--status-healthy);
+            opacity: 1;
+        }
+
+        .service-card.unhealthy::before {
+            background: var(--status-unhealthy);
+            opacity: 1;
+        }
+
+        .service-card.warning::before {
+            background: var(--status-warning);
+            opacity: 1;
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .service-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .service-details h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .service-details p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--status-unknown);
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.healthy {
+            background: var(--status-healthy);
+            color: var(--status-healthy);
+        }
+
+        .status-indicator.unhealthy {
+            background: var(--status-unhealthy);
+            color: var(--status-unhealthy);
+        }
+
+        .status-indicator.warning {
+            background: var(--status-warning);
+            color: var(--status-warning);
+        }
+
+        .status-indicator.loading {
+            background: var(--primary-color);
+            color: var(--primary-color);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .service-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .service-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
+            flex: 1;
+        }
+
+        .btn-success {
+            background: var(--status-healthy);
+            color: var(--bg-primary);
+        }
+
+        .btn-danger {
+            background: var(--status-unhealthy);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--status-warning);
+            color: var(--bg-primary);
+        }
+
+        .system-overview {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 40px;
+        }
+
+        .overview-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .overview-header h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .overview-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .overview-stat {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+
+        .overview-stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .overview-stat-value.healthy {
+            color: var(--status-healthy);
+        }
+
+        .overview-stat-value.unhealthy {
+            color: var(--status-unhealthy);
+        }
+
+        .overview-stat-value.warning {
+            color: var(--status-warning);
+        }
+
+        .overview-stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            color: #ff4444;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <navigation-header 
+        title="Service Dashboard"
+        breadcrumbs="Home,Services"
+        current-page="Service Dashboard"
+        back-url="main-app.html">
+    </navigation-header>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Service Dashboard</h1>
+            <p>Monitor and manage your media server services</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="refreshServices()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                </svg>
+                Refresh
+            </button>
+            <button class="btn btn-secondary" onclick="startAllServices()" id="startAllBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Start All
+            </button>
+            <button class="btn btn-secondary" onclick="stopAllServices()" id="stopAllBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+                Stop All
+            </button>
+            <button class="btn btn-secondary" onclick="generateHealthReport()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Health Report
+            </button>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="system-overview">
+            <div class="overview-header">
+                <h2>System Overview</h2>
+                <p>Overall system health and performance metrics</p>
+            </div>
+            <div class="overview-stats">
+                <div class="overview-stat">
+                    <div class="overview-stat-value healthy" id="totalServicesCount">-</div>
+                    <div class="overview-stat-label">Total Services</div>
+                </div>
+                <div class="overview-stat">
+                    <div class="overview-stat-value healthy" id="runningServicesCount">-</div>
+                    <div class="overview-stat-label">Running</div>
+                </div>
+                <div class="overview-stat">
+                    <div class="overview-stat-value healthy" id="healthyServicesCount">-</div>
+                    <div class="overview-stat-label">Healthy</div>
+                </div>
+                <div class="overview-stat">
+                    <div class="overview-stat-value" id="avgResponseTime">-</div>
+                    <div class="overview-stat-label">Avg Response</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-grid" id="servicesGrid">
+            <!-- Services will be populated here -->
+        </div>
+
+        <div class="last-updated" id="lastUpdated">
+            Last updated: Never
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div id="loadingMessage">Loading services...</div>
+        </div>
+    </div>
+
+    <!-- Include API clients -->
+    <script src="../api/api-client.js"></script>
+    <script src="../api/docker-service-client.js"></script>
+
+    <script>
+        // Initialize service client
+        let serviceClient = null;
+        let monitoringActive = false;
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initializeServiceClient();
+            refreshServices();
+        });
+
+        function initializeServiceClient() {
+            try {
+                serviceClient = new DockerServiceClient({
+                    baseURL: window.location.origin
+                });
+
+                // Set up event listeners
+                serviceClient.on('services-updated', (services) => {
+                    renderServices(services);
+                    updateOverviewStats(services);
+                });
+
+                serviceClient.on('service-status-updated', (data) => {
+                    updateServiceCard(data.service, data.status);
+                });
+
+                serviceClient.on('services-started', (data) => {
+                    if (data.success) {
+                        showMessage(`Services started: ${data.services}`, 'success');
+                    } else {
+                        showError(`Failed to start services: ${data.error}`);
+                    }
+                });
+
+                serviceClient.on('services-stopped', (data) => {
+                    if (data.success) {
+                        showMessage(`Services stopped: ${data.services}`, 'success');
+                    } else {
+                        showError(`Failed to stop services: ${data.error}`);
+                    }
+                });
+
+                serviceClient.on('monitoring-update', (data) => {
+                    console.log('Monitoring update:', data.services.length, 'services');
+                });
+
+                console.log('Service client initialized successfully');
+
+            } catch (error) {
+                console.error('Failed to initialize service client:', error);
+                showError('Failed to initialize service monitoring. Some features may be limited.');
+            }
+        }
+
+        async function refreshServices() {
+            if (!serviceClient) {
+                showError('Service client not initialized');
+                return;
+            }
+
+            showLoading('Refreshing services...');
+
+            try {
+                const services = await serviceClient.getAllServices();
+                updateLastUpdated();
+                hideLoading();
+            } catch (error) {
+                console.error('Failed to refresh services:', error);
+                showError('Failed to refresh services: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        function renderServices(services) {
+            const grid = document.getElementById('servicesGrid');
+            
+            if (!services || services.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; color: var(--text-secondary); grid-column: 1 / -1;">No services found</div>';
+                return;
+            }
+
+            grid.innerHTML = services.map(service => createServiceCard(service)).join('');
+        }
+
+        function createServiceCard(service) {
+            const statusClass = getStatusClass(service);
+            const statusText = getStatusText(service);
+            const responseTime = service.responseTime ? `${service.responseTime}ms` : 'N/A';
+            const version = service.version || 'Unknown';
+
+            return `
+                <div class="service-card ${statusClass}" id="service-${service.service}">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon">${service.icon || '⚙️'}</div>
+                            <div class="service-details">
+                                <h3>${service.name || service.service}</h3>
+                                <p>${service.description || 'Media service'}</p>
+                            </div>
+                        </div>
+                        <div class="service-status">
+                            <div class="status-indicator ${getStatusIndicatorClass(service)}"></div>
+                            <span>${statusText}</span>
+                        </div>
+                    </div>
+
+                    <div class="service-metrics">
+                        <div class="metric">
+                            <div class="metric-value">${responseTime}</div>
+                            <div class="metric-label">Response</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${service.port || 'N/A'}</div>
+                            <div class="metric-label">Port</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${version}</div>
+                            <div class="metric-label">Version</div>
+                        </div>
+                    </div>
+
+                    <div class="service-actions">
+                        <button class="btn btn-small btn-success" onclick="startService('${service.service}')" 
+                                ${service.running ? 'disabled' : ''}>
+                            Start
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="stopService('${service.service}')" 
+                                ${!service.running ? 'disabled' : ''}>
+                            Stop
+                        </button>
+                        <button class="btn btn-small btn-warning" onclick="restartService('${service.service}')">
+                            Restart
+                        </button>
+                        ${service.port ? `<button class="btn btn-small btn-secondary" onclick="openService('${service.service}', ${service.port})">Open</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getStatusClass(service) {
+            if (service.healthStatus === 'healthy') return 'healthy';
+            if (service.healthStatus === 'unhealthy' || service.healthStatus === 'unreachable') return 'unhealthy';
+            if (service.healthStatus === 'timeout') return 'warning';
+            return '';
+        }
+
+        function getStatusIndicatorClass(service) {
+            if (service.healthStatus === 'healthy') return 'healthy';
+            if (service.healthStatus === 'unhealthy' || service.healthStatus === 'unreachable') return 'unhealthy';
+            if (service.healthStatus === 'timeout') return 'warning';
+            return '';
+        }
+
+        function getStatusText(service) {
+            if (service.fallback) return 'Status Unknown';
+            if (service.running && service.healthStatus === 'healthy') return 'Running';
+            if (service.running && service.healthStatus === 'unhealthy') return 'Running (Unhealthy)';
+            if (service.running && service.healthStatus === 'timeout') return 'Running (Slow)';
+            if (service.running) return 'Running';
+            return 'Stopped';
+        }
+
+        function updateOverviewStats(services) {
+            const total = services.length;
+            const running = services.filter(s => s.running).length;
+            const healthy = services.filter(s => s.healthStatus === 'healthy').length;
+            const responseTimes = services.filter(s => s.responseTime).map(s => s.responseTime);
+            const avgResponse = responseTimes.length ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : 0;
+
+            document.getElementById('totalServicesCount').textContent = total;
+            document.getElementById('runningServicesCount').textContent = running;
+            document.getElementById('healthyServicesCount').textContent = healthy;
+            document.getElementById('avgResponseTime').textContent = avgResponse ? `${avgResponse}ms` : 'N/A';
+
+            // Update colors based on health
+            const runningEl = document.getElementById('runningServicesCount');
+            const healthyEl = document.getElementById('healthyServicesCount');
+            const avgEl = document.getElementById('avgResponseTime');
+
+            runningEl.className = `overview-stat-value ${running === total ? 'healthy' : running > 0 ? 'warning' : 'unhealthy'}`;
+            healthyEl.className = `overview-stat-value ${healthy === running ? 'healthy' : healthy > 0 ? 'warning' : 'unhealthy'}`;
+            avgEl.className = `overview-stat-value ${avgResponse < 1000 ? 'healthy' : avgResponse < 3000 ? 'warning' : 'unhealthy'}`;
+        }
+
+        async function startService(serviceName) {
+            if (!serviceClient) return;
+
+            showLoading(`Starting ${serviceName}...`);
+            try {
+                await serviceClient.startServices([serviceName]);
+                setTimeout(refreshServices, 2000); // Refresh after 2 seconds
+            } catch (error) {
+                console.error(`Failed to start ${serviceName}:`, error);
+                showError(`Failed to start ${serviceName}: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function stopService(serviceName) {
+            if (!serviceClient) return;
+
+            showLoading(`Stopping ${serviceName}...`);
+            try {
+                await serviceClient.stopServices([serviceName]);
+                setTimeout(refreshServices, 2000); // Refresh after 2 seconds
+            } catch (error) {
+                console.error(`Failed to stop ${serviceName}:`, error);
+                showError(`Failed to stop ${serviceName}: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function restartService(serviceName) {
+            if (!serviceClient) return;
+
+            showLoading(`Restarting ${serviceName}...`);
+            try {
+                await serviceClient.restartServices([serviceName]);
+                setTimeout(refreshServices, 3000); // Refresh after 3 seconds
+            } catch (error) {
+                console.error(`Failed to restart ${serviceName}:`, error);
+                showError(`Failed to restart ${serviceName}: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function startAllServices() {
+            if (!serviceClient) return;
+
+            showLoading('Starting all services...');
+            try {
+                await serviceClient.startServices();
+                setTimeout(refreshServices, 3000); // Refresh after 3 seconds
+            } catch (error) {
+                console.error('Failed to start all services:', error);
+                showError('Failed to start all services: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function stopAllServices() {
+            if (!confirm('Are you sure you want to stop all services?')) return;
+            if (!serviceClient) return;
+
+            showLoading('Stopping all services...');
+            try {
+                await serviceClient.stopServices();
+                setTimeout(refreshServices, 2000); // Refresh after 2 seconds
+            } catch (error) {
+                console.error('Failed to stop all services:', error);
+                showError('Failed to stop all services: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function openService(serviceName, port) {
+            const url = `http://localhost:${port}`;
+            window.open(url, '_blank');
+        }
+
+        async function generateHealthReport() {
+            if (!serviceClient) return;
+
+            showLoading('Generating health report...');
+            try {
+                const report = await serviceClient.generateHealthReport();
+                downloadReport(report);
+            } catch (error) {
+                console.error('Failed to generate health report:', error);
+                showError('Failed to generate health report: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function downloadReport(report) {
+            const content = JSON.stringify(report, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `health-report-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessage('Health report downloaded successfully', 'success');
+        }
+
+        function showLoading(message) {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => {
+                errorEl.classList.remove('show');
+            }, 5000);
+        }
+
+        function showMessage(message, type = 'info') {
+            console.log(`${type.toUpperCase()}: ${message}`);
+            // You could implement a toast notification system here
+        }
+
+        function updateLastUpdated() {
+            document.getElementById('lastUpdated').textContent = 
+                'Last updated: ' + new Date().toLocaleString();
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (!document.hidden && serviceClient) {
+                refreshServices();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

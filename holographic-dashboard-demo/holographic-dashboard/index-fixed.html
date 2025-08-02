@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Holographic Media Dashboard 2025</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0A0A14;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #webgl-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #hud-interface {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .holo-header {
+            background: rgba(10, 10, 20, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 2rem;
+            text-align: center;
+            pointer-events: auto;
+        }
+        
+        .holo-title {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00FFFF, #FF00FF, #FFFF00, #00FFFF);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+            100% { background-position: 0% center; }
+        }
+        
+        .subtitle {
+            display: block;
+            font-size: 1rem;
+            color: #B0B0C0;
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+        
+        .stats-panel {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            display: grid;
+            gap: 1rem;
+            pointer-events: auto;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            border-color: #00FFFF;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00FFFF;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #B0B0C0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+        
+        .activity-feed {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            pointer-events: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid #00FFFF;
+            font-size: 0.9rem;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A0A14;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            border-top-color: #00FFFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="webgl-container"></div>
+    
+    <div id="hud-interface">
+        <header class="holo-header">
+            <h1 class="holo-title">
+                MEDIA SERVER
+                <span class="subtitle">2025 HOLOGRAPHIC EDITION</span>
+            </h1>
+        </header>
+        
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-value" id="total-media">2,847</div>
+                <div class="stat-label">Total Media</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="storage-used">47.3TB</div>
+                <div class="stat-label">Storage Used</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="active-streams">12</div>
+                <div class="stat-label">Active Streams</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uptime">98.7%</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+        
+        <div class="activity-feed">
+            <h3 style="margin-bottom: 1rem; color: #00FFFF;">Recent Activity</h3>
+            <div class="activity-item">🎬 New movie added: Dune Part Two</div>
+            <div class="activity-item">👤 User 'Sarah' started watching The Mandalorian</div>
+            <div class="activity-item">⬇️ Download completed: Avatar 2</div>
+            <div class="activity-item">🔄 Transcoding finished: 12 episodes</div>
+        </div>
+    </div>
+    
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Initializing Holographic System...</p>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize Three.js scene
+        let scene, camera, renderer, composer;
+        let particles, mediaCards = [];
+        let clock = new THREE.Clock();
+        
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0A0A14, 10, 100);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 5, 20);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: false 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x0A0A14);
+            document.getElementById('webgl-container').appendChild(renderer.domElement);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0x00FFFF, 1, 50);
+            pointLight1.position.set(10, 10, 10);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xFF00FF, 1, 50);
+            pointLight2.position.set(-10, 10, -10);
+            scene.add(pointLight2);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(50, 50, 0x00FFFF, 0x003333);
+            scene.add(gridHelper);
+            
+            // Create holographic media cards
+            createMediaCards();
+            
+            // Create particle system
+            createParticles();
+            
+            // Mouse controls
+            let mouseX = 0, mouseY = 0;
+            let targetX = 0, targetY = 0;
+            
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+            });
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                const time = clock.getElapsedTime();
+                
+                // Camera movement
+                targetX += (mouseX - targetX) * 0.05;
+                targetY += (mouseY - targetY) * 0.05;
+                
+                camera.position.x = Math.sin(targetX * 0.5) * 20;
+                camera.position.z = Math.cos(targetX * 0.5) * 20;
+                camera.position.y = 5 + targetY * 5;
+                camera.lookAt(0, 0, 0);
+                
+                // Animate media cards
+                mediaCards.forEach((card, i) => {
+                    card.position.y = Math.sin(time + i * 0.5) * 0.5 + 2;
+                    card.rotation.y = time * 0.2;
+                    
+                    // Pulse effect
+                    const scale = 1 + Math.sin(time * 2 + i) * 0.05;
+                    card.scale.set(scale, scale, scale);
+                });
+                
+                // Rotate particles
+                if (particles) {
+                    particles.rotation.y = time * 0.05;
+                }
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function createMediaCards() {
+            const cardGeometry = new THREE.BoxGeometry(3, 4, 0.1);
+            
+            for (let i = 0; i < 9; i++) {
+                const material = new THREE.MeshPhongMaterial({
+                    color: new THREE.Color().setHSL(i / 9, 0.7, 0.5),
+                    emissive: new THREE.Color().setHSL(i / 9, 0.7, 0.3),
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide
+                });
+                
+                const card = new THREE.Mesh(cardGeometry, material);
+                
+                // Position in circle
+                const angle = (i / 9) * Math.PI * 2;
+                const radius = 10;
+                card.position.x = Math.cos(angle) * radius;
+                card.position.z = Math.sin(angle) * radius;
+                card.position.y = 2;
+                
+                scene.add(card);
+                mediaCards.push(card);
+                
+                // Add wireframe overlay
+                const wireframe = new THREE.Mesh(
+                    cardGeometry,
+                    new THREE.MeshBasicMaterial({
+                        color: 0x00FFFF,
+                        wireframe: true,
+                        transparent: true,
+                        opacity: 0.3
+                    })
+                );
+                card.add(wireframe);
+            }
+        }
+        
+        function createParticles() {
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 2000;
+            const posArray = new Float32Array(particlesCount * 3);
+            const colors = new Float32Array(particlesCount * 3);
+            
+            for (let i = 0; i < particlesCount * 3; i += 3) {
+                // Position
+                posArray[i] = (Math.random() - 0.5) * 50;
+                posArray[i + 1] = Math.random() * 20;
+                posArray[i + 2] = (Math.random() - 0.5) * 50;
+                
+                // Color
+                const color = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+                colors[i] = color.r;
+                colors[i + 1] = color.g;
+                colors[i + 2] = color.b;
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            
+            particles = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particles);
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            init();
+        });
+        
+        // Animate stats
+        setTimeout(() => {
+            document.querySelectorAll('.stat-value').forEach(stat => {
+                const value = stat.textContent;
+                stat.style.transition = 'all 0.3s ease';
+                stat.addEventListener('mouseover', () => {
+                    stat.style.transform = 'scale(1.1)';
+                    stat.style.textShadow = '0 0 20px rgba(0, 255, 255, 0.8)';
+                });
+                stat.addEventListener('mouseout', () => {
+                    stat.style.transform = 'scale(1)';
+                    stat.style.textShadow = '0 0 10px rgba(0, 255, 255, 0.5)';
+                });
+            });
+        }, 100);
+    </script>
+</body>
+</html>

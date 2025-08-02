@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Media Server Control Dashboard</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        }
+        
+        .header {
+            background: rgba(10, 10, 20, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.5);
+            padding: 1.5rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+        }
+        
+        .service-card.unavailable {
+            opacity: 0.5;
+            border-color: rgba(255, 0, 0, 0.3);
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .service-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .service-icon {
+            font-size: 2rem;
+        }
+        
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-online {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid rgba(0, 255, 0, 0.5);
+            color: #00ff00;
+        }
+        
+        .status-offline {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            color: #ff6666;
+        }
+        
+        .status-loading {
+            background: rgba(255, 255, 0, 0.2);
+            border: 1px solid rgba(255, 255, 0, 0.5);
+            color: #ffff00;
+        }
+        
+        .service-info {
+            color: #b0b0c0;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #b0b0c0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+        }
+        
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: #ff6666;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Media Server Control Center</h1>
+        <p style="color: #b0b0c0;">Manage all your media services from one place</p>
+    </header>
+    
+    <div class="container">
+        <!-- System Stats -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-value" id="active-services">0</div>
+                <div class="stat-label">Active Services</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-media">0</div>
+                <div class="stat-label">Media Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="storage-used">0 GB</div>
+                <div class="stat-label">Storage Used</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="active-streams">0</div>
+                <div class="stat-label">Active Streams</div>
+            </div>
+        </div>
+        
+        <!-- Services Grid -->
+        <div class="services-grid" id="services-grid">
+            <!-- Services will be populated here -->
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="refreshServices()" title="Refresh Status">
+        ↻
+    </button>
+    
+    <script>
+        // Service definitions
+        const services = [
+            {
+                name: 'Jellyfin',
+                icon: '🎬',
+                port: 8096,
+                description: 'Media server for movies, TV shows, music, and photos',
+                path: '',
+                api: '/System/Info/Public'
+            },
+            {
+                name: 'Sonarr',
+                icon: '📺',
+                port: 8989,
+                description: 'TV show collection manager and downloader',
+                path: '',
+                api: '/api/v3/system/status'
+            },
+            {
+                name: 'Radarr',
+                icon: '🎞️',
+                port: 7878,
+                description: 'Movie collection manager and downloader',
+                path: '',
+                api: '/api/v3/system/status'
+            },
+            {
+                name: 'Prowlarr',
+                icon: '🔍',
+                port: 9696,
+                description: 'Indexer manager for Sonarr and Radarr',
+                path: '',
+                api: '/api/v1/system/status'
+            },
+            {
+                name: 'qBittorrent',
+                icon: '⬇️',
+                port: 8090,
+                description: 'BitTorrent client for downloading media',
+                path: '',
+                webui: true
+            },
+            {
+                name: 'Jellyseerr',
+                icon: '🎭',
+                port: 5055,
+                description: 'Media request management and discovery',
+                path: '',
+                api: '/api/v1/status'
+            },
+            {
+                name: 'Bazarr',
+                icon: '💬',
+                port: 6767,
+                description: 'Subtitle management for movies and TV shows',
+                path: '',
+                api: '/api/system/status'
+            },
+            {
+                name: 'Grafana',
+                icon: '📊',
+                port: 3000,
+                description: 'Monitoring and analytics dashboards',
+                path: '',
+                api: '/api/health'
+            },
+            {
+                name: 'Portainer',
+                icon: '🐳',
+                port: 9000,
+                description: 'Docker container management',
+                path: '',
+                api: '/api/system/status'
+            }
+        ];
+        
+        // Check service status
+        async function checkServiceStatus(service) {
+            try {
+                const response = await fetch(`http://localhost:${service.port}${service.api || ''}`, {
+                    method: 'GET',
+                    mode: 'no-cors',
+                    cache: 'no-cache'
+                });
+                return 'online';
+            } catch (error) {
+                // Try a simple fetch without API endpoint
+                try {
+                    await fetch(`http://localhost:${service.port}`, {
+                        method: 'HEAD',
+                        mode: 'no-cors'
+                    });
+                    return 'online';
+                } catch {
+                    return 'offline';
+                }
+            }
+        }
+        
+        // Create service card
+        function createServiceCard(service, status) {
+            const card = document.createElement('div');
+            card.className = `service-card ${status === 'offline' ? 'unavailable' : ''}`;
+            
+            card.innerHTML = `
+                <div class="service-header">
+                    <div class="service-name">
+                        <span class="service-icon">${service.icon}</span>
+                        <span>${service.name}</span>
+                    </div>
+                    <div class="service-status status-${status}">
+                        ${status === 'loading' ? '<span class="loading-spinner"></span>' : ''}
+                        <span>${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                    </div>
+                </div>
+                <div class="service-info">${service.description}</div>
+                <div class="service-actions">
+                    <a href="http://localhost:${service.port}${service.path}" 
+                       target="_blank" 
+                       class="btn btn-primary"
+                       ${status === 'offline' ? 'style="pointer-events: none; opacity: 0.5;"' : ''}>
+                        Open ${service.name} →
+                    </a>
+                    <button class="btn btn-secondary" onclick="restartService('${service.name}')">
+                        Restart
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Load all services
+        async function loadServices() {
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+            
+            let activeCount = 0;
+            
+            for (const service of services) {
+                // Show loading state
+                const loadingCard = createServiceCard(service, 'loading');
+                grid.appendChild(loadingCard);
+                
+                // Check actual status
+                const status = await checkServiceStatus(service);
+                if (status === 'online') activeCount++;
+                
+                // Update with real status
+                const card = createServiceCard(service, status);
+                grid.replaceChild(card, loadingCard);
+            }
+            
+            // Update stats
+            document.getElementById('active-services').textContent = activeCount;
+            updateStats();
+        }
+        
+        // Update system stats
+        async function updateStats() {
+            // These would normally come from actual API calls
+            document.getElementById('total-media').textContent = '2,847';
+            document.getElementById('storage-used').textContent = '4.7 TB';
+            document.getElementById('active-streams').textContent = '3';
+        }
+        
+        // Restart service (mock function - would need backend implementation)
+        function restartService(serviceName) {
+            if (confirm(`Restart ${serviceName}?`)) {
+                alert(`Restarting ${serviceName}...\n\nNote: This requires backend implementation with Docker API.`);
+                // In real implementation, this would call a backend API that runs:
+                // docker restart <container_name>
+            }
+        }
+        
+        // Refresh all services
+        function refreshServices() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.style.animation = 'spin 1s linear';
+            setTimeout(() => {
+                btn.style.animation = '';
+            }, 1000);
+            loadServices();
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            loadServices();
+            // Refresh every 30 seconds
+            setInterval(loadServices, 30000);
+        });
+    </script>
+</body>
+</html>

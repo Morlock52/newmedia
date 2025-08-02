@@ -1,0 +1,466 @@
+version: '3.9'
+
+# Cloudflare CDN Integration with Edge Computing
+# Optimized for global content delivery and edge caching
+
+services:
+  # Cloudflare Tunnel for secure origin connection
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_METRICS=0.0.0.0:2000
+      - TUNNEL_LOGLEVEL=info
+    volumes:
+      - ./config/cloudflared:/home/nonroot/.cloudflared
+    networks:
+      - edge_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Cloudflare Worker Runtime for Edge Computing
+  miniflare:
+    image: miniflare/miniflare:latest
+    container_name: miniflare_edge
+    command: |
+      --host 0.0.0.0
+      --port 8787
+      --watch
+      --debug
+      --cache
+      --cache-persist ./cache
+      --kv-persist ./kv
+      --durable-objects-persist ./do
+      --r2-persist ./r2
+    volumes:
+      - ./edge-workers:/app
+      - ./data/miniflare/cache:/cache
+      - ./data/miniflare/kv:/kv
+      - ./data/miniflare/do:/do
+      - ./data/miniflare/r2:/r2
+    ports:
+      - "8787:8787"
+    networks:
+      - edge_network
+    restart: unless-stopped
+    environment:
+      - CF_ACCOUNT_ID=${CF_ACCOUNT_ID}
+      - CF_API_TOKEN=${CF_API_TOKEN}
+
+  # Cloudflare API Integration Service
+  cf_api_service:
+    image: python:3.11-slim
+    container_name: cf_api_service
+    build:
+      context: ./cloudflare-api
+      dockerfile: Dockerfile
+    environment:
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
+      - CF_API_KEY=${CLOUDFLARE_API_KEY}
+      - CF_ZONE_ID=${CLOUDFLARE_ZONE_ID}
+      - CF_ACCOUNT_ID=${CF_ACCOUNT_ID}
+      - REDIS_URL=redis://neural_cache:6379
+      - PROMETHEUS_PUSHGATEWAY=http://prometheus_optimized:9091
+    volumes:
+      - ./cloudflare-api:/app
+      - ./logs/cloudflare:/var/log/cloudflare
+    networks:
+      - edge_network
+      - cache_network
+    restart: unless-stopped
+    command: |
+      python -c "
+      import os
+      import time
+      import requests
+      import redis
+      import json
+      from datetime import datetime, timedelta
+      
+      class CloudflareOptimizer:
+          def __init__(self):
+              self.cf_email = os.environ['CF_API_EMAIL']
+              self.cf_key = os.environ['CF_API_KEY']
+              self.zone_id = os.environ['CF_ZONE_ID']
+              self.account_id = os.environ['CF_ACCOUNT_ID']
+              self.redis_client = redis.from_url(os.environ['REDIS_URL'])
+              self.headers = {
+                  'X-Auth-Email': self.cf_email,
+                  'X-Auth-Key': self.cf_key,
+                  'Content-Type': 'application/json'
+              }
+              self.base_url = 'https://api.cloudflare.com/client/v4'
+          
+          def configure_cache_rules(self):
+              # Configure aggressive caching for media files
+              cache_rules = [
+                  {
+                      'targets': [
+                          {'target': 'url', 'constraint': {'operator': 'matches', 'value': '*.mp4'}}
+                      ],
+                      'actions': [
+                          {'id': 'cache_level', 'value': 'cache_everything'},
+                          {'id': 'edge_cache_ttl', 'value': 2592000},  # 30 days
+                          {'id': 'browser_cache_ttl', 'value': 2592000},
+                          {'id': 'origin_cache_control', 'value': 'on'}
+                      ],
+                      'priority': 1,
+                      'status': 'active'
+                  },
+                  {
+                      'targets': [
+                          {'target': 'url', 'constraint': {'operator': 'matches', 'value': '*.webm'}}
+                      ],
+                      'actions': [
+                          {'id': 'cache_level', 'value': 'cache_everything'},
+                          {'id': 'edge_cache_ttl', 'value': 2592000},
+                          {'id': 'browser_cache_ttl', 'value': 2592000}
+                      ],
+                      'priority': 2,
+                      'status': 'active'
+                  },
+                  {
+                      'targets': [
+                          {'target': 'url', 'constraint': {'operator': 'matches', 'value': '*.m3u8'}}
+                      ],
+                      'actions': [
+                          {'id': 'cache_level', 'value': 'cache_everything'},
+                          {'id': 'edge_cache_ttl', 'value': 300},  # 5 minutes for manifests
+                          {'id': 'browser_cache_ttl', 'value': 0}
+                      ],
+                      'priority': 3,
+                      'status': 'active'
+                  },
+                  {
+                      'targets': [
+                          {'target': 'url', 'constraint': {'operator': 'matches', 'value': '*.ts'}}
+                      ],
+                      'actions': [
+                          {'id': 'cache_level', 'value': 'cache_everything'},
+                          {'id': 'edge_cache_ttl', 'value': 86400},  # 1 day for segments
+                          {'id': 'browser_cache_ttl', 'value': 3600}
+                      ],
+                      'priority': 4,
+                      'status': 'active'
+                  }
+              ]
+              
+              for rule in cache_rules:
+                  response = requests.post(
+                      f'{self.base_url}/zones/{self.zone_id}/pagerules',
+                      headers=self.headers,
+                      json=rule
+                  )
+                  print(f'Cache rule created: {response.json()}')
+          
+          def enable_argo_smart_routing(self):
+              # Enable Argo Smart Routing for performance
+              response = requests.patch(
+                  f'{self.base_url}/zones/{self.zone_id}/argo/smart_routing',
+                  headers=self.headers,
+                  json={'value': 'on'}
+              )
+              print(f'Argo Smart Routing: {response.json()}')
+          
+          def configure_load_balancing(self):
+              # Create load balancer for media servers
+              lb_config = {
+                  'name': 'media-servers-lb',
+                  'description': 'Load balancer for media streaming servers',
+                  'default_pools': ['media_pool_1', 'media_pool_2'],
+                  'fallback_pool': 'media_pool_fallback',
+                  'proxied': True,
+                  'ttl': 30,
+                  'steering_policy': 'dynamic_latency',
+                  'session_affinity': 'cookie',
+                  'session_affinity_ttl': 1800,
+                  'session_affinity_attributes': {
+                      'samesite': 'Lax',
+                      'secure': 'Always',
+                      'zero_downtime_failover': 'sticky'
+                  }
+              }
+              
+              response = requests.post(
+                  f'{self.base_url}/zones/{self.zone_id}/load_balancers',
+                  headers=self.headers,
+                  json=lb_config
+              )
+              print(f'Load balancer created: {response.json()}')
+          
+          def configure_workers_routes(self):
+              # Configure Workers routes for edge computing
+              worker_routes = [
+                  {
+                      'pattern': '*/api/optimize/*',
+                      'script': 'media-optimizer'
+                  },
+                  {
+                      'pattern': '*/stream/adaptive/*',
+                      'script': 'adaptive-bitrate-selector'
+                  },
+                  {
+                      'pattern': '*/auth/*',
+                      'script': 'edge-auth-handler'
+                  },
+                  {
+                      'pattern': '*/analytics/*',
+                      'script': 'analytics-collector'
+                  }
+              ]
+              
+              for route in worker_routes:
+                  response = requests.post(
+                      f'{self.base_url}/zones/{self.zone_id}/workers/routes',
+                      headers=self.headers,
+                      json=route
+                  )
+                  print(f'Worker route created: {response.json()}')
+          
+          def update_cache_analytics(self):
+              # Fetch and store cache analytics
+              response = requests.get(
+                  f'{self.base_url}/zones/{self.zone_id}/analytics/dashboard',
+                  headers=self.headers,
+                  params={
+                      'since': (datetime.now() - timedelta(hours=1)).isoformat(),
+                      'until': datetime.now().isoformat()
+                  }
+              )
+              
+              if response.status_code == 200:
+                  analytics = response.json()
+                  
+                  # Store in Redis for monitoring
+                  self.redis_client.setex(
+                      'cf:analytics:latest',
+                      300,  # 5 minutes TTL
+                      json.dumps(analytics)
+                  )
+                  
+                  # Extract key metrics
+                  if 'data' in analytics and 'totals' in analytics['data']:
+                      totals = analytics['data']['totals']
+                      cache_hit_rate = totals.get('cache_hit_rate', 0)
+                      bandwidth_saved = totals.get('bandwidth_saved', 0)
+                      
+                      print(f'Cache Hit Rate: {cache_hit_rate}%')
+                      print(f'Bandwidth Saved: {bandwidth_saved / (1024**3):.2f} GB')
+          
+          def optimize_image_delivery(self):
+              # Configure Cloudflare Images for thumbnails
+              image_config = {
+                  'variants': [
+                      {
+                          'id': 'thumbnail',
+                          'options': {
+                              'fit': 'cover',
+                              'width': 300,
+                              'height': 200,
+                              'quality': 85,
+                              'format': 'auto'  # WebP/AVIF auto-selection
+                          }
+                      },
+                      {
+                          'id': 'poster',
+                          'options': {
+                              'fit': 'contain',
+                              'width': 1920,
+                              'height': 1080,
+                              'quality': 90,
+                              'format': 'auto'
+                          }
+                      },
+                      {
+                          'id': 'preview',
+                          'options': {
+                              'fit': 'cover',
+                              'width': 640,
+                              'height': 360,
+                              'quality': 80,
+                              'format': 'auto'
+                          }
+                      }
+                  ]
+              }
+              
+              for variant in image_config['variants']:
+                  response = requests.post(
+                      f'{self.base_url}/accounts/{self.account_id}/images/v1/variants',
+                      headers=self.headers,
+                      json=variant
+                  )
+                  print(f'Image variant created: {response.json()}')
+          
+          def configure_stream_delivery(self):
+              # Configure Cloudflare Stream for video delivery
+              stream_config = {
+                  'allowedOrigins': ['*'],
+                  'requireSignedURLs': False,
+                  'watermark': None,
+                  'meta': {
+                      'name': 'Media Server Stream'
+                  }
+              }
+              
+              response = requests.post(
+                  f'{self.base_url}/accounts/{self.account_id}/stream',
+                  headers=self.headers,
+                  json=stream_config
+              )
+              print(f'Stream configuration: {response.json()}')
+          
+          def run(self):
+              print('Starting Cloudflare CDN Optimizer...')
+              
+              # Initial configuration
+              self.configure_cache_rules()
+              self.enable_argo_smart_routing()
+              self.configure_load_balancing()
+              self.configure_workers_routes()
+              self.optimize_image_delivery()
+              self.configure_stream_delivery()
+              
+              # Continuous monitoring and optimization
+              while True:
+                  try:
+                      self.update_cache_analytics()
+                      time.sleep(300)  # Update every 5 minutes
+                  except Exception as e:
+                      print(f'Error updating analytics: {e}')
+                      time.sleep(60)
+      
+      if __name__ == '__main__':
+          optimizer = CloudflareOptimizer()
+          optimizer.run()
+      "
+
+  # Edge Cache Warming Service
+  cache_warmer:
+    image: alpine:latest
+    container_name: cache_warmer
+    command: |
+      sh -c "
+      apk add --no-cache curl jq
+      
+      # Function to warm cache for a URL
+      warm_url() {
+        url=$$1
+        echo \"Warming cache for: $$url\"
+        
+        # Request through Cloudflare
+        curl -s -o /dev/null -w '%{http_code}' \
+          -H 'CF-Cache-Warmup: true' \
+          -H 'User-Agent: CloudflareMediaCacheWarmer/1.0' \
+          \"$$url\"
+      }
+      
+      # Function to warm video segments
+      warm_video_segments() {
+        base_url=$$1
+        segment_count=$$2
+        
+        for i in $$(seq 0 $$segment_count); do
+          warm_url \"$$base_url/segment$$i.ts\"
+        done
+      }
+      
+      # Main warming loop
+      while true; do
+        echo 'Starting cache warming cycle...'
+        
+        # Warm popular content
+        # This would typically read from a popularity tracking service
+        warm_url 'https://media.example.com/popular/movie1/index.m3u8'
+        warm_video_segments 'https://media.example.com/popular/movie1' 100
+        
+        warm_url 'https://media.example.com/popular/movie2/index.m3u8'
+        warm_video_segments 'https://media.example.com/popular/movie2' 100
+        
+        # Warm thumbnails
+        for i in $$(seq 1 10); do
+          warm_url \"https://media.example.com/thumbnails/movie$$i.jpg\"
+        done
+        
+        echo 'Cache warming cycle complete'
+        sleep 3600  # Run every hour
+      done
+      "
+    networks:
+      - edge_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # Cloudflare Analytics Dashboard
+  cf_analytics_dashboard:
+    image: grafana/grafana:latest
+    container_name: cf_analytics_dashboard
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=cloudflare-app
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/cloudflare-overview.json
+    volumes:
+      - ./config/grafana/dashboards/cloudflare:/var/lib/grafana/dashboards
+      - ./data/grafana/cloudflare:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - edge_network
+    restart: unless-stopped
+
+  # R2 Storage Gateway for media files
+  r2_gateway:
+    image: minio/minio:latest
+    container_name: r2_gateway
+    command: gateway s3 https://r2.cloudflarestorage.com
+    environment:
+      - MINIO_ROOT_USER=${R2_ACCESS_KEY_ID}
+      - MINIO_ROOT_PASSWORD=${R2_SECRET_ACCESS_KEY}
+      - MINIO_BROWSER=on
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_CACHE=on
+      - MINIO_CACHE_DRIVES=/cache
+      - MINIO_CACHE_EXCLUDE=*.db,*.log
+      - MINIO_CACHE_QUOTA=90
+      - MINIO_CACHE_AFTER=1
+      - MINIO_CACHE_WATERMARK_LOW=70
+      - MINIO_CACHE_WATERMARK_HIGH=85
+    volumes:
+      - ./data/r2-cache:/cache
+      - ./config/minio:/root/.minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - edge_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+
+networks:
+  edge_network:
+    external: true
+  media_network:
+    external: true
+  cache_network:
+    external: true

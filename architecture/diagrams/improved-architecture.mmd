@@ -1,0 +1,121 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#1f2937', 'primaryTextColor': '#fff', 'primaryBorderColor': '#374151', 'lineColor': '#6b7280', 'secondaryColor': '#374151', 'tertiaryColor': '#1f2937'}}}%%
+
+graph TB
+    subgraph "Internet Layer"
+        Users[Users]
+        CF[Cloudflare<br/>WAF + CDN]
+    end
+    
+    subgraph "Edge Security Layer"
+        FW[pfSense<br/>Firewall]
+        IDS[Suricata<br/>IDS/IPS]
+        VPN_EP[WireGuard<br/>VPN Endpoint]
+    end
+    
+    subgraph "API Gateway Layer"
+        Kong[Kong<br/>API Gateway]
+        Traefik[Traefik v3<br/>Ingress]
+        Authelia[Authelia<br/>SSO + MFA]
+    end
+    
+    subgraph "Service Mesh"
+        Istio[Istio<br/>Service Mesh]
+        Envoy[Envoy Proxies]
+        mTLS[mTLS<br/>Encryption]
+    end
+    
+    subgraph "Application Layer"
+        subgraph "Media Services"
+            Jellyfin[Jellyfin<br/>Media Server]
+            Plex[Plex<br/>Alternative]
+            Immich[Immich<br/>Photos]
+        end
+        
+        subgraph "Content Management"
+            Sonarr[Sonarr]
+            Radarr[Radarr]
+            Prowlarr[Prowlarr]
+        end
+        
+        subgraph "Download Services"
+            Gluetun[Gluetun<br/>VPN]
+            qBit[qBittorrent]
+            SAB[SABnzbd]
+        end
+    end
+    
+    subgraph "Data Layer"
+        subgraph "Databases"
+            PG_Primary[PostgreSQL<br/>Primary]
+            PG_Replica[PostgreSQL<br/>Replica]
+            Redis_Master[Redis<br/>Master]
+            Redis_Replica[Redis<br/>Replica]
+        end
+        
+        subgraph "Storage"
+            Ceph[Ceph<br/>Distributed Storage]
+            Backup[Restic<br/>Backup]
+        end
+    end
+    
+    subgraph "Security & Monitoring"
+        Vault[HashiCorp Vault<br/>Secrets]
+        Falco[Falco<br/>Runtime Security]
+        Prometheus[Prometheus]
+        Grafana[Grafana]
+        Loki[Loki<br/>Logs]
+    end
+    
+    %% Connections
+    Users --> CF
+    CF --> FW
+    FW --> IDS
+    IDS --> Kong
+    
+    VPN_EP --> FW
+    
+    Kong --> Authelia
+    Kong --> Traefik
+    Authelia --> Vault
+    
+    Traefik --> Istio
+    Istio --> Envoy
+    Envoy --> mTLS
+    
+    mTLS --> Jellyfin
+    mTLS --> Sonarr
+    mTLS --> Gluetun
+    
+    Jellyfin --> PG_Primary
+    PG_Primary --> PG_Replica
+    
+    Jellyfin --> Redis_Master
+    Redis_Master --> Redis_Replica
+    
+    Jellyfin --> Ceph
+    Ceph --> Backup
+    
+    %% Monitoring connections
+    Falco --> Prometheus
+    Prometheus --> Grafana
+    All --> Loki
+    
+    %% Security flow
+    Vault -.->|Secrets| All
+    Falco -.->|Monitor| All
+    
+    classDef internet fill:#ef4444,stroke:#dc2626,stroke-width:3px
+    classDef security fill:#f59e0b,stroke:#d97706,stroke-width:3px
+    classDef gateway fill:#06b6d4,stroke:#0891b2,stroke-width:3px
+    classDef mesh fill:#3b82f6,stroke:#2563eb,stroke-width:3px
+    classDef app fill:#10b981,stroke:#059669,stroke-width:2px
+    classDef data fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px
+    classDef monitor fill:#ec4899,stroke:#db2777,stroke-width:2px
+    
+    class Users,CF internet
+    class FW,IDS,VPN_EP security
+    class Kong,Traefik,Authelia gateway
+    class Istio,Envoy,mTLS mesh
+    class Jellyfin,Plex,Immich,Sonarr,Radarr,Prowlarr,Gluetun,qBit,SAB app
+    class PG_Primary,PG_Replica,Redis_Master,Redis_Replica,Ceph,Backup data
+    class Vault,Falco,Prometheus,Grafana,Loki monitor

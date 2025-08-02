@@ -1,0 +1,71 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'media-server'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - 'alertmanager:9093'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - 'alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Docker metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker-exporter:9323']
+
+  # Jellyfin metrics
+  - job_name: 'jellyfin'
+    static_configs:
+      - targets: ['jellyfin:8096']
+    metrics_path: '/metrics'
+
+  # Radarr metrics
+  - job_name: 'radarr'
+    static_configs:
+      - targets: ['radarr:7878']
+    metrics_path: '/api/v3/metrics'
+    params:
+      apikey: ['${RADARR_API_KEY}']
+
+  # Sonarr metrics
+  - job_name: 'sonarr'
+    static_configs:
+      - targets: ['sonarr:8989']
+    metrics_path: '/api/v3/metrics'
+    params:
+      apikey: ['${SONARR_API_KEY}']
+
+  # qBittorrent metrics
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent-exporter:9539']
+
+  # Glances system monitoring
+  - job_name: 'glances'
+    static_configs:
+      - targets: ['glances:61208']
+
+  # Custom application metrics
+  - job_name: 'media_automation'
+    static_configs:
+      - targets: ['host.docker.internal:8003']
+    metrics_path: '/metrics'

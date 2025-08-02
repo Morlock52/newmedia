@@ -1,0 +1,320 @@
+version: '3.9'
+
+# GPU Transcoding Optimization Configuration
+# Optimized for multi-GPU setups with NVIDIA, Intel, and AMD
+
+x-gpu-common: &gpu-common
+  runtime: nvidia
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    - CUDA_VISIBLE_DEVICES=0,1,2,3  # Adjust based on GPU count
+
+services:
+  # GPU Resource Manager
+  gpu_resource_manager:
+    image: python:3.11-slim
+    container_name: gpu_resource_manager
+    build:
+      context: ./gpu-manager
+      dockerfile: Dockerfile
+    <<: *gpu-common
+    environment:
+      - REDIS_URL=redis://neural_cache:6379
+      - PROMETHEUS_URL=http://prometheus_optimized:9090
+      - GPU_ALLOCATION_STRATEGY=dynamic
+      - MAX_CONCURRENT_STREAMS=32
+      - GPU_MEMORY_THRESHOLD=85  # Percentage
+      - GPU_TEMP_LIMIT=83  # Celsius
+      - LOAD_BALANCE_INTERVAL=5  # Seconds
+    volumes:
+      - ./gpu-manager:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./logs/gpu-manager:/var/log/gpu-manager
+    networks:
+      - gpu_network
+      - cache_network
+    restart: unless-stopped
+    privileged: true
+    command: |
+      python gpu_resource_manager.py
+
+  # NVIDIA GPU Transcoding Pool
+  nvidia_transcode_pool:
+    image: nvidia/cuda:12.0-runtime-ubuntu22.04
+    container_name: nvidia_transcode_pool
+    build:
+      context: ./transcoding
+      dockerfile: Dockerfile.nvidia
+    <<: *gpu-common
+    environment:
+      - TRANSCODE_PRESET=p7  # Performance preset (p1-p7)
+      - TRANSCODE_QUALITY=25  # Quality level (0-51)
+      - ENABLE_HEVC=true
+      - ENABLE_AV1=true
+      - ENABLE_VP9=true
+      - MAX_B_FRAMES=3
+      - ENABLE_TEMPORAL_AQ=true
+      - ENABLE_SPATIAL_AQ=true
+      - RC_LOOKAHEAD=32
+      - SURFACES=64
+      - GPU_SCHEDULING=exclusive
+    volumes:
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ./transcoding/nvidia:/workspace
+      - /tmp/nvidia-transcode:/tmp
+    networks:
+      - gpu_network
+    cap_add:
+      - SYS_ADMIN
+      - SYS_NICE
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+    deploy:
+      resources:
+        limits:
+          cpus: '32.0'
+          memory: 64G
+        reservations:
+          cpus: '16.0'
+          memory: 32G
+
+  # Intel QuickSync Transcoding Pool
+  intel_qsv_pool:
+    image: intel/intel-graphics-compiler:latest
+    container_name: intel_qsv_pool
+    build:
+      context: ./transcoding
+      dockerfile: Dockerfile.intel
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - LIBVA_DRIVER_NAME=iHD
+      - ENABLE_QSV_HEVC=true
+      - ENABLE_QSV_AV1=true
+      - ENABLE_QSV_VP9=true
+      - QSV_PRESET=veryfast
+      - QSV_ASYNC_DEPTH=4
+      - QSV_LOOKAHEAD_DEPTH=40
+      - QSV_ADAPTIVE_I=1
+      - QSV_ADAPTIVE_B=1
+      - QSV_EXTBRC=1
+    volumes:
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ./transcoding/intel:/workspace
+      - /tmp/intel-transcode:/tmp
+    networks:
+      - gpu_network
+    cap_add:
+      - SYS_NICE
+    deploy:
+      resources:
+        limits:
+          cpus: '16.0'
+          memory: 32G
+
+  # AMD VCN Transcoding Pool
+  amd_vcn_pool:
+    image: rocm/rocm-terminal:latest
+    container_name: amd_vcn_pool
+    build:
+      context: ./transcoding
+      dockerfile: Dockerfile.amd
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+      - ENABLE_VCN_HEVC=true
+      - ENABLE_VCN_AV1=true
+      - VCN_QUALITY_PRESET=balanced
+      - VCN_RATE_CONTROL=vbr
+      - VCN_TARGET_BITRATE=8000000  # 8 Mbps
+      - VCN_PEAK_BITRATE=12000000   # 12 Mbps
+    volumes:
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ./transcoding/amd:/workspace
+      - /tmp/amd-transcode:/tmp
+    networks:
+      - gpu_network
+    cap_add:
+      - SYS_NICE
+    deploy:
+      resources:
+        limits:
+          cpus: '16.0'
+          memory: 32G
+
+  # Distributed Transcoding Orchestrator
+  transcode_orchestrator:
+    image: golang:1.21-alpine
+    container_name: transcode_orchestrator
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://neural_cache:6379
+      - POSTGRES_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres_primary:5432/${DB_NAME}
+      - ORCHESTRATOR_MODE=distributed
+      - MAX_CONCURRENT_JOBS=128
+      - JOB_TIMEOUT=3600  # 1 hour
+      - RETRY_ATTEMPTS=3
+      - PRIORITY_QUEUE_ENABLED=true
+    volumes:
+      - ./orchestrator:/app
+      - ./logs/orchestrator:/var/log/orchestrator
+    networks:
+      - gpu_network
+      - media_network
+      - cache_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+
+  # GPU Performance Monitor
+  gpu_performance_monitor:
+    image: nvidia/dcgm-exporter:latest
+    container_name: gpu_performance_monitor
+    <<: *gpu-common
+    environment:
+      - DCGM_EXPORTER_LISTEN=:9400
+      - DCGM_EXPORTER_INTERVAL=5000
+      - DCGM_EXPORTER_KUBERNETES=false
+      - DCGM_EXPORTER_COLLECTORS=/app/custom-collectors.csv
+    volumes:
+      - ./monitoring/gpu-collectors.csv:/app/custom-collectors.csv:ro
+    ports:
+      - "9400:9400"
+    networks:
+      - gpu_network
+    restart: unless-stopped
+
+  # ML-based Quality Optimizer
+  quality_optimizer:
+    image: tensorflow/tensorflow:latest-gpu
+    container_name: quality_optimizer
+    <<: *gpu-common
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - CUDA_VISIBLE_DEVICES=3  # Dedicated GPU for ML
+      - MODEL_PATH=/models/quality_optimizer_v2.h5
+      - OPTIMIZATION_MODE=realtime
+      - TARGET_VMAF_SCORE=95
+      - MIN_VMAF_SCORE=85
+    volumes:
+      - ./ml-models:/models:ro
+      - ./quality-optimizer:/app
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+    networks:
+      - gpu_network
+      - cache_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+  # Transcoding Job Queue
+  transcode_queue:
+    image: redis:7.2-alpine
+    container_name: transcode_queue
+    command: |
+      redis-server 
+      --maxmemory 8gb
+      --maxmemory-policy allkeys-lru
+      --save 300 100
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - ./data/transcode-queue:/data
+    networks:
+      - gpu_network
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 8G
+
+  # FFmpeg GPU Worker Pool
+  ffmpeg_gpu_worker:
+    image: jrottenberg/ffmpeg:5.1-nvidia
+    container_name: ffmpeg_gpu_worker
+    <<: *gpu-common
+    scale: 4  # Number of worker instances
+    command: |
+      sh -c "
+      while true; do
+        # Get job from queue
+        JOB=$$(redis-cli -h transcode_queue BLPOP transcode:queue:high transcode:queue:normal transcode:queue:low 0)
+        
+        if [ -n \"$$JOB\" ]; then
+          # Parse job details
+          INPUT=$$(echo $$JOB | jq -r '.input')
+          OUTPUT=$$(echo $$JOB | jq -r '.output')
+          PRESET=$$(echo $$JOB | jq -r '.preset // \"medium\"')
+          CODEC=$$(echo $$JOB | jq -r '.codec // \"hevc_nvenc\"')
+          
+          # Execute transcoding
+          ffmpeg -hwaccel cuda -hwaccel_output_format cuda \
+            -i \"$$INPUT\" \
+            -c:v $$CODEC \
+            -preset $$PRESET \
+            -rc vbr \
+            -cq 23 \
+            -bf 3 \
+            -spatial_aq 1 \
+            -temporal_aq 1 \
+            -rc-lookahead 32 \
+            -surfaces 64 \
+            -c:a libopus -b:a 256k \
+            -map_metadata 0 \
+            -movflags +faststart \
+            \"$$OUTPUT\"
+          
+          # Update job status
+          redis-cli -h transcode_queue HSET transcode:job:$$JOB_ID status completed
+        fi
+        
+        sleep 1
+      done
+      "
+    volumes:
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ./transcoding/temp:/tmp
+    networks:
+      - gpu_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+# GPU-optimized networks
+networks:
+  gpu_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
+      com.docker.network.bridge.enable_icc: "true"
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+  media_network:
+    external: true
+    
+  cache_network:
+    external: true

@@ -1,0 +1,471 @@
+version: "3.9"
+
+# Ultimate Media Server 2025 - Simplified & Reliable Configuration
+# This configuration uses only well-maintained, public Docker images
+# All services are tested and verified to work together
+
+networks:
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  # Named volumes for better data persistence
+  jellyfin_config:
+  sonarr_config:
+  radarr_config:
+  lidarr_config:
+  readarr_config:
+  prowlarr_config:
+  bazarr_config:
+  overseerr_config:
+  qbittorrent_config:
+  sabnzbd_config:
+  tautulli_config:
+  homepage_config:
+  portainer_data:
+  traefik_data:
+  postgres_data:
+  redis_data:
+
+services:
+  # =========================
+  # PHASE 1: Core Infrastructure
+  # =========================
+  
+  # Redis - Cache and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - media_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # PostgreSQL - Database for apps that need it
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=mediaserver
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-mediaserver2025}
+      - POSTGRES_DB=mediaserver
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - media_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediaserver"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # =========================
+  # PHASE 2: Media Servers
+  # =========================
+  
+  # Jellyfin - Primary media server
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-http://localhost:8096}
+    volumes:
+      - jellyfin_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${MEDIA_PATH:-./media}/transcodes:/transcodes
+    ports:
+      - 8096:8096      # HTTP Web UI
+      - 8920:8920      # HTTPS Web UI (optional)
+      - 7359:7359/udp  # Client discovery
+      - 1900:1900/udp  # DLNA
+    networks:
+      - media_network
+    devices:
+      - /dev/dri:/dev/dri  # Intel Quick Sync (optional, remove if no Intel GPU)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Plex - Alternative media server (optional)
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - VERSION=docker
+    volumes:
+      - ./config/plex:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+    ports:
+      - 32400:32400
+    networks:
+      - media_network
+    profiles:
+      - optional
+
+  # =========================
+  # PHASE 3: Media Management (Arr Suite)
+  # =========================
+  
+  # Prowlarr - Indexer manager
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - prowlarr_config:/config
+    ports:
+      - 9696:9696
+    networks:
+      - media_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9696"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Sonarr - TV show management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - sonarr_config:/config
+      - ${MEDIA_PATH:-./media}/tv:/tv
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - 8989:8989
+    networks:
+      - media_network
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8989"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Radarr - Movie management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - radarr_config:/config
+      - ${MEDIA_PATH:-./media}/movies:/movies
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - 7878:7878
+    networks:
+      - media_network
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7878"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Lidarr - Music management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - lidarr_config:/config
+      - ${MEDIA_PATH:-./media}/music:/music
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - 8686:8686
+    networks:
+      - media_network
+    depends_on:
+      - prowlarr
+
+  # Readarr - Book management
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - readarr_config:/config
+      - ${MEDIA_PATH:-./media}/books:/books
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - 8787:8787
+    networks:
+      - media_network
+    depends_on:
+      - prowlarr
+
+  # Bazarr - Subtitle management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - bazarr_config:/config
+      - ${MEDIA_PATH:-./media}/movies:/movies
+      - ${MEDIA_PATH:-./media}/tv:/tv
+    ports:
+      - 6767:6767
+    networks:
+      - media_network
+
+  # =========================
+  # PHASE 4: Download Clients
+  # =========================
+  
+  # qBittorrent - Torrent client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - media_network
+
+  # SABnzbd - Usenet client
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - sabnzbd_config:/config
+      - ${DOWNLOADS_PATH:-./downloads}/usenet:/downloads
+      - ${DOWNLOADS_PATH:-./downloads}/incomplete:/incomplete-downloads
+    ports:
+      - 8081:8080
+    networks:
+      - media_network
+
+  # =========================
+  # PHASE 5: Request & Analytics
+  # =========================
+  
+  # Overseerr - Request management for Jellyfin/Plex
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - overseerr_config:/config
+    ports:
+      - 5055:5055
+    networks:
+      - media_network
+
+  # Tautulli - Media server analytics
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - tautulli_config:/config
+    ports:
+      - 8181:8181
+    networks:
+      - media_network
+
+  # =========================
+  # PHASE 6: Management & Monitoring
+  # =========================
+  
+  # Homepage - Beautiful dashboard
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 3000:3000
+    networks:
+      - media_network
+
+  # Portainer - Docker management UI
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    ports:
+      - 9000:9000
+      - 9443:9443
+    networks:
+      - media_network
+
+  # Uptime Kuma - Service monitoring
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./config/uptime-kuma:/app/data
+    ports:
+      - 3001:3001
+    networks:
+      - media_network
+
+  # =========================
+  # PHASE 7: Reverse Proxy (Optional)
+  # =========================
+  
+  # Traefik - Reverse proxy with automatic SSL
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --log.level=INFO
+    ports:
+      - 80:80
+      - 443:443
+      - 8082:8080  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/letsencrypt
+    networks:
+      - media_network
+    profiles:
+      - with-proxy
+
+  # =========================
+  # OPTIONAL SERVICES
+  # =========================
+  
+  # Watchtower - Automatic container updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_MONITOR_ONLY=true
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${EMAIL_FROM:-admin@example.com}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${EMAIL_TO:-admin@example.com}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - media_network
+    profiles:
+      - optional
+
+  # Flaresolverr - Cloudflare bypass for Prowlarr
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ:-America/New_York}
+    ports:
+      - 8191:8191
+    networks:
+      - media_network
+    profiles:
+      - optional
+
+  # =========================
+  # VPN Service (Optional)
+  # =========================
+  
+  # Gluetun - VPN client for secure downloading
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-nordvpn}
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${VPN_USER}
+      - OPENVPN_PASSWORD=${VPN_PASS}
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
+      - FIREWALL_OUTBOUND_SUBNETS=172.20.0.0/16,192.168.0.0/16
+    networks:
+      - media_network
+    profiles:
+      - with-vpn

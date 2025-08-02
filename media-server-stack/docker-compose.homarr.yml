@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Homarr Dashboard
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - homarr_configs:/app/data/configs
+      - homarr_icons:/app/public/icons
+      - homarr_data:/data
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    networks:
+      - traefik_network
+      - media_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homarr-web.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-web.entrypoints=web"
+      - "traefik.http.services.homarr.loadbalancer.server.port=7575"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.homarr-secure.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`) || Host(`homarr.${DOMAIN}`)"
+      - "traefik.http.routers.homarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.homarr-secure.tls=true"
+
+networks:
+  traefik_network:
+    external: true
+  media_network:
+    external: true
+
+volumes:
+  homarr_configs:
+  homarr_icons:
+  homarr_data:

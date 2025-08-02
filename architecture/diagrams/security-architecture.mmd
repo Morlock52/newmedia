@@ -1,0 +1,201 @@
+graph TB
+    subgraph "External Threats"
+        Internet[Internet]
+        Attackers[Attackers]
+        Bots[Malicious Bots]
+    end
+
+    subgraph "Edge Security Layer"
+        CF_WAF[Cloudflare WAF]
+        CF_DDoS[DDoS Protection]
+        CF_Bot[Bot Management]
+        CF_RL[Rate Limiting]
+        GeoBlock[Geo-blocking]
+    end
+
+    subgraph "Network Security Layer"
+        FW[pfSense Firewall]
+        IDS_IPS[Snort IDS/IPS]
+        VPN_GW[VPN Gateway]
+        VLAN[VLAN Segmentation]
+        NetSeg[Network Segmentation]
+    end
+
+    subgraph "Authentication Layer"
+        Authelia[Authelia SSO]
+        Keycloak[Keycloak IdP]
+        MFA[Multi-Factor Auth]
+        LDAP[LDAP/AD]
+        OAuth[OAuth2/OIDC]
+        SAML[SAML Provider]
+    end
+
+    subgraph "Authorization Layer"
+        RBAC[Role-Based Access]
+        OPA[Open Policy Agent]
+        ACL[Access Control Lists]
+        Permissions[Permission Engine]
+    end
+
+    subgraph "Service Mesh Security"
+        Istio[Istio Security]
+        mTLS[Mutual TLS]
+        Envoy[Envoy Proxy]
+        CircuitBreaker[Circuit Breakers]
+        ServiceAuth[Service Auth]
+    end
+
+    subgraph "Application Security"
+        InputVal[Input Validation]
+        SQLInj[SQL Injection Prevention]
+        XSS[XSS Protection]
+        CSRF[CSRF Protection]
+        SecHeaders[Security Headers]
+    end
+
+    subgraph "Data Security"
+        subgraph "Encryption at Rest"
+            DiskEnc[Disk Encryption]
+            DBEnc[Database Encryption]
+            FileEnc[File Encryption]
+            KeyVault[HashiCorp Vault]
+        end
+        
+        subgraph "Encryption in Transit"
+            TLS13[TLS 1.3]
+            VPNTunnel[VPN Tunnels]
+            E2E[End-to-End Encryption]
+        end
+        
+        subgraph "Data Loss Prevention"
+            DLP[DLP Engine]
+            PII[PII Detection]
+            Copyright[Copyright Protection]
+            Watermark[Watermarking]
+        end
+    end
+
+    subgraph "Container Security"
+        RuntimeSec[gVisor Runtime]
+        ImageScan[Trivy Scanning]
+        AdmissionCtrl[Admission Controller]
+        PodPolicy[Pod Security Policy]
+        SecComp[Seccomp Profiles]
+    end
+
+    subgraph "Secrets Management"
+        Vault[HashiCorp Vault]
+        K8sSecrets[K8s Secrets]
+        EnvEncrypt[Env Encryption]
+        RotationEngine[Secret Rotation]
+    end
+
+    subgraph "Monitoring & Compliance"
+        SIEM[SIEM System]
+        AuditLogs[Audit Logging]
+        Compliance[Compliance Engine]
+        ThreatDetect[Threat Detection]
+        Forensics[Forensics Tools]
+    end
+
+    subgraph "Incident Response"
+        AlertSystem[Alert System]
+        Playbooks[Response Playbooks]
+        Isolation[Service Isolation]
+        Recovery[Recovery Procedures]
+    end
+
+    %% Threat Flow
+    Internet --> Attackers
+    Internet --> Bots
+    Attackers --> CF_WAF
+    Bots --> CF_Bot
+
+    %% Edge Security
+    CF_WAF --> CF_DDoS
+    CF_DDoS --> CF_RL
+    CF_Bot --> GeoBlock
+    CF_RL --> FW
+
+    %% Network Security
+    FW --> IDS_IPS
+    IDS_IPS --> VPN_GW
+    VPN_GW --> VLAN
+    VLAN --> NetSeg
+
+    %% Authentication Flow
+    NetSeg --> Authelia
+    Authelia --> Keycloak
+    Authelia --> MFA
+    Keycloak --> LDAP
+    Keycloak --> OAuth
+    Keycloak --> SAML
+
+    %% Authorization
+    Authelia --> RBAC
+    RBAC --> OPA
+    OPA --> ACL
+    ACL --> Permissions
+
+    %% Service Mesh
+    Permissions --> Istio
+    Istio --> mTLS
+    mTLS --> Envoy
+    Envoy --> CircuitBreaker
+    Envoy --> ServiceAuth
+
+    %% Application Security
+    ServiceAuth --> InputVal
+    InputVal --> SQLInj
+    SQLInj --> XSS
+    XSS --> CSRF
+    CSRF --> SecHeaders
+
+    %% Data Encryption
+    SecHeaders --> DiskEnc
+    DiskEnc --> DBEnc
+    DBEnc --> FileEnc
+    FileEnc --> KeyVault
+
+    %% Transit Encryption
+    ServiceAuth --> TLS13
+    TLS13 --> VPNTunnel
+    VPNTunnel --> E2E
+
+    %% DLP
+    FileEnc --> DLP
+    DLP --> PII
+    PII --> Copyright
+    Copyright --> Watermark
+
+    %% Container Security
+    Istio --> RuntimeSec
+    RuntimeSec --> ImageScan
+    ImageScan --> AdmissionCtrl
+    AdmissionCtrl --> PodPolicy
+    PodPolicy --> SecComp
+
+    %% Secrets
+    KeyVault --> Vault
+    Vault --> K8sSecrets
+    K8sSecrets --> EnvEncrypt
+    EnvEncrypt --> RotationEngine
+
+    %% Monitoring
+    All --> SIEM
+    SIEM --> AuditLogs
+    AuditLogs --> Compliance
+    Compliance --> ThreatDetect
+    ThreatDetect --> Forensics
+
+    %% Incident Response
+    ThreatDetect --> AlertSystem
+    AlertSystem --> Playbooks
+    Playbooks --> Isolation
+    Isolation --> Recovery
+
+    style CF_WAF fill:#f96,stroke:#333,stroke-width:4px
+    style Authelia fill:#69f,stroke:#333,stroke-width:4px
+    style Istio fill:#9f6,stroke:#333,stroke-width:4px
+    style Vault fill:#f69,stroke:#333,stroke-width:4px
+    style SIEM fill:#96f,stroke:#333,stroke-width:4px

@@ -1,0 +1,1641 @@
+# Ultimate Media Server Stack - Production 2025
+# =============================================
+# Version: 3.0.0 - Production-Ready with Enterprise Features
+# Features: Security hardening, performance optimization, high availability
+# Requirements: Docker 25.0+, Docker Compose 2.23+
+
+version: '3.9'
+
+# =============================================
+# NETWORKS - Isolated Security Zones
+# =============================================
+networks:
+  # Public-facing services (reverse proxy only)
+  public:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+    driver_opts:
+      com.docker.network.bridge.name: media_public
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+
+  # Frontend services (web UIs)
+  frontend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.1.0/24
+    driver_opts:
+      com.docker.network.bridge.name: media_frontend
+
+  # Backend services (APIs, databases)
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.2.0/24
+    driver_opts:
+      com.docker.network.bridge.name: media_backend
+
+  # Storage network (NFS, object storage)
+  storage:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.3.0/24
+
+  # Download network (VPN isolated)
+  downloads:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.4.0/24
+
+  # Monitoring network
+  monitoring:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.5.0/24
+
+# =============================================
+# VOLUMES - Persistent Storage
+# =============================================
+volumes:
+  # Database volumes
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_ROOT}/postgres/data
+
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_ROOT}/redis/data
+
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+  # Security volumes
+  vault_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_ROOT}/vault/data
+
+  # Backup volumes
+  backup_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BACKUP_LOCATION}
+
+# =============================================
+# SERVICES - Production Configuration
+# =============================================
+
+services:
+  # =============================================
+  # CORE INFRASTRUCTURE
+  # =============================================
+  
+  # PostgreSQL - Primary Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: media_postgres
+    hostname: postgres
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - default_statistics_target=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - work_mem=4MB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - max_wal_size=4GB
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-mediastack}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --data-checksums"
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mediauser} -d ${DB_NAME:-mediastack}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  # Redis - Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: media_redis
+    hostname: redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - backend
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 768M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # SECURITY LAYER
+  # =============================================
+
+  # Traefik - Reverse Proxy with Auto SSL
+  traefik:
+    image: traefik:3.0
+    container_name: media_traefik
+    hostname: traefik
+    restart: unless-stopped
+    command:
+      # Global settings
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=false
+      # API settings
+      - --api=true
+      - --api.dashboard=true
+      - --api.debug=false
+      # Log settings
+      - --log=true
+      - --log.level=INFO
+      - --log.filepath=/logs/traefik.log
+      - --log.format=json
+      # Access log
+      - --accesslog=true
+      - --accesslog.filepath=/logs/access.log
+      - --accesslog.format=json
+      - --accesslog.filters.statusCodes=400-499,500-599
+      # Provider settings
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=public
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      - --providers.file.filename=/dynamic/dynamic.yml
+      - --providers.file.watch=true
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=cloudflare
+      - --entrypoints.websecure.http.tls.domains[0].main=${DOMAIN}
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.${DOMAIN}
+      # Certificate resolver
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.delaybeforecheck=10
+      - --certificatesresolvers.cloudflare.acme.email=${ADMIN_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.cloudflare.acme.keyType=RSA4096
+      # Security headers
+      - --pilot.dashboard=false
+      # Metrics
+      - --metrics.prometheus=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+      # Ping
+      - --ping=true
+      - --ping.entryPoint=ping
+      - --entrypoints.ping.address=:8082
+    environment:
+      CF_API_EMAIL: ${CF_API_EMAIL}
+      CF_DNS_API_TOKEN: ${CF_API_KEY}
+      CF_ZONE_API_TOKEN: ${CF_API_KEY}
+      CLOUDFLARE_EMAIL: ${CF_API_EMAIL}
+      CLOUDFLARE_API_KEY: ${CF_API_KEY}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/traefik/letsencrypt:/letsencrypt
+      - ./docker/traefik/logs:/logs
+      - ./docker/traefik/dynamic:/dynamic:ro
+    networks:
+      - public
+      - frontend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth@docker,security-headers@docker"
+      # Auth middleware
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_USERS}"
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.security-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.X-Robots-Tag=noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.server="
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.X-Powered-By="
+      - "traefik.http.middlewares.security-headers.headers.permissionsPolicy=camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Authelia - Advanced Authentication
+  authelia:
+    image: authelia/authelia:latest
+    container_name: media_authelia
+    hostname: authelia
+    restart: unless-stopped
+    environment:
+      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
+      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_ENCRYPTION_KEY}
+      AUTHELIA_STORAGE_POSTGRES_HOST: postgres
+      AUTHELIA_STORAGE_POSTGRES_PORT: 5432
+      AUTHELIA_STORAGE_POSTGRES_DATABASE: authelia
+      AUTHELIA_STORAGE_POSTGRES_USERNAME: ${DB_USERNAME:-mediauser}
+      AUTHELIA_STORAGE_POSTGRES_PASSWORD: ${DB_PASSWORD}
+      AUTHELIA_NOTIFIER_SMTP_HOST: ${SMTP_SERVER}
+      AUTHELIA_NOTIFIER_SMTP_PORT: ${SMTP_PORT}
+      AUTHELIA_NOTIFIER_SMTP_USERNAME: ${SMTP_USERNAME}
+      AUTHELIA_NOTIFIER_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      AUTHELIA_NOTIFIER_SMTP_SENDER: ${SMTP_FROM_EMAIL}
+      TZ: ${TZ}
+    volumes:
+      - ./docker/authelia/configuration.yml:/config/configuration.yml:ro
+      - ./docker/authelia/users_database.yml:/config/users_database.yml:rw
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "authelia", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls.certresolver=cloudflare"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # MEDIA SERVERS
+  # =============================================
+
+  # Jellyfin - Media Server with Hardware Acceleration
+  jellyfin:
+    image: jellyfin/jellyfin:10.9.1
+    container_name: media_jellyfin
+    hostname: jellyfin
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    group_add:
+      - "109"  # render group for GPU access
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN}
+      JELLYFIN_CONFIG_DIR: /config
+      JELLYFIN_DATA_DIR: /data
+      JELLYFIN_LOG_DIR: /log
+      JELLYFIN_CACHE_DIR: /cache
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    volumes:
+      - ./config/jellyfin:/config
+      - ./config/jellyfin/data:/data
+      - ./logs/jellyfin:/log
+      - /tmp/jellyfin-cache:/cache
+      - /tmp/jellyfin-transcode:/transcode
+      # Media volumes - read-only
+      - ${MOVIES_PATH}:/media/movies:ro
+      - ${TV_PATH}:/media/tv:ro
+      - ${MUSIC_PATH}:/media/music:ro
+      - ${AUDIOBOOKS_PATH}:/media/audiobooks:ro
+      - ${BOOKS_PATH}:/media/books:ro
+      - ${PODCASTS_PATH}:/media/podcasts:ro
+    devices:
+      # Intel GPU for hardware transcoding
+      - /dev/dri:/dev/dri
+      # NVIDIA GPU (if available)
+      # - /dev/nvidia0:/dev/nvidia0
+      # - /dev/nvidiactl:/dev/nvidiactl
+      # - /dev/nvidia-modeset:/dev/nvidia-modeset
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8096:8096"     # HTTP
+      - "8920:8920"     # HTTPS
+      - "7359:7359/udp" # Client discovery
+      - "1900:1900/udp" # DLNA
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: ${JELLYFIN_MEMORY_LIMIT:-4G}
+        reservations:
+          cpus: '1'
+          memory: 1G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Required for hardware acceleration
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=cloudflare"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.http.routers.jellyfin.middlewares=security-headers@docker"
+      # Homepage integration
+      - "homepage.group=Media"
+      - "homepage.name=Jellyfin"
+      - "homepage.icon=jellyfin.png"
+      - "homepage.href=https://jellyfin.${DOMAIN}"
+      - "homepage.description=Media Server"
+      - "homepage.weight=1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # =============================================
+  # ARR SUITE - Media Management
+  # =============================================
+
+  # Prowlarr - Indexer Manager
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:develop
+    container_name: media_prowlarr
+    hostname: prowlarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      PROWLARR__INSTANCE_NAME: Prowlarr
+      PROWLARR__PORT: 9696
+      PROWLARR__LOG_LEVEL: info
+      PROWLARR__ANALYTICS_ENABLED: "False"
+      PROWLARR__AUTHENTICATION_METHOD: External
+      PROWLARR__AUTHENTICATION_REQUIRED: DisabledForLocalAddresses
+      PROWLARR__POSTGRES_HOST: postgres
+      PROWLARR__POSTGRES_PORT: 5432
+      PROWLARR__POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      PROWLARR__POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PROWLARR__POSTGRES_MAIN_DB: prowlarr_main
+      PROWLARR__POSTGRES_LOG_DB: prowlarr_log
+    volumes:
+      - ./config/prowlarr:/config
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: ${PROWLARR_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.routers.prowlarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Prowlarr"
+      - "homepage.icon=prowlarr.png"
+      - "homepage.href=https://prowlarr.${DOMAIN}"
+      - "homepage.description=Indexer Manager"
+      - "homepage.weight=1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Sonarr - TV Show Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:develop
+    container_name: media_sonarr
+    hostname: sonarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      SONARR__INSTANCE_NAME: Sonarr
+      SONARR__PORT: 8989
+      SONARR__LOG_LEVEL: info
+      SONARR__ANALYTICS_ENABLED: "False"
+      SONARR__AUTHENTICATION_METHOD: External
+      SONARR__AUTHENTICATION_REQUIRED: DisabledForLocalAddresses
+      SONARR__POSTGRES_HOST: postgres
+      SONARR__POSTGRES_PORT: 5432
+      SONARR__POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      SONARR__POSTGRES_PASSWORD: ${DB_PASSWORD}
+      SONARR__POSTGRES_MAIN_DB: sonarr_main
+      SONARR__POSTGRES_LOG_DB: sonarr_log
+    volumes:
+      - ./config/sonarr:/config
+      - ${TV_PATH}:/tv
+      - ${DOWNLOADS_TV}:/downloads/tv
+      - ${DOWNLOADS_INCOMPLETE}:/downloads/incomplete
+    networks:
+      - frontend
+      - backend
+      - storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: ${SONARR_MEMORY_LIMIT:-1G}
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Sonarr"
+      - "homepage.icon=sonarr.png"
+      - "homepage.href=https://sonarr.${DOMAIN}"
+      - "homepage.description=TV Show Manager"
+      - "homepage.weight=2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Radarr - Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:develop
+    container_name: media_radarr
+    hostname: radarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      RADARR__INSTANCE_NAME: Radarr
+      RADARR__PORT: 7878
+      RADARR__LOG_LEVEL: info
+      RADARR__ANALYTICS_ENABLED: "False"
+      RADARR__AUTHENTICATION_METHOD: External
+      RADARR__AUTHENTICATION_REQUIRED: DisabledForLocalAddresses
+      RADARR__POSTGRES_HOST: postgres
+      RADARR__POSTGRES_PORT: 5432
+      RADARR__POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      RADARR__POSTGRES_PASSWORD: ${DB_PASSWORD}
+      RADARR__POSTGRES_MAIN_DB: radarr_main
+      RADARR__POSTGRES_LOG_DB: radarr_log
+    volumes:
+      - ./config/radarr:/config
+      - ${MOVIES_PATH}:/movies
+      - ${DOWNLOADS_MOVIES}:/downloads/movies
+      - ${DOWNLOADS_INCOMPLETE}:/downloads/incomplete
+    networks:
+      - frontend
+      - backend
+      - storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: ${RADARR_MEMORY_LIMIT:-1G}
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Radarr"
+      - "homepage.icon=radarr.png"
+      - "homepage.href=https://radarr.${DOMAIN}"
+      - "homepage.description=Movie Manager"
+      - "homepage.weight=3"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Lidarr - Music Management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:develop
+    container_name: media_lidarr
+    hostname: lidarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      LIDARR__INSTANCE_NAME: Lidarr
+      LIDARR__PORT: 8686
+      LIDARR__LOG_LEVEL: info
+      LIDARR__ANALYTICS_ENABLED: "False"
+      LIDARR__AUTHENTICATION_METHOD: External
+      LIDARR__AUTHENTICATION_REQUIRED: DisabledForLocalAddresses
+      LIDARR__POSTGRES_HOST: postgres
+      LIDARR__POSTGRES_PORT: 5432
+      LIDARR__POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      LIDARR__POSTGRES_PASSWORD: ${DB_PASSWORD}
+      LIDARR__POSTGRES_MAIN_DB: lidarr_main
+      LIDARR__POSTGRES_LOG_DB: lidarr_log
+    volumes:
+      - ./config/lidarr:/config
+      - ${MUSIC_PATH}:/music
+      - ${DOWNLOADS_MUSIC}:/downloads/music
+      - ${DOWNLOADS_INCOMPLETE}:/downloads/incomplete
+    networks:
+      - frontend
+      - backend
+      - storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8686/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: ${LIDARR_MEMORY_LIMIT:-768M}
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr.entrypoints=websecure"
+      - "traefik.http.routers.lidarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Lidarr"
+      - "homepage.icon=lidarr.png"
+      - "homepage.href=https://lidarr.${DOMAIN}"
+      - "homepage.description=Music Manager"
+      - "homepage.weight=4"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Readarr - Book Management
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: media_readarr
+    hostname: readarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      READARR__INSTANCE_NAME: Readarr
+      READARR__PORT: 8787
+      READARR__LOG_LEVEL: info
+      READARR__ANALYTICS_ENABLED: "False"
+      READARR__AUTHENTICATION_METHOD: External
+      READARR__AUTHENTICATION_REQUIRED: DisabledForLocalAddresses
+      READARR__POSTGRES_HOST: postgres
+      READARR__POSTGRES_PORT: 5432
+      READARR__POSTGRES_USER: ${DB_USERNAME:-mediauser}
+      READARR__POSTGRES_PASSWORD: ${DB_PASSWORD}
+      READARR__POSTGRES_MAIN_DB: readarr_main
+      READARR__POSTGRES_LOG_DB: readarr_log
+    volumes:
+      - ./config/readarr:/config
+      - ${BOOKS_PATH}:/books
+      - ${AUDIOBOOKS_PATH}:/audiobooks
+      - ${DOWNLOADS_AUDIOBOOKS}:/downloads/audiobooks
+      - ${DOWNLOADS_INCOMPLETE}:/downloads/incomplete
+    networks:
+      - frontend
+      - backend
+      - storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prowlarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: ${READARR_MEMORY_LIMIT:-768M}
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr.entrypoints=websecure"
+      - "traefik.http.routers.readarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.readarr.loadbalancer.server.port=8787"
+      - "traefik.http.routers.readarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Readarr"
+      - "homepage.icon=readarr.png"
+      - "homepage.href=https://readarr.${DOMAIN}"
+      - "homepage.description=Book Manager"
+      - "homepage.weight=5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Bazarr - Subtitle Management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: media_bazarr
+    hostname: bazarr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+    volumes:
+      - ./config/bazarr:/config
+      - ${MOVIES_PATH}:/movies
+      - ${TV_PATH}:/tv
+    networks:
+      - frontend
+      - backend
+      - storage
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6767/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: ${BAZARR_MEMORY_LIMIT:-512M}
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr.entrypoints=websecure"
+      - "traefik.http.routers.bazarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+      - "traefik.http.routers.bazarr.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Media Management"
+      - "homepage.name=Bazarr"
+      - "homepage.icon=bazarr.png"
+      - "homepage.href=https://bazarr.${DOMAIN}"
+      - "homepage.description=Subtitle Manager"
+      - "homepage.weight=6"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # DOWNLOAD CLIENTS
+  # =============================================
+
+  # VPN - Gluetun for secure downloading
+  vpn:
+    image: qmcgaw/gluetun:latest
+    container_name: media_vpn
+    hostname: vpn
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE:-mullvad}
+      VPN_TYPE: ${VPN_TYPE:-wireguard}
+      WIREGUARD_PRIVATE_KEY: ${VPN_PRIVATE_KEY}
+      WIREGUARD_ADDRESSES: ${VPN_ADDRESSES}
+      SERVER_CITIES: ${VPN_REGION}
+      FIREWALL_OUTBOUND_SUBNETS: 172.30.0.0/16
+      FIREWALL_VPN_INPUT_PORTS: 6881,6889
+      HTTPPROXY: "on"
+      HTTPPROXY_LOG: "on"
+      SHADOWSOCKS: "on"
+      DOT: "on"
+      DOT_PROVIDERS: cloudflare
+      BLOCK_MALICIOUS: "on"
+      BLOCK_SURVEILLANCE: "on"
+      BLOCK_ADS: "on"
+      UPDATER_PERIOD: 24h
+      TZ: ${TZ}
+    volumes:
+      - ./config/gluetun:/gluetun
+    networks:
+      - downloads
+      - backend
+    ports:
+      # qBittorrent
+      - "8080:8080"
+      # Privoxy
+      - "8888:8888"
+      # Shadowsocks
+      - "8388:8388"
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # qBittorrent - Torrent Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: media_qbittorrent
+    hostname: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:vpn"
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+      WEBUI_PORT: 8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAIN}`)"
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=cloudflare"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+      - "traefik.http.routers.qbittorrent.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Downloads"
+      - "homepage.name=qBittorrent"
+      - "homepage.icon=qbittorrent.png"
+      - "homepage.href=https://qbittorrent.${DOMAIN}"
+      - "homepage.description=Torrent Client"
+      - "homepage.weight=1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # SABnzbd - Usenet Client
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: media_sabnzbd
+    hostname: sabnzbd
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+    volumes:
+      - ./config/sabnzbd:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${DOWNLOADS_INCOMPLETE}:/incomplete-downloads
+    networks:
+      - frontend
+      - backend
+      - storage
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/sabnzbd/api?mode=version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAIN}`)"
+      - "traefik.http.routers.sabnzbd.entrypoints=websecure"
+      - "traefik.http.routers.sabnzbd.tls.certresolver=cloudflare"
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sabnzbd.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Downloads"
+      - "homepage.name=SABnzbd"
+      - "homepage.icon=sabnzbd.png"
+      - "homepage.href=https://sabnzbd.${DOMAIN}"
+      - "homepage.description=Usenet Client"
+      - "homepage.weight=2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # REQUEST MANAGEMENT
+  # =============================================
+
+  # Overseerr - Request Management
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: media_overseerr
+    hostname: overseerr
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+    volumes:
+      - ./config/overseerr:/config
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - jellyfin
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5055/api/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: ${OVERSEERR_MEMORY_LIMIT:-1G}
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.rule=Host(`overseerr.${DOMAIN}`) || Host(`requests.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
+      - "traefik.http.routers.overseerr.middlewares=security-headers@docker"
+      # Homepage
+      - "homepage.group=Media"
+      - "homepage.name=Overseerr"
+      - "homepage.icon=overseerr.png"
+      - "homepage.href=https://overseerr.${DOMAIN}"
+      - "homepage.description=Request Management"
+      - "homepage.weight=2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # MONITORING & ANALYTICS
+  # =============================================
+
+  # Tautulli - Plex/Jellyfin Analytics
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: media_tautulli
+    hostname: tautulli
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      UMASK: 002
+    volumes:
+      - ./config/tautulli:/config
+      - ./logs/jellyfin:/logs:ro
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - jellyfin
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.tls.certresolver=cloudflare"
+      - "traefik.http.services.tautulli.loadbalancer.server.port=8181"
+      - "traefik.http.routers.tautulli.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Monitoring"
+      - "homepage.name=Tautulli"
+      - "homepage.icon=tautulli.png"
+      - "homepage.href=https://tautulli.${DOMAIN}"
+      - "homepage.description=Media Analytics"
+      - "homepage.weight=1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: media_prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring
+      - backend
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=cloudflare"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker,security-headers@docker"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Grafana - Metrics Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: media_grafana
+    hostname: grafana
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+      GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}
+      GF_SERVER_ENABLE_GZIP: "true"
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: ${DB_USERNAME:-mediauser}
+      GF_DATABASE_PASSWORD: ${DB_PASSWORD}
+      GF_SESSION_PROVIDER: redis
+      GF_SESSION_PROVIDER_CONFIG: addr=redis:6379,password=${REDIS_PASSWORD},db=1
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "false"
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_AUTH_OAUTH_AUTO_LOGIN: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_USERS_DEFAULT_THEME: dark
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: info
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring
+      - frontend
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflare"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Monitoring"
+      - "homepage.name=Grafana"
+      - "homepage.icon=grafana.png"
+      - "homepage.href=https://grafana.${DOMAIN}"
+      - "homepage.description=Metrics Dashboard"
+      - "homepage.weight=2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: media_loki
+    hostname: loki
+    restart: unless-stopped
+    user: "${PUID}:${PGID}"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./docker/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring
+      - backend
+    ports:
+      - "127.0.0.1:3100:3100"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Promtail - Log Collector
+  promtail:
+    image: grafana/promtail:latest
+    container_name: media_promtail
+    hostname: promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./docker/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - ./logs:/logs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # MANAGEMENT INTERFACES
+  # =============================================
+
+  # Homepage - Dashboard
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: media_homepage
+    hostname: homepage
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      HOMEPAGE_VAR_DOMAIN: ${DOMAIN}
+    volumes:
+      - ./docker/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/homepage/icons:/app/public/icons
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls.certresolver=cloudflare"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.middlewares=authelia@docker,security-headers@docker"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Portainer - Container Management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: media_portainer
+    hostname: portainer
+    restart: unless-stopped
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/portainer:/data
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "9443:9443"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "https://localhost:9443"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=cloudflare"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.routers.portainer.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Management"
+      - "homepage.name=Portainer"
+      - "homepage.icon=portainer.png"
+      - "homepage.href=https://portainer.${DOMAIN}"
+      - "homepage.description=Container Management"
+      - "homepage.weight=1"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =============================================
+  # BACKUP & MAINTENANCE
+  # =============================================
+
+  # Duplicati - Backup Solution
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: media_duplicati
+    hostname: duplicati
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      CLI_ARGS: --webservice-interface=any
+    volumes:
+      - ./config/duplicati:/config
+      - backup_data:/backups
+      - ./config:/source/config:ro
+      - ./docker:/source/docker:ro
+    networks:
+      - frontend
+      - storage
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=cloudflare"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker,security-headers@docker"
+      # Homepage
+      - "homepage.group=Management"
+      - "homepage.name=Duplicati"
+      - "homepage.icon=duplicati.png"
+      - "homepage.href=https://backup.${DOMAIN}"
+      - "homepage.description=Backup Manager"
+      - "homepage.weight=2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Watchtower - Container Updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: media_watchtower
+    hostname: watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_RESTARTING: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+      WATCHTOWER_REVIVE_STOPPED: "false"
+      WATCHTOWER_NO_PULL: "false"
+      WATCHTOWER_MONITOR_ONLY: "false"
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *"  # 4 AM daily
+      WATCHTOWER_NOTIFICATIONS: shoutrrr
+      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL}
+      WATCHTOWER_NOTIFICATION_TEMPLATE: |
+        {{range .}}{{.Message}}{{println}}{{end}}
+      TZ: ${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =============================================
+# HEALTHCHECK DEPENDENCIES
+# =============================================
+# Service startup order is managed through depends_on
+# with health checks to ensure proper initialization

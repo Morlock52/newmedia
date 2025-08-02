@@ -1,0 +1,203 @@
+{
+  "type": "container_security_strategy",
+  "created": "2025-08-02",
+  "version": "1.0.0",
+  "components": {
+    "non_root_users": {
+      "implementation": "All containers run with PUID=1001/PGID=1001",
+      "umask": "077 for restrictive permissions",
+      "user_namespace_remapping": "Enabled in Docker daemon",
+      "benefits": [
+        "Prevents privilege escalation",
+        "Limits container breakout risks",
+        "Enforces least privilege principle"
+      ]
+    },
+    "read_only_filesystems": {
+      "implementation": "read_only: true in docker-compose",
+      "writable_paths": "Using tmpfs for /tmp, /var/log, /cache",
+      "persistent_data": "Specific volume mounts only",
+      "benefits": [
+        "Prevents malware persistence",
+        "Blocks unauthorized modifications",
+        "Ensures container immutability"
+      ]
+    },
+    "security_scanning": {
+      "tool": "Trivy",
+      "automation": "scripts/security-scan.sh",
+      "reports": "JSON format in security/reports/",
+      "schedule": "Daily automated scans",
+      "sbom_generation": "Syft integration for software inventory",
+      "features": [
+        "CVE detection",
+        "License compliance",
+        "Secret scanning",
+        "Configuration auditing"
+      ]
+    },
+    "secret_management": {
+      "storage": "Docker secrets (external)",
+      "rotation": "Automated with scripts/rotate-secrets.sh",
+      "categories": [
+        "database_passwords",
+        "api_keys",
+        "auth_tokens",
+        "ssl_certificates",
+        "vpn_credentials"
+      ],
+      "zero_downtime": "Rolling updates with service refresh",
+      "security_features": [
+        "Encrypted at rest",
+        "In-memory only exposure",
+        "Service-specific access",
+        "Audit logging"
+      ]
+    },
+    "network_segmentation": {
+      "zones": {
+        "dmz": {
+          "subnet": "172.30.0.0/24",
+          "purpose": "Public-facing services (Traefik only)",
+          "restrictions": "HTTP/HTTPS only, no outbound initiation"
+        },
+        "frontend": {
+          "subnet": "172.30.1.0/24",
+          "purpose": "Web interfaces and APIs",
+          "restrictions": "Internal only, specific ports allowed"
+        },
+        "backend": {
+          "subnet": "172.30.2.0/24",
+          "purpose": "Databases and cache",
+          "restrictions": "No external access, frontend only"
+        },
+        "downloads": {
+          "subnet": "172.30.3.0/24",
+          "purpose": "Download clients",
+          "restrictions": "VPN only egress, kill switch enabled"
+        },
+        "monitoring": {
+          "subnet": "172.30.4.0/24",
+          "purpose": "Metrics and observability",
+          "restrictions": "Read-only access to other zones"
+        }
+      },
+      "firewall": "iptables DOCKER-USER chain rules",
+      "implementation": "scripts/setup-firewall.sh"
+    },
+    "apparmor_profiles": {
+      "media_server": {
+        "profile": "apparmor/media-server-profile",
+        "applies_to": ["jellyfin", "plex", "emby"],
+        "restrictions": "File access, network, capabilities"
+      },
+      "arr_suite": {
+        "profile": "apparmor/arr-suite-profile",
+        "applies_to": ["sonarr", "radarr", "lidarr", "prowlarr", "bazarr"],
+        "restrictions": "Database access, media directories"
+      },
+      "enforcement": "security_opt in docker-compose"
+    },
+    "seccomp_profiles": {
+      "implementation": "JSON profiles per service type",
+      "syscall_filtering": "Whitelist approach",
+      "default_action": "SCMP_ACT_ERRNO",
+      "profiles": [
+        "seccomp/media-server.json",
+        "seccomp/arr-suite.json",
+        "seccomp/download-client.json",
+        "seccomp/traefik.json"
+      ]
+    },
+    "image_verification": {
+      "docker_content_trust": "DOCKER_CONTENT_TRUST=1",
+      "cosign": "Public key verification for signed images",
+      "automated_checks": "Pre-deployment verification script",
+      "trusted_registries": [
+        "docker.io",
+        "lscr.io",
+        "ghcr.io",
+        "gcr.io"
+      ]
+    },
+    "runtime_security": {
+      "falco": {
+        "purpose": "Kernel-level runtime monitoring",
+        "rules": "Custom rules for media server patterns",
+        "alerts": "Real-time security event detection"
+      },
+      "capabilities": {
+        "dropped": "ALL capabilities dropped by default",
+        "added": "Only minimum required (CHOWN, DAC_OVERRIDE, SETUID, SETGID)"
+      },
+      "no_new_privileges": "Enforced for all containers"
+    },
+    "monitoring": {
+      "prometheus_metrics": [
+        "container_security_violations",
+        "firewall_blocked_connections",
+        "failed_authentication_attempts",
+        "vulnerability_scan_results"
+      ],
+      "grafana_dashboards": [
+        "Security Overview",
+        "Container Compliance",
+        "Network Security",
+        "Secret Access Audit"
+      ],
+      "log_aggregation": "Centralized security logs with Loki",
+      "alerting": {
+        "critical": ["Container escape attempts", "Critical CVEs"],
+        "high": ["Privilege escalation", "Firewall breaches"],
+        "medium": ["Failed auth attempts", "Policy violations"]
+      }
+    }
+  },
+  "implementation_files": {
+    "docker_compose": "security/docker-compose-secure.yml",
+    "apparmor_profiles": "security/apparmor/",
+    "seccomp_profiles": "security/seccomp/",
+    "scripts": {
+      "security_scan": "security/scripts/security-scan.sh",
+      "rotate_secrets": "security/scripts/rotate-secrets.sh",
+      "setup_firewall": "security/scripts/setup-firewall.sh"
+    },
+    "documentation": "security/README.md"
+  },
+  "deployment_checklist": [
+    "Enable Docker user namespace remapping",
+    "Deploy AppArmor profiles to /etc/apparmor.d/",
+    "Initialize secrets with rotate-secrets.sh init",
+    "Apply firewall rules with setup-firewall.sh",
+    "Configure Docker Content Trust",
+    "Schedule security scans",
+    "Set up monitoring and alerts",
+    "Test all services for functionality",
+    "Document emergency procedures",
+    "Train operations team"
+  ],
+  "compliance": {
+    "standards": [
+      "CIS Docker Benchmark",
+      "NIST Cybersecurity Framework",
+      "OWASP Container Security Top 10"
+    ],
+    "audit_frequency": "Quarterly",
+    "penetration_testing": "Bi-annually"
+  },
+  "incident_response": {
+    "detection": ["Falco", "Prometheus alerts", "Log analysis"],
+    "response_steps": [
+      "Isolate affected container",
+      "Create forensic snapshot",
+      "Analyze attack vector",
+      "Apply countermeasures",
+      "Restore from secure backup",
+      "Document lessons learned"
+    ],
+    "contacts": {
+      "security_team": "security@example.com",
+      "escalation": "oncall@example.com"
+    }
+  }
+}

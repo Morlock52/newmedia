@@ -1,0 +1,1137 @@
+version: "3.9"
+
+networks:
+  media-net:
+    driver: bridge
+  vpn-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  # Database volumes
+  postgres_data:
+  mariadb_data:
+  redis_data:
+  # Media volumes
+  jellyfin_config:
+  plex_config:
+  emby_config:
+  # Monitoring volumes
+  grafana_data:
+  prometheus_data:
+  # Utility volumes
+  nextcloud_data:
+  gitea_data:
+
+services:
+  # ==============================================
+  # DASHBOARDS & MAIN INTERFACE
+  # ==============================================
+  
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./homarr-configs:/app/data/configs
+      - ./homarr-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 7575:7575
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Dashboards"
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./homepage-configs:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 3001:3000
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  dashy:
+    image: lissy93/dashy:latest
+    container_name: dashy
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./dashy-config:/app/public/conf.yml
+    ports:
+      - 4000:80
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # MEDIA SERVERS
+  # ==============================================
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=http://localhost:8096
+    volumes:
+      - jellyfin_config:/config
+      - ./media:/media:ro
+      - ./transcode:/transcode
+    # Hardware acceleration disabled for macOS compatibility
+    # devices:
+    #   - /dev/dri:/dev/dri  # Intel GPU (Linux only)
+    ports:
+      - 8096:8096
+      - 8920:8920  # HTTPS
+      - 7359:7359/udp  # Discovery
+      - 1900:1900/udp  # DLNA
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Servers"
+
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - PLEX_CLAIM=${PLEX_CLAIM_TOKEN}
+    volumes:
+      - plex_config:/config
+      - ./media:/data:ro
+      - ./transcode:/transcode
+    # Hardware acceleration disabled for macOS compatibility
+    # devices:
+    #   - /dev/dri:/dev/dri  # Intel GPU (Linux only)
+    ports:
+      - 32400:32400
+      - 3005:3005
+      - 8324:8324
+      - 32469:32469
+      - 1900:1900/udp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Servers"
+
+  emby:
+    image: emby/embyserver:latest
+    container_name: emby
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - UID=1000
+      - GID=1000
+    volumes:
+      - emby_config:/config
+      - ./media:/mnt/share1:ro
+    # Hardware acceleration disabled for macOS compatibility
+    # devices:
+    #   - /dev/dri:/dev/dri  # Intel GPU (Linux only)
+    ports:
+      - 8922:8920
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Servers"
+
+  # ==============================================
+  # MEDIA MANAGEMENT (*ARR SUITE)
+  # ==============================================
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sonarr:/config
+      - ./media:/media
+      - ./downloads:/downloads
+    ports:
+      - 8989:8989
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Management"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/radarr:/config
+      - ./media:/media
+      - ./downloads:/downloads
+    ports:
+      - 7878:7878
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Management"
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/lidarr:/config
+      - ./media/music:/music
+      - ./downloads:/downloads
+    ports:
+      - 8686:8686
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Management"
+
+  # readarr:
+  #   image: lscr.io/linuxserver/readarr:develop
+  #   container_name: readarr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=${TZ:-America/New_York}
+  #   volumes:
+  #     - ./config/readarr:/config
+  #     - ./media/books:/books
+  #     - ./downloads:/downloads
+  #   ports:
+  #     - 8787:8787
+  #   networks:
+  #     - media-net
+  #   restart: unless-stopped
+  #   labels:
+  #     - "homarr.group=Media Management"
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/bazarr:/config
+      - ./media:/media
+    ports:
+      - 6767:6767
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Management"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - 9696:9696
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Management"
+
+  # ==============================================
+  # REQUEST MANAGEMENT
+  # ==============================================
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/jellyseerr:/app/config
+    ports:
+      - 5055:5055
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Request Management"
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/overseerr:/config
+    ports:
+      - 5056:5055
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Request Management"
+
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/ombi:/config
+    ports:
+      - 3579:3579
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Request Management"
+
+  # ==============================================
+  # DOWNLOAD SERVICES
+  # ==============================================
+
+  # VPN service disabled for demo (requires VPN configuration)
+  # gluetun:
+  #   image: qmcgaw/gluetun:latest
+  #   container_name: gluetun
+  #   cap_add:
+  #     - NET_ADMIN
+  #   environment:
+  #     - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-mullvad}
+  #     - VPN_TYPE=wireguard
+  #     - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+  #     - WIREGUARD_ADDRESSES=${VPN_ADDRESSES}
+  #     - FIREWALL_OUTBOUND_SUBNETS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+  #   volumes:
+  #     - ./config/gluetun:/gluetun
+  #   ports:
+  #     - 8090:8080  # qBittorrent WebUI (changed to avoid conflict)
+  #     - 9091:9091  # Transmission WebUI
+  #     - 8112:8112  # Deluge WebUI
+  #   networks:
+  #     - vpn-net
+  #     - media-net
+  #   restart: unless-stopped
+  #   labels:
+  #     - "homarr.group=VPN"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ./downloads:/downloads
+    ports:
+      - 8090:8080
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Downloads"
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/transmission:/config
+      - ./downloads:/downloads
+    ports:
+      - 9091:9091
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Downloads"
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sabnzbd:/config
+      - ./downloads:/downloads
+      - ./downloads/incomplete:/incomplete-downloads
+    ports:
+      - 8085:8080
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Downloads"
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/nzbget:/config
+      - ./downloads:/downloads
+    ports:
+      - 6789:6789
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Downloads"
+
+  # ==============================================
+  # CONTENT LIBRARIES
+  # ==============================================
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/calibre-web:/config
+      - ./media/books:/books
+    ports:
+      - 8083:8083
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/audiobookshelf:/config
+      - ./config/audiobookshelf/metadata:/metadata
+      - ./media/audiobooks:/audiobooks
+      - ./media/podcasts:/podcasts
+    ports:
+      - 13378:80
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=/navidrome
+    volumes:
+      - ./config/navidrome:/data
+      - ./media/music:/music:ro
+    ports:
+      - 4533:4533
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  airsonic-advanced:
+    image: airsonicadvanced/airsonic-advanced:latest
+    container_name: airsonic
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/airsonic:/airsonic/config
+      - ./media/music:/airsonic/music:ro
+      - ./config/airsonic/playlists:/airsonic/playlists
+      - ./config/airsonic/podcasts:/airsonic/podcasts
+    ports:
+      - 4040:4040
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  photoprism:
+    image: photoprism/photoprism:latest
+    container_name: photoprism
+    environment:
+      - PHOTOPRISM_ADMIN_PASSWORD=${PHOTOPRISM_ADMIN_PASSWORD:-changeme}
+      - PHOTOPRISM_SITE_URL=http://localhost:2342
+      - PHOTOPRISM_DATABASE_DRIVER=mysql
+      - PHOTOPRISM_DATABASE_SERVER=mariadb:3306
+      - PHOTOPRISM_DATABASE_NAME=photoprism
+      - PHOTOPRISM_DATABASE_USER=photoprism
+      - PHOTOPRISM_DATABASE_PASSWORD=${PHOTOPRISM_DB_PASSWORD:-changeme}
+      - PHOTOPRISM_SITE_CAPTION=AI-Powered Photos
+    volumes:
+      - ./media/photos:/photoprism/originals
+      - ./config/photoprism/storage:/photoprism/storage
+    ports:
+      - 2342:2342
+    networks:
+      - media-net
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_server
+    command: ["start.sh", "immich"]
+    volumes:
+      - ./media/photos:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - 2283:3001
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_microservices
+    command: ["start.sh", "microservices"]
+    volumes:
+      - ./media/photos:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - DB_HOSTNAME=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+      - IMMICH_MACHINE_LEARNING_URL=http://immich-machine-learning:3003
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich_machine_learning
+    volumes:
+      - ./config/immich/model-cache:/cache
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    environment:
+      - PAPERLESS_REDIS=redis://redis:6379
+      - PAPERLESS_DBHOST=postgres
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:-changeme}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:-changeme}
+      - PAPERLESS_URL=http://localhost:8000
+      - PAPERLESS_OCR_LANGUAGE=eng
+    volumes:
+      - ./config/paperless/data:/usr/src/paperless/data
+      - ./config/paperless/media:/usr/src/paperless/media
+      - ./config/paperless/export:/usr/src/paperless/export
+      - ./config/paperless/consume:/usr/src/paperless/consume
+    ports:
+      - 8000:8000
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  komga:
+    image: gotson/komga:latest
+    container_name: komga
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/komga:/config
+      - ./media/comics:/data
+    ports:
+      - 25600:25600
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Libraries"
+
+  # ==============================================
+  # UTILITIES & TOOLS
+  # ==============================================
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-changeme}
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD:-changeme}
+    volumes:
+      - nextcloud_data:/var/www/html
+      - ./config/nextcloud/data:/var/www/html/data
+    ports:
+      - 8888:80
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Utilities"
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    environment:
+      - WEBSOCKET_ENABLED=true
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-changeme}
+    volumes:
+      - ./config/vaultwarden:/data
+    ports:
+      - 8200:80
+      - 3012:3012
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Utilities"
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - WEBPASSWORD=${PIHOLE_PASSWORD:-changeme}
+    volumes:
+      - ./config/pihole/etc-pihole:/etc/pihole
+      - ./config/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+    ports:
+      - 80:80
+      - 53:53/tcp
+      - 53:53/udp
+      - 67:67/udp
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Network"
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/adguardhome/work:/opt/adguardhome/work
+      - ./config/adguardhome/conf:/opt/adguardhome/conf
+    ports:
+      - 3000:3000  # Web interface
+      - 5353:53/tcp  # DNS
+      - 5353:53/udp  # DNS
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Network"
+
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/syncthing:/config
+      - ./sync:/data1
+      - ./media:/data2
+    ports:
+      - 8384:8384
+      - 22000:22000/tcp
+      - 22000:22000/udp
+      - 21027:21027/udp
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Utilities"
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    environment:
+      - FB_DATABASE=/database/filebrowser.db
+    volumes:
+      - ./media:/srv
+      - ./config/filebrowser/filebrowser.db:/database/filebrowser.db
+      - ./config/filebrowser/settings.json:/config/settings.json
+    ports:
+      - 8088:80
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Utilities"
+
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - PASSWORD=${CODESERVER_PASSWORD:-changeme}
+      - SUDO_PASSWORD=${CODESERVER_SUDO_PASSWORD:-changeme}
+    volumes:
+      - ./config/code-server:/config
+      - .:/workspace
+    ports:
+      - 8443:8443
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Development"
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD:-changeme}
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 3030:3000
+      - 222:22
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Development"
+
+  # ==============================================
+  # MANAGEMENT & MONITORING
+  # ==============================================
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/portainer:/data
+    ports:
+      - 9000:9000
+      - 9443:9443
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Management"
+
+  yacht:
+    image: selfhostedpro/yacht:latest
+    container_name: yacht
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/yacht:/config
+    ports:
+      - 8001:8000
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Management"
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    environment:
+      - DB_MYSQL_HOST=mariadb
+      - DB_MYSQL_PORT=3306
+      - DB_MYSQL_USER=npm
+      - DB_MYSQL_PASSWORD=${NPM_DB_PASSWORD:-changeme}
+      - DB_MYSQL_NAME=npm
+    volumes:
+      - ./config/nginx-proxy-manager/data:/data
+      - ./config/nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+    ports:
+      - 81:81
+      - 443:443
+    networks:
+      - media-net
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Management"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Management"
+
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - DIUN_WATCH_SCHEDULE=0 */6 * * *
+      - DIUN_PROVIDERS_DOCKER=true
+      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
+    volumes:
+      - ./config/diun:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Management"
+
+  # ==============================================
+  # MONITORING STACK
+  # ==============================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - 3003:3000
+    networks:
+      - monitoring-net
+      - media-net
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - 3100:3100
+    volumes:
+      - ./config/loki:/etc/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/promtail:/etc/promtail
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    volumes:
+      - ./config/uptime-kuma:/app/data
+    ports:
+      - 3001:3001
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  scrutiny:
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    container_name: scrutiny
+    cap_add:
+      - SYS_RAWIO
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./config/scrutiny:/opt/scrutiny/config
+    ports:
+      - 8086:8086
+    # Storage devices disabled for macOS compatibility
+    # devices:
+    #   - /dev/sda  # Linux storage device
+    #   - /dev/sdb  # Linux storage device
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+    pid: host
+    ports:
+      - 61208:61208
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    hostname: localhost
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 19999:19999
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Monitoring"
+
+  # ==============================================
+  # DATABASES
+  # ==============================================
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_MULTIPLE_DATABASES=immich,paperless,nextcloud,gitea
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-changeme}
+      - MYSQL_DATABASE=npm
+      - MYSQL_USER=npm
+      - MYSQL_PASSWORD=${NPM_DB_PASSWORD:-changeme}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./config/mariadb/init-multiple-databases.sql:/docker-entrypoint-initdb.d/init-multiple-databases.sql
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+  # ==============================================
+  # STATISTICS & ANALYTICS
+  # ==============================================
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/tautulli:/config
+    ports:
+      - 8181:8181
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Statistics"
+
+  # ==============================================
+  # MEDIA PROCESSING
+  # ==============================================
+
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - PUID=1000
+      - PGID=1000
+      - UMASK_SET=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+    volumes:
+      - ./config/tdarr/server:/app/server
+      - ./config/tdarr/configs:/app/configs
+      - ./config/tdarr/logs:/app/logs
+      - ./media:/media
+      - ./transcode:/temp
+    ports:
+      - 8265:8265  # WebUI
+      - 8266:8266  # Server
+    # Hardware acceleration disabled for macOS compatibility
+    # devices:
+    #   - /dev/dri:/dev/dri  # Intel GPU (Linux only)
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homarr.group=Media Processing"

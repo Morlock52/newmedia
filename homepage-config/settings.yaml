@@ -1,0 +1,14 @@
+title: Media Server 2025
+theme: dark
+color: blue
+target: _blank
+layout:
+  Media:
+    style: row
+    columns: 4
+  Services:
+    style: row
+    columns: 3
+  Monitoring:
+    style: row
+    columns: 3

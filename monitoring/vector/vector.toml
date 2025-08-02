@@ -1,0 +1,249 @@
+# Vector Configuration for Media Server Log Processing
+# Collects, transforms, and routes logs from all media services
+
+[api]
+enabled = true
+address = "127.0.0.1:8686"
+
+# =============================================================================
+# SOURCES - Log Collection
+# =============================================================================
+
+# Docker container logs
+[sources.docker_logs]
+type = "docker_logs"
+include_containers = [
+  "jellyfin",
+  "plex", 
+  "emby",
+  "sonarr",
+  "radarr",
+  "lidarr",
+  "bazarr",
+  "prowlarr",
+  "qbittorrent",
+  "sabnzbd",
+  "overseerr",
+  "tautulli",
+  "homepage",
+  "grafana",
+  "prometheus",
+  "loki"
+]
+
+# System logs
+[sources.system_logs]
+type = "file"
+include = ["/var/log/syslog", "/var/log/messages", "/var/log/dmesg"]
+ignore_older_secs = 86400
+
+# Application logs
+[sources.app_logs]
+type = "file"
+include = ["/var/log/nginx/*.log", "/var/log/apache2/*.log"]
+ignore_older_secs = 86400
+
+# =============================================================================
+# TRANSFORMS - Log Processing
+# =============================================================================
+
+# Parse and enrich container logs
+[transforms.parse_container_logs]
+type = "remap"
+inputs = ["docker_logs"]
+source = '''
+  # Parse timestamp
+  .timestamp = parse_timestamp(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.fZ") ?? now()
+  
+  # Extract service name from container name
+  .service = string!(.container_name)
+  
+  # Parse log level from message
+  log_level_patterns = {
+    "ERROR": "error",
+    "WARN": "warn", 
+    "INFO": "info",
+    "DEBUG": "debug",
+    "TRACE": "trace"
+  }
+  
+  for pattern, level in log_level_patterns {
+    if contains(.message, pattern) {
+      .level = level
+      break
+    }
+  }
+  
+  .level = .level ?? "info"
+  
+  # Extract structured data for specific services
+  if .service == "jellyfin" {
+    # Parse Jellyfin specific log patterns
+    if match(.message, r"Session (\w+) playing") {
+      .session_id = capture!(.message, r"Session (\w+)")
+      .event_type = "playback_start"
+    }
+    
+    if match(.message, r"Transcoding") {
+      .event_type = "transcode"
+    }
+  }
+  
+  if .service == "sonarr" || .service == "radarr" {
+    # Parse Arr suite download events
+    if match(.message, r"Downloading") {
+      .event_type = "download_start"
+    }
+    
+    if match(.message, r"Import completed") {
+      .event_type = "import_completed"
+    }
+  }
+  
+  if .service == "qbittorrent" {
+    # Parse torrent events
+    if match(.message, r"added") {
+      .event_type = "torrent_added"
+    }
+    
+    if match(.message, r"completed") {
+      .event_type = "torrent_completed"
+    }
+  }
+  
+  # Add metadata
+  .media_server = true
+  .environment = "production"
+'''
+
+# Filter for error logs
+[transforms.error_logs]
+type = "filter"
+inputs = ["parse_container_logs"]
+condition = '.level == "error"'
+
+# Filter for media events
+[transforms.media_events]
+type = "filter"
+inputs = ["parse_container_logs"]
+condition = 'exists(.event_type)'
+
+# Aggregate metrics from logs
+[transforms.log_metrics]
+type = "log_to_metric"
+inputs = ["parse_container_logs"]
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "log_events_total"
+tags.service = "{{ service }}"
+tags.level = "{{ level }}"
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "media_events_total"
+condition = 'exists(.event_type)'
+tags.service = "{{ service }}"
+tags.event_type = "{{ event_type }}"
+
+# Parse system logs
+[transforms.parse_system_logs]
+type = "remap"
+inputs = ["system_logs"]
+source = '''
+  # Parse syslog format
+  if match(.message, r"^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}") {
+    parsed = parse_syslog!(.message)
+    .timestamp = parsed.timestamp
+    .hostname = parsed.hostname
+    .service = parsed.appname
+    .message = parsed.msg
+    .level = "info"
+  }
+  
+  # Extract important system events
+  if contains(.message, "error") || contains(.message, "Error") {
+    .level = "error"
+  }
+  
+  if contains(.message, "warning") || contains(.message, "Warning") {
+    .level = "warn"
+  }
+  
+  .media_server = false
+'''
+
+# =============================================================================
+# SINKS - Output Destinations
+# =============================================================================
+
+# Send all logs to Loki
+[sinks.loki_all]
+type = "loki"
+inputs = ["parse_container_logs", "parse_system_logs"]
+endpoint = "http://loki:3100"
+encoding.codec = "json"
+labels.service = "{{ service }}"
+labels.level = "{{ level }}"
+labels.container = "{{ container_name }}"
+
+# Send error logs to separate stream
+[sinks.loki_errors]
+type = "loki"
+inputs = ["error_logs"]
+endpoint = "http://loki:3100"
+encoding.codec = "json"
+labels.service = "{{ service }}"
+labels.level = "error"
+labels.stream = "errors"
+
+# Send media events to dedicated stream
+[sinks.loki_media_events]
+type = "loki"
+inputs = ["media_events"]
+endpoint = "http://loki:3100"
+encoding.codec = "json"
+labels.service = "{{ service }}"
+labels.event_type = "{{ event_type }}"
+labels.stream = "media_events"
+
+# Send metrics to Prometheus
+[sinks.prometheus_metrics]
+type = "prometheus_exporter"
+inputs = ["log_metrics"]
+address = "0.0.0.0:9598"
+
+# Send critical errors to alerting
+[sinks.critical_alerts]
+type = "http"
+inputs = ["error_logs"]
+uri = "http://alertmanager:9093/api/v1/alerts"
+method = "post"
+encoding.codec = "json"
+
+[sinks.critical_alerts.headers]
+"Content-Type" = "application/json"
+
+# Archive logs to file for backup
+[sinks.archive]
+type = "file"
+inputs = ["parse_container_logs", "parse_system_logs"]
+path = "/var/log/media-server/archive-%Y-%m-%d.log"
+encoding.codec = "json"
+
+[sinks.archive.compression]
+algorithm = "gzip"
+
+# =============================================================================
+# HEALTHCHECK
+# =============================================================================
+
+[sources.vector_metrics]
+type = "internal_metrics"
+
+[sinks.vector_health]
+type = "prometheus_exporter"
+inputs = ["vector_metrics"]
+address = "0.0.0.0:9599"

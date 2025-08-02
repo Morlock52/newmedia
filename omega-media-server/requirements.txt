@@ -1,0 +1,79 @@
+# Core Python dependencies for Omega Media Server
+
+# AI/ML Libraries
+tensorflow==2.15.0
+torch==2.1.2
+torchvision==0.16.2
+transformers==4.36.2
+whisper==1.1.10
+opencv-python==4.9.0.80
+scikit-learn==1.4.0
+numpy==1.26.3
+pandas==2.1.4
+
+# Image Processing
+Pillow==10.2.0
+imageio==2.33.1
+face-recognition==1.3.0
+dlib==19.24.2
+
+# Natural Language Processing
+spacy==3.7.2
+nltk==3.8.1
+langdetect==1.0.9
+
+# Audio Processing
+librosa==0.10.1
+pydub==0.25.1
+SpeechRecognition==3.10.1
+
+# Video Processing
+moviepy==1.0.3
+ffmpeg-python==0.2.0
+pyav==11.0.0
+
+# API and Web
+fastapi==0.108.0
+uvicorn==0.25.0
+httpx==0.26.0
+websockets==12.0
+aiofiles==23.2.1
+
+# Database
+asyncpg==0.29.0
+redis==5.0.1
+motor==3.3.2
+
+# Utilities
+python-dotenv==1.0.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+click==8.1.7
+rich==13.7.0
+tqdm==4.66.1
+
+# Monitoring and Logging
+prometheus-client==0.19.0
+python-json-logger==2.0.7
+sentry-sdk==1.39.1
+
+# Security
+cryptography==41.0.7
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+
+# Task Queue
+celery==5.3.5
+flower==2.0.1
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Development
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+ipython==8.19.0

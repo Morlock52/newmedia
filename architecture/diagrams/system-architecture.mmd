@@ -1,0 +1,128 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#1f2937', 'primaryTextColor': '#fff', 'primaryBorderColor': '#374151', 'lineColor': '#6b7280', 'secondaryColor': '#374151', 'tertiaryColor': '#1f2937'}}}%%
+
+graph TB
+    subgraph "Internet"
+        U[Users]
+        CF[Cloudflare WAF]
+    end
+    
+    subgraph "Edge Layer"
+        FW[pfSense Firewall<br/>IDS/IPS]
+        VPN[WireGuard VPN]
+    end
+    
+    subgraph "Proxy Layer"
+        TR[Traefik<br/>Reverse Proxy]
+        AUTH[Authelia<br/>SSO Provider]
+        CS[CrowdSec<br/>Security]
+    end
+    
+    subgraph "Application Layer"
+        subgraph "Media Servers"
+            JF[Jellyfin<br/>Movies/TV]
+            NAV[Navidrome<br/>Music]
+            ABS[AudioBookshelf<br/>Audiobooks]
+            IMM[Immich<br/>Photos]
+            KAV[Kavita<br/>Books/Comics]
+        end
+        
+        subgraph "Content Management"
+            SON[Sonarr<br/>TV]
+            RAD[Radarr<br/>Movies]
+            LID[Lidarr<br/>Music]
+            READ[Readarr<br/>Books]
+            MYL[Mylar3<br/>Comics]
+        end
+        
+        subgraph "Support Services"
+            OVER[Overseerr<br/>Requests]
+            PROW[Prowlarr<br/>Indexers]
+            QB[qBittorrent<br/>Downloads]
+            ORG[Organizr<br/>Dashboard]
+        end
+    end
+    
+    subgraph "Data Layer"
+        subgraph "Databases"
+            PG[PostgreSQL<br/>Main DB]
+            PG_IMM[PostgreSQL<br/>Immich DB]
+        end
+        
+        subgraph "Cache & Search"
+            RED[Redis<br/>Cache]
+            ES[Elasticsearch<br/>Search]
+            MEIL[Meilisearch<br/>Fast Search]
+        end
+        
+        subgraph "Storage"
+            NAS[NAS Storage<br/>Media Files]
+            SSD[SSD Cache<br/>Transcoding]
+        end
+    end
+    
+    subgraph "Monitoring Layer"
+        PROM[Prometheus<br/>Metrics]
+        GRAF[Grafana<br/>Dashboards]
+        LOKI[Loki<br/>Logs]
+        TAUT[Tautulli<br/>Analytics]
+    end
+    
+    %% Connections
+    U --> CF
+    CF --> FW
+    U -.-> VPN
+    VPN --> FW
+    FW --> TR
+    TR --> AUTH
+    TR --> CS
+    
+    AUTH --> JF
+    AUTH --> NAV
+    AUTH --> ABS
+    AUTH --> IMM
+    AUTH --> KAV
+    
+    TR --> SON
+    TR --> RAD
+    TR --> LID
+    TR --> READ
+    TR --> MYL
+    
+    TR --> OVER
+    TR --> PROW
+    TR --> QB
+    TR --> ORG
+    
+    JF --> NAS
+    NAV --> NAS
+    ABS --> NAS
+    IMM --> NAS
+    KAV --> NAS
+    
+    IMM --> PG_IMM
+    IMM --> RED
+    
+    JF --> RED
+    NAV --> RED
+    
+    OVER --> ES
+    ORG --> ES
+    
+    PROM --> GRAF
+    LOKI --> GRAF
+    TAUT --> GRAF
+    
+    %% Styling
+    classDef media fill:#3b82f6,stroke:#2563eb,stroke-width:2px
+    classDef content fill:#10b981,stroke:#059669,stroke-width:2px
+    classDef support fill:#f59e0b,stroke:#d97706,stroke-width:2px
+    classDef data fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px
+    classDef monitoring fill:#ef4444,stroke:#dc2626,stroke-width:2px
+    classDef security fill:#06b6d4,stroke:#0891b2,stroke-width:2px
+    
+    class JF,NAV,ABS,IMM,KAV media
+    class SON,RAD,LID,READ,MYL content
+    class OVER,PROW,QB,ORG support
+    class PG,PG_IMM,RED,ES,MEIL,NAS,SSD data
+    class PROM,GRAF,LOKI,TAUT monitoring
+    class FW,VPN,TR,AUTH,CS security

@@ -1,0 +1,186 @@
+version: "3.9"
+
+networks:
+  media-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  jellyfin_config:
+  grafana_data:
+  prometheus_data:
+
+services:
+  # ==============================================
+  # MEDIA SERVER CORE
+  # ==============================================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=http://localhost:8096
+    volumes:
+      - jellyfin_config:/config
+      - ./media:/media:ro
+      - ./transcode:/transcode
+    ports:
+      - 8096:8096
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # ARR SERVICES CORE
+  # ==============================================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./sonarr-config:/config
+      - ./media/tv:/tv
+      - ./downloads:/downloads
+    ports:
+      - 8989:8989
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./radarr-config:/config
+      - ./media/movies:/movies
+      - ./downloads:/downloads
+    ports:
+      - 7878:7878
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./prowlarr-config:/config
+    ports:
+      - 9696:9696
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # DOWNLOAD CLIENT
+  # ==============================================
+  
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./qbittorrent-config:/config
+      - ./downloads:/downloads
+    ports:
+      - 8082:8080  # Changed to avoid conflict with organizr
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # MONITORING CORE
+  # ==============================================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - 3000:3000
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # DASHBOARD
+  # ==============================================
+  
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./homarr-configs:/app/data/configs
+      - ./homarr-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 7575:7575
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  # ==============================================
+  # MANAGEMENT
+  # ==============================================
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    environment:
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./portainer-data:/data
+    ports:
+      - 9000:9000
+    networks:
+      - media-net
+    restart: unless-stopped

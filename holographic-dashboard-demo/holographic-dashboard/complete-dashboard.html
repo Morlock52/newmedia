@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holographic Media Dashboard</title>
+    <style>
+        :root {
+            --primary-cyan: #00ffff;
+            --primary-magenta: #ff00ff;
+            --dark-bg: #0a0a0a;
+            --card-bg: rgba(20, 20, 30, 0.7);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --hover-scale: 1.05;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(255, 0, 255, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 10%, rgba(0, 255, 255, 0.05) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, var(--primary-cyan), var(--primary-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-item {
+            padding: 0.5rem 1rem;
+            background: none;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            position: relative;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border-radius: 20px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-primary);
+            border-color: var(--primary-cyan);
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-cyan), var(--primary-magenta));
+            box-shadow: 0 0 10px var(--primary-cyan);
+        }
+
+        /* Header Actions */
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            border-radius: 20px;
+            width: 200px;
+            transition: all var(--transition-speed);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            width: 250px;
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            background: none;
+            border: none;
+            color: var(--primary-cyan);
+            cursor: pointer;
+            padding: 0.3rem;
+            transition: all var(--transition-speed);
+        }
+
+        .search-btn:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 10px var(--primary-cyan));
+        }
+
+        .icon-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--primary-cyan);
+            background: rgba(0, 255, 255, 0.1);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            padding: 2rem;
+            min-height: calc(100vh - 80px);
+            position: relative;
+        }
+
+        .page {
+            display: none;
+            animation: pageIn 0.5s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-speed);
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--primary-cyan);
+            box-shadow: 0 10px 40px rgba(0, 255, 255, 0.2);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+            opacity: 0;
+        }
+
+        .stat-card:hover::before {
+            animation: shimmer 0.6s ease-out;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) translateY(-100%) rotate(45deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(100%) translateY(100%) rotate(45deg);
+                opacity: 0;
+            }
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-cyan), var(--primary-magenta));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Media Grid */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .media-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all var(--transition-speed);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .media-card:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-cyan);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .media-card-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 255, 0.2));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .media-card-image::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: white;
+            opacity: 0;
+            transition: all var(--transition-speed);
+        }
+
+        .media-card:hover .media-card-image::after {
+            opacity: 0.8;
+        }
+
+        .media-card-info {
+            padding: 1rem;
+        }
+
+        .media-card-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .media-card-meta {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Action Button */
+        .action-btn {
+            background: linear-gradient(135deg, var(--primary-cyan), var(--primary-magenta));
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all var(--transition-speed);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.6s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .action-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity var(--transition-speed);
+        }
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform var(--transition-speed);
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            color: var(--primary-cyan);
+            background: rgba(0, 255, 255, 0.1);
+            transform: rotate(90deg);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            transition: all var(--transition-speed);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--primary-cyan);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            transform: translateX(400px);
+            transition: transform var(--transition-speed);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .notification.show {
+            display: flex;
+            transform: translateX(0);
+        }
+
+        .notification-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--primary-cyan), var(--primary-magenta));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--primary-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* User Menu */
+        .user-menu {
+            position: absolute;
+            top: 60px;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.5rem;
+            min-width: 200px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-menu.active {
+            display: block;
+        }
+
+        .user-menu-item {
+            padding: 0.75rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-menu-item:hover {
+            background: rgba(0, 255, 255, 0.1);
+            color: var(--primary-cyan);
+        }
+
+        /* Page Headers */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--primary-cyan), var(--primary-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--primary-cyan);
+            color: var(--primary-cyan);
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        /* Search Overlay */
+        .search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            opacity: 0;
+            transition: opacity var(--transition-speed);
+        }
+
+        .search-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .search-overlay-content {
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .search-overlay-input {
+            width: 100%;
+            background: var(--glass-bg);
+            border: 2px solid var(--primary-cyan);
+            color: var(--text-primary);
+            padding: 1.5rem 2rem;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            box-shadow: 0 10px 40px rgba(0, 255, 255, 0.3);
+        }
+
+        .search-overlay-input:focus {
+            outline: none;
+        }
+
+        .search-results {
+            margin-top: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .search-result-item:hover {
+            border-color: var(--primary-cyan);
+            transform: translateX(10px);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            right: -400px;
+            top: 80px;
+            bottom: 0;
+            width: 400px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass-border);
+            padding: 2rem;
+            transition: right var(--transition-speed);
+            z-index: 1500;
+            overflow-y: auto;
+        }
+
+        .settings-panel.active {
+            right: 0;
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-cyan);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: var(--glass-border);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .toggle-switch.active {
+            background: var(--primary-cyan);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: all var(--transition-speed);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(25px);
+        }
+
+        /* Analytics Charts */
+        .chart-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        /* Live TV Grid */
+        .live-tv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .live-channel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all var(--transition-speed);
+            cursor: pointer;
+        }
+
+        .live-channel:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-cyan);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .live-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #ff0000;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Stack Monitor */
+        .stack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stack-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            position: relative;
+            transition: all var(--transition-speed);
+        }
+
+        .stack-item:hover {
+            border-color: var(--primary-cyan);
+            transform: translateY(-5px);
+        }
+
+        .stack-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .stack-status.warning {
+            background: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+
+        .stack-status.error {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .settings-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+
+        /* Touch Gestures */
+        .touch-active {
+            transition: none !important;
+        }
+
+        /* Keyboard Focus */
+        *:focus-visible {
+            outline: 2px solid var(--primary-cyan);
+            outline-offset: 2px;
+        }
+
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--glass-bg) 25%, rgba(255, 255, 255, 0.1) 50%, var(--glass-bg) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">Holographic Media</div>
+        
+        <nav class="nav">
+            <button class="nav-item active" data-page="dashboard">Dashboard</button>
+            <button class="nav-item" data-page="movies">Movies</button>
+            <button class="nav-item" data-page="series">Series</button>
+            <button class="nav-item" data-page="music">Music</button>
+            <button class="nav-item" data-page="live-tv">Live TV</button>
+            <button class="nav-item" data-page="analytics">Analytics</button>
+            <button class="nav-item" data-page="stack">Stack Monitor</button>
+        </nav>
+
+        <div class="header-actions">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="Search...">
+                <button class="search-btn">🔍</button>
+            </div>
+            <button class="icon-btn" id="settingsBtn">⚙️</button>
+            <button class="icon-btn" id="notificationBtn">🔔</button>
+            <div style="position: relative;">
+                <button class="icon-btn" id="userBtn">👤</button>
+                <div class="user-menu" id="userMenu">
+                    <div class="user-menu-item">👤 Profile</div>
+                    <div class="user-menu-item">📊 My Stats</div>
+                    <div class="user-menu-item">⚙️ Preferences</div>
+                    <div class="user-menu-item">📝 History</div>
+                    <div class="user-menu-item">🚪 Logout</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Page -->
+        <div class="page active" id="dashboard">
+            <div class="page-header">
+                <h1 class="page-title">Dashboard</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showNotification('Dashboard refreshed!')">
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card" onclick="navigateToPage('movies')">
+                    <div class="stat-icon">🎬</div>
+                    <div class="stat-value">1,247</div>
+                    <div class="stat-label">Movies</div>
+                </div>
+                <div class="stat-card" onclick="navigateToPage('series')">
+                    <div class="stat-icon">📺</div>
+                    <div class="stat-value">342</div>
+                    <div class="stat-label">TV Series</div>
+                </div>
+                <div class="stat-card" onclick="navigateToPage('music')">
+                    <div class="stat-icon">🎵</div>
+                    <div class="stat-value">5,832</div>
+                    <div class="stat-label">Songs</div>
+                </div>
+                <div class="stat-card" onclick="navigateToPage('live-tv')">
+                    <div class="stat-icon">📡</div>
+                    <div class="stat-value">48</div>
+                    <div class="stat-label">Live Channels</div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 3rem; margin-bottom: 1rem;">Recently Added</h2>
+            <div class="media-grid">
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Holographic Dreams</div>
+                        <div class="media-card-meta">Movie • 2024</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Neon Nights</div>
+                        <div class="media-card-meta">Series • S1E1</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Cyber Symphony</div>
+                        <div class="media-card-meta">Album • Various Artists</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Digital Horizons</div>
+                        <div class="media-card-meta">Movie • 2024</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movies Page -->
+        <div class="page" id="movies">
+            <div class="page-header">
+                <h1 class="page-title">Movies</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showModal('addMovie')">
+                        <span>+ Add Movie</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active">All</button>
+                <button class="filter-btn">Action</button>
+                <button class="filter-btn">Sci-Fi</button>
+                <button class="filter-btn">Drama</button>
+                <button class="filter-btn">Comedy</button>
+                <button class="filter-btn">Horror</button>
+            </div>
+
+            <div class="media-grid">
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Quantum Leap</div>
+                        <div class="media-card-meta">2024 • Action</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Neural Network</div>
+                        <div class="media-card-meta">2024 • Sci-Fi</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Digital Love</div>
+                        <div class="media-card-meta">2023 • Romance</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Cyber Heist</div>
+                        <div class="media-card-meta">2024 • Thriller</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">The Algorithm</div>
+                        <div class="media-card-meta">2024 • Mystery</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Virtual Reality</div>
+                        <div class="media-card-meta">2024 • Adventure</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Series Page -->
+        <div class="page" id="series">
+            <div class="page-header">
+                <h1 class="page-title">TV Series</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showModal('addSeries')">
+                        <span>+ Add Series</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active">All</button>
+                <button class="filter-btn">Trending</button>
+                <button class="filter-btn">New Episodes</button>
+                <button class="filter-btn">Completed</button>
+                <button class="filter-btn">Watchlist</button>
+            </div>
+
+            <div class="media-grid">
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Tech Chronicles</div>
+                        <div class="media-card-meta">S3E5 • Ongoing</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Future City</div>
+                        <div class="media-card-meta">S1E10 • New</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Data Miners</div>
+                        <div class="media-card-meta">S2E8 • Popular</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">The Network</div>
+                        <div class="media-card-meta">S4E12 • Finale</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Music Page -->
+        <div class="page" id="music">
+            <div class="page-header">
+                <h1 class="page-title">Music</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showModal('createPlaylist')">
+                        <span>+ Create Playlist</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active">All Music</button>
+                <button class="filter-btn">Playlists</button>
+                <button class="filter-btn">Albums</button>
+                <button class="filter-btn">Artists</button>
+                <button class="filter-btn">Recently Played</button>
+            </div>
+
+            <div class="media-grid">
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Synthwave Dreams</div>
+                        <div class="media-card-meta">Playlist • 42 songs</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Electric Nights</div>
+                        <div class="media-card-meta">Album • Neon Artist</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Chill Vibes</div>
+                        <div class="media-card-meta">Playlist • 28 songs</div>
+                    </div>
+                </div>
+                <div class="media-card" onclick="showModal('media')">
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Future Bass</div>
+                        <div class="media-card-meta">Genre Mix • 100 songs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live TV Page -->
+        <div class="page" id="live-tv">
+            <div class="page-header">
+                <h1 class="page-title">Live TV</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showModal('programGuide')">
+                        <span>Program Guide</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active">All Channels</button>
+                <button class="filter-btn">News</button>
+                <button class="filter-btn">Sports</button>
+                <button class="filter-btn">Movies</button>
+                <button class="filter-btn">Kids</button>
+            </div>
+
+            <div class="live-tv-grid">
+                <div class="live-channel" onclick="showModal('liveStream')">
+                    <div class="media-card-image">
+                        <div class="live-indicator">LIVE</div>
+                    </div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Tech News 24</div>
+                        <div class="media-card-meta">Breaking: AI Breakthrough</div>
+                    </div>
+                </div>
+                <div class="live-channel" onclick="showModal('liveStream')">
+                    <div class="media-card-image">
+                        <div class="live-indicator">LIVE</div>
+                    </div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Sports Channel</div>
+                        <div class="media-card-meta">Championship Finals</div>
+                    </div>
+                </div>
+                <div class="live-channel" onclick="showModal('liveStream')">
+                    <div class="media-card-image">
+                        <div class="live-indicator">LIVE</div>
+                    </div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Movie Classic</div>
+                        <div class="media-card-meta">Sci-Fi Marathon</div>
+                    </div>
+                </div>
+                <div class="live-channel" onclick="showModal('liveStream')">
+                    <div class="media-card-image">
+                        <div class="live-indicator">LIVE</div>
+                    </div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">Music TV</div>
+                        <div class="media-card-meta">Top 40 Countdown</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div class="page" id="analytics">
+            <div class="page-header">
+                <h1 class="page-title">Analytics</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showNotification('Report exported!')">
+                        <span>Export Report</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👁️</div>
+                    <div class="stat-value">45.2K</div>
+                    <div class="stat-label">Total Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value">2.4h</div>
+                    <div class="stat-label">Avg. Watch Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">+23%</div>
+                    <div class="stat-label">Growth Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value">1.2K</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Viewing Trends</h3>
+                <div class="chart-placeholder">
+                    <div class="loading"></div>
+                    <span style="margin-left: 1rem;">Loading chart data...</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Content Distribution</h3>
+                <div class="chart-placeholder">
+                    <div class="loading"></div>
+                    <span style="margin-left: 1rem;">Loading chart data...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stack Monitor Page -->
+        <div class="page" id="stack">
+            <div class="page-header">
+                <h1 class="page-title">Stack Monitor</h1>
+                <div class="page-actions">
+                    <button class="action-btn" onclick="showNotification('Stack refreshed!')">
+                        <span>Refresh All</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stack-grid">
+                <div class="stack-item">
+                    <div class="stack-status"></div>
+                    <h3>API Server</h3>
+                    <p>Status: Operational</p>
+                    <p>Uptime: 99.9%</p>
+                    <p>Response: 42ms</p>
+                </div>
+                <div class="stack-item">
+                    <div class="stack-status"></div>
+                    <h3>Database</h3>
+                    <p>Status: Healthy</p>
+                    <p>Connections: 127/500</p>
+                    <p>Memory: 2.4GB</p>
+                </div>
+                <div class="stack-item">
+                    <div class="stack-status warning"></div>
+                    <h3>CDN</h3>
+                    <p>Status: High Load</p>
+                    <p>Bandwidth: 89%</p>
+                    <p>Cache Hit: 94%</p>
+                </div>
+                <div class="stack-item">
+                    <div class="stack-status"></div>
+                    <h3>Media Server</h3>
+                    <p>Status: Streaming</p>
+                    <p>Active Streams: 342</p>
+                    <p>Bitrate: 4.2Mbps</p>
+                </div>
+                <div class="stack-item">
+                    <div class="stack-status"></div>
+                    <h3>Auth Service</h3>
+                    <p>Status: Secure</p>
+                    <p>Logins/hr: 482</p>
+                    <p>Failed: 0.2%</p>
+                </div>
+                <div class="stack-item">
+                    <div class="stack-status error"></div>
+                    <h3>Backup Service</h3>
+                    <p>Status: Failed</p>
+                    <p>Last Backup: 2h ago</p>
+                    <p>Storage: 78%</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div class="modal" id="mediaModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Media Details</h2>
+                <button class="modal-close" onclick="closeModal('mediaModal')">×</button>
+            </div>
+            <div style="height: 200px; background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 255, 0.2)); border-radius: 10px; margin-bottom: 1rem;"></div>
+            <p>Experience the future of entertainment with our holographic media platform.</p>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="action-btn" onclick="closeModal('mediaModal'); showNotification('Playing media...')">Play Now</button>
+                <button class="filter-btn" onclick="showNotification('Added to watchlist!')">Add to Watchlist</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="addMovieModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Movie</h2>
+                <button class="modal-close" onclick="closeModal('addMovieModal')">×</button>
+            </div>
+            <form onsubmit="handleAddMovie(event)">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Year</label>
+                    <input type="number" class="form-input" min="1900" max="2030" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Genre</label>
+                    <select class="form-input">
+                        <option>Action</option>
+                        <option>Sci-Fi</option>
+                        <option>Drama</option>
+                        <option>Comedy</option>
+                        <option>Horror</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-btn" style="width: 100%;">Add Movie</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="createPlaylistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Playlist</h2>
+                <button class="modal-close" onclick="closeModal('createPlaylistModal')">×</button>
+            </div>
+            <form onsubmit="handleCreatePlaylist(event)">
+                <div class="form-group">
+                    <label class="form-label">Playlist Name</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Privacy</label>
+                    <select class="form-input">
+                        <option>Public</option>
+                        <option>Private</option>
+                        <option>Unlisted</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-btn" style="width: 100%;">Create Playlist</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Overlay -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-overlay-content">
+            <input type="text" class="search-overlay-input" placeholder="Search for movies, series, music..." id="searchOverlayInput">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <h2>Settings</h2>
+        
+        <div class="settings-section">
+            <h3 class="settings-title">Appearance</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span>Dark Mode</span>
+                <div class="toggle-switch active"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span>Holographic Effects</span>
+                <div class="toggle-switch active"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Animations</span>
+                <div class="toggle-switch active"></div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="settings-title">Playback</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span>Auto-play Next</span>
+                <div class="toggle-switch active"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span>Skip Intros</span>
+                <div class="toggle-switch"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Default Quality</label>
+                <select class="form-input">
+                    <option>4K HDR</option>
+                    <option>1080p</option>
+                    <option>720p</option>
+                    <option>Auto</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3 class="settings-title">Notifications</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span>New Content</span>
+                <div class="toggle-switch active"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>System Updates</span>
+                <div class="toggle-switch"></div>
+            </div>
+        </div>
+
+        <button class="action-btn" style="width: 100%; margin-top: 2rem;" onclick="showNotification('Settings saved!')">Save Settings</button>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div class="notification-icon">✓</div>
+        <span id="notificationText">Success!</span>
+    </div>
+
+    <script>
+        // Page Navigation
+        let currentPage = 'dashboard';
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        function navigateToPage(pageName) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-page') === pageName) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageName).classList.add('active');
+            currentPage = pageName;
+
+            // Close mobile menu if open
+            closeMobileMenu();
+        }
+
+        // Navigation event listeners
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                navigateToPage(item.getAttribute('data-page'));
+            });
+        });
+
+        // Modal Functions
+        function showModal(modalType) {
+            let modalId = 'mediaModal';
+            if (modalType === 'addMovie') modalId = 'addMovieModal';
+            if (modalType === 'addSeries') modalId = 'addMovieModal';
+            if (modalType === 'createPlaylist') modalId = 'createPlaylistModal';
+            
+            const modal = document.getElementById(modalId);
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on background click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+
+        // Search Functions
+        const searchBtn = document.querySelector('.search-btn');
+        const searchInput = document.querySelector('.search-input');
+        const searchOverlay = document.getElementById('searchOverlay');
+        const searchOverlayInput = document.getElementById('searchOverlayInput');
+        const searchResults = document.getElementById('searchResults');
+
+        searchBtn.addEventListener('click', openSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                openSearch();
+            }
+        });
+
+        function openSearch() {
+            searchOverlay.classList.add('active');
+            searchOverlayInput.focus();
+            searchOverlayInput.value = searchInput.value;
+            performSearch();
+        }
+
+        searchOverlay.addEventListener('click', (e) => {
+            if (e.target === searchOverlay) {
+                searchOverlay.classList.remove('active');
+            }
+        });
+
+        searchOverlayInput.addEventListener('input', performSearch);
+
+        function performSearch() {
+            const query = searchOverlayInput.value;
+            if (query.length > 0) {
+                // Simulate search results
+                searchResults.innerHTML = `
+                    <div class="search-result-item" onclick="closeSearch(); showModal('media')">
+                        <strong>Holographic Dreams</strong> - Movie
+                    </div>
+                    <div class="search-result-item" onclick="closeSearch(); showModal('media')">
+                        <strong>Neon Nights</strong> - Series
+                    </div>
+                    <div class="search-result-item" onclick="closeSearch(); showModal('media')">
+                        <strong>Cyber Symphony</strong> - Album
+                    </div>
+                `;
+            } else {
+                searchResults.innerHTML = '';
+            }
+        }
+
+        function closeSearch() {
+            searchOverlay.classList.remove('active');
+        }
+
+        // Settings Panel
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('active');
+        });
+
+        // Close settings panel when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+                settingsPanel.classList.remove('active');
+            }
+        });
+
+        // User Menu
+        const userBtn = document.getElementById('userBtn');
+        const userMenu = document.getElementById('userMenu');
+
+        userBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('active');
+        });
+
+        document.addEventListener('click', () => {
+            userMenu.classList.remove('active');
+        });
+
+        // Toggle Switches
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+            });
+        });
+
+        // Notification Function
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Form Handlers
+        function handleAddMovie(e) {
+            e.preventDefault();
+            closeModal('addMovieModal');
+            showNotification('Movie added successfully!');
+            // Simulate adding movie to grid
+            setTimeout(() => {
+                const moviesGrid = document.querySelector('#movies .media-grid');
+                const newMovie = document.createElement('div');
+                newMovie.className = 'media-card';
+                newMovie.onclick = () => showModal('media');
+                newMovie.innerHTML = `
+                    <div class="media-card-image"></div>
+                    <div class="media-card-info">
+                        <div class="media-card-title">New Movie</div>
+                        <div class="media-card-meta">2024 • Custom</div>
+                    </div>
+                `;
+                moviesGrid.insertBefore(newMovie, moviesGrid.firstChild);
+            }, 500);
+        }
+
+        function handleCreatePlaylist(e) {
+            e.preventDefault();
+            closeModal('createPlaylistModal');
+            showNotification('Playlist created successfully!');
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            // Escape key closes modals and overlays
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    closeModal(modal.id);
+                });
+                searchOverlay.classList.remove('active');
+                settingsPanel.classList.remove('active');
+                userMenu.classList.remove('active');
+            }
+
+            // Ctrl/Cmd + K opens search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                openSearch();
+            }
+
+            // Arrow keys for navigation (when not in input)
+            if (!e.target.matches('input, textarea')) {
+                const pages = ['dashboard', 'movies', 'series', 'music', 'live-tv', 'analytics', 'stack'];
+                const currentIndex = pages.indexOf(currentPage);
+                
+                if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                    navigateToPage(pages[currentIndex - 1]);
+                } else if (e.key === 'ArrowRight' && currentIndex < pages.length - 1) {
+                    navigateToPage(pages[currentIndex + 1]);
+                }
+            }
+        });
+
+        // Touch Gestures for Mobile
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const pages = ['dashboard', 'movies', 'series', 'music', 'live-tv', 'analytics', 'stack'];
+            const currentIndex = pages.indexOf(currentPage);
+            
+            if (touchEndX < touchStartX - swipeThreshold && currentIndex < pages.length - 1) {
+                // Swipe left - next page
+                navigateToPage(pages[currentIndex + 1]);
+            }
+            
+            if (touchEndX > touchStartX + swipeThreshold && currentIndex > 0) {
+                // Swipe right - previous page
+                navigateToPage(pages[currentIndex - 1]);
+            }
+        }
+
+        // Loading States
+        function showLoading(element) {
+            element.classList.add('skeleton');
+        }
+
+        function hideLoading(element) {
+            element.classList.remove('skeleton');
+        }
+
+        // Simulate loading for charts
+        setTimeout(() => {
+            document.querySelectorAll('.chart-placeholder').forEach(chart => {
+                chart.innerHTML = '<div style="text-align: center; color: var(--primary-cyan);">Chart visualization would appear here</div>';
+            });
+        }, 2000);
+
+        // Add ripple effect to buttons
+        document.querySelectorAll('.action-btn, .filter-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Mobile Menu Function
+        function closeMobileMenu() {
+            // Function placeholder for mobile menu if implemented
+        }
+
+        // Initialize
+        showNotification('Welcome to Holographic Media Dashboard!');
+
+        // Notification button handler
+        document.getElementById('notificationBtn').addEventListener('click', () => {
+            showNotification('No new notifications');
+        });
+
+        // Add hover sound effect (optional)
+        const hoverSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE');
+
+        // View Transitions API (if supported)
+        if ('startViewTransition' in document) {
+            const originalNavigate = navigateToPage;
+            navigateToPage = (pageName) => {
+                document.startViewTransition(() => {
+                    originalNavigate(pageName);
+                });
+            };
+        }
+    </script>
+</body>
+</html>

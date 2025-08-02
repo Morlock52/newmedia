@@ -1,0 +1,283 @@
+# Ultimate Media Server 2025 - Automation Stack Deployment
+# Quick deployment for full *arr automation
+
+version: '3.9'
+
+networks:
+  automation:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  prowlarr_config:
+  sonarr_config:
+  radarr_config:
+  lidarr_config:
+  readarr_config:
+  bazarr_config:
+  overseerr_config:
+  qbittorrent_config:
+  sabnzbd_config:
+
+services:
+  # =========================
+  # Indexer Management
+  # =========================
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - prowlarr_config:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - automation
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Media Automation
+  # =========================
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - sonarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "8989:8989"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - radarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "7878:7878"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - lidarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "8686:8686"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8686/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - readarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "8787:8787"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - bazarr_config:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+    ports:
+      - "6767:6767"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6767/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Download Clients
+  # =========================
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun-automation
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-mullvad}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY:-}
+      - WIREGUARD_ADDRESSES=${VPN_ADDRESSES:-}
+      - FIREWALL_OUTBOUND_SUBNETS=172.30.0.0/24,172.16.0.0/12,192.168.0.0/16
+    ports:
+      - "8080:8080"  # qBittorrent WebUI
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - automation
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - sabnzbd_config:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - "8081:8080"
+    networks:
+      - automation
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # =========================
+  # Request Management
+  # =========================
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr-automation
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - overseerr_config:/app/config
+    ports:
+      - "5055:5055"
+    networks:
+      - automation
+    restart: unless-stopped
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Automation Setup Helper
+  # =========================
+  automation-configurator:
+    image: curlimages/curl:latest
+    container_name: automation-configurator
+    networks:
+      - automation
+    volumes:
+      - ./scripts:/scripts:ro
+    command: >
+      sh -c "
+        echo 'Waiting for services to start...' &&
+        sleep 60 &&
+        echo 'Configuring automation APIs...' &&
+        /scripts/configure-automation-apis.sh &&
+        echo 'Automation configuration complete!'
+      "
+    depends_on:
+      - prowlarr
+      - sonarr
+      - radarr
+      - lidarr
+      - readarr
+      - qbittorrent
+      - sabnzbd
+    restart: "no"

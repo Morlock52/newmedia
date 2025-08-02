@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart .env Configuration Editor</title>
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Holographic Background */
+        .holographic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            animation: holographicShift 20s ease-in-out infinite;
+        }
+
+        @keyframes holographicShift {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.1); }
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 40px rgba(102, 126, 234, 0.5);
+        }
+
+        .header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Editor Panel */
+        .editor-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .editor-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #667eea);
+            border-radius: 20px;
+            z-index: -1;
+            opacity: 0.3;
+            animation: gradientRotate 10s linear infinite;
+        }
+
+        @keyframes gradientRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .editor-header h2 {
+            font-size: 1.5rem;
+            font-weight: 400;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        /* Code Editor */
+        .code-editor {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50px;
+            padding: 1.5rem 0;
+            text-align: right;
+            color: #444;
+            user-select: none;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        #envEditor {
+            width: 100%;
+            min-height: 500px;
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            resize: vertical;
+            padding-left: 60px;
+            outline: none;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            padding: 1.5rem;
+        }
+
+        .sidebar-panel h3 {
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        /* Service Status */
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .service-name {
+            font-size: 0.9rem;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.running {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+        }
+
+        .status-indicator.stopped {
+            background: #f87171;
+            box-shadow: 0 0 10px #f87171;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* AI Suggestions */
+        .suggestion-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .suggestion-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            color: #e0e0e0;
+        }
+
+        .suggestion-desc {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* Port Checker */
+        .port-checker {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .port-input {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e0e0e0;
+            outline: none;
+        }
+
+        .port-input:focus {
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .port-result {
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .port-result.available {
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .port-result.occupied {
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        /* Key Generator */
+        .key-generator {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .generated-key {
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            word-break: break-all;
+            margin-top: 0.5rem;
+            color: #4ade80;
+        }
+
+        /* Validation Messages */
+        .validation-messages {
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .validation-item {
+            display: flex;
+            align-items: start;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-item.error {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+        }
+
+        .validation-item.warning {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+        }
+
+        .validation-item.success {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid transparent;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="holographic-bg"></div>
+
+    <!-- Navigation Header -->
+    <navigation-header 
+        title="Smart .env Editor"
+        breadcrumbs="Home,Configuration,Env Editor"
+        current-page="Env Editor"
+        back-url="main-app.html">
+    </navigation-header>
+
+    <div class="container">
+
+        <div class="main-grid">
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="editor-header">
+                    <h2>Environment Variables</h2>
+                    <div class="editor-actions">
+                        <button class="btn btn-secondary" onclick="loadEnvFile()">
+                            <span>📂 Reload</span>
+                        </button>
+                        <button class="btn" onclick="saveEnvFile()">
+                            <span>💾 Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="code-editor">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <textarea id="envEditor" placeholder="Loading .env file..."></textarea>
+                </div>
+
+                <div class="validation-messages" id="validationMessages"></div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Service Status -->
+                <div class="sidebar-panel">
+                    <h3>🚀 Service Status</h3>
+                    <div id="serviceStatus">
+                        <div class="service-item">
+                            <span class="service-name">Docker</span>
+                            <div class="service-status">
+                                <span class="status-indicator stopped"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                        <div class="service-item">
+                            <span class="service-name">PostgreSQL</span>
+                            <div class="service-status">
+                                <span class="status-indicator stopped"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                        <div class="service-item">
+                            <span class="service-name">Redis</span>
+                            <div class="service-status">
+                                <span class="status-indicator stopped"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                        <div class="service-item">
+                            <span class="service-name">API Server</span>
+                            <div class="service-status">
+                                <span class="status-indicator stopped"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Port Checker -->
+                <div class="sidebar-panel">
+                    <h3>🔌 Port Checker</h3>
+                    <div class="port-checker">
+                        <input type="number" class="port-input" id="portInput" placeholder="Enter port..." value="3000">
+                        <button class="btn btn-secondary" onclick="checkPort()">Check</button>
+                    </div>
+                    <div id="portResult"></div>
+                    <div style="margin-top: 1rem;">
+                        <small style="color: #666;">Common ports:</small>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="checkPort(3000)">3000</button>
+                            <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="checkPort(5432)">5432</button>
+                            <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="checkPort(6379)">6379</button>
+                            <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="checkPort(8080)">8080</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Generator -->
+                <div class="sidebar-panel">
+                    <h3>🔐 Key Generator</h3>
+                    <div class="key-generator">
+                        <select id="keyType" style="width: 100%; padding: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #e0e0e0; margin-bottom: 0.5rem;">
+                            <option value="jwt">JWT Secret</option>
+                            <option value="api">API Key</option>
+                            <option value="password">Strong Password</option>
+                            <option value="uuid">UUID</option>
+                        </select>
+                        <button class="btn btn-secondary" style="width: 100%;" onclick="generateKey()">Generate</button>
+                        <div id="generatedKey"></div>
+                    </div>
+                </div>
+
+                <!-- AI Suggestions -->
+                <div class="sidebar-panel">
+                    <h3>🤖 AI Suggestions</h3>
+                    <div id="aiSuggestions">
+                        <div class="suggestion-item" onclick="applySuggestion('database')">
+                            <div class="suggestion-title">Configure Database</div>
+                            <div class="suggestion-desc">Add PostgreSQL connection settings</div>
+                        </div>
+                        <div class="suggestion-item" onclick="applySuggestion('redis')">
+                            <div class="suggestion-title">Setup Redis Cache</div>
+                            <div class="suggestion-desc">Add Redis configuration variables</div>
+                        </div>
+                        <div class="suggestion-item" onclick="applySuggestion('auth')">
+                            <div class="suggestion-title">Authentication Setup</div>
+                            <div class="suggestion-desc">Add JWT and session variables</div>
+                        </div>
+                        <div class="suggestion-item" onclick="applySuggestion('aws')">
+                            <div class="suggestion-title">AWS Integration</div>
+                            <div class="suggestion-desc">Add AWS S3 and SES settings</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'http://localhost:3001/api';
+        let currentEnvContent = '';
+        let validationTimeout = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEnvFile();
+            updateLineNumbers();
+            checkServices();
+            setupAutoValidation();
+        });
+
+        // Load .env file
+        async function loadEnvFile() {
+            showLoading(true);
+            try {
+                // For demo purposes, we'll use sample data
+                // In production, this would fetch from the API
+                const sampleEnv = `# Application Configuration
+NODE_ENV=development
+PORT=3000
+HOST=localhost
+
+# Database Configuration
+DATABASE_URL=postgresql://user:password@localhost:5432/myapp
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=
+
+# Authentication
+JWT_SECRET=your-super-secret-jwt-key-here
+JWT_EXPIRES_IN=7d
+SESSION_SECRET=your-session-secret-here
+
+# API Keys
+STRIPE_API_KEY=sk_test_...
+SENDGRID_API_KEY=SG...
+GOOGLE_MAPS_API_KEY=
+
+# AWS Configuration
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+S3_BUCKET=my-app-bucket
+
+# Feature Flags
+ENABLE_ANALYTICS=true
+ENABLE_NOTIFICATIONS=false
+MAINTENANCE_MODE=false`;
+
+                currentEnvContent = sampleEnv;
+                document.getElementById('envEditor').value = sampleEnv;
+                updateLineNumbers();
+                validateEnvFile();
+            } catch (error) {
+                console.error('Failed to load .env file:', error);
+                showNotification('Failed to load .env file', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Save .env file
+        async function saveEnvFile() {
+            showLoading(true);
+            try {
+                const content = document.getElementById('envEditor').value;
+                
+                // In production, this would POST to the API
+                // For demo, we'll just simulate success
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                currentEnvContent = content;
+                showNotification('Environment file saved successfully!', 'success');
+                validateEnvFile();
+            } catch (error) {
+                console.error('Failed to save .env file:', error);
+                showNotification('Failed to save .env file', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Update line numbers
+        function updateLineNumbers() {
+            const editor = document.getElementById('envEditor');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const lines = editor.value.split('\n').length;
+            
+            lineNumbers.innerHTML = '';
+            for (let i = 1; i <= lines; i++) {
+                lineNumbers.innerHTML += `${i}<br>`;
+            }
+        }
+
+        // Setup auto-validation
+        function setupAutoValidation() {
+            const editor = document.getElementById('envEditor');
+            
+            editor.addEventListener('input', () => {
+                updateLineNumbers();
+                
+                // Debounce validation
+                clearTimeout(validationTimeout);
+                validationTimeout = setTimeout(() => {
+                    validateEnvFile();
+                }, 500);
+            });
+
+            editor.addEventListener('scroll', () => {
+                document.getElementById('lineNumbers').scrollTop = editor.scrollTop;
+            });
+        }
+
+        // Validate .env file
+        function validateEnvFile() {
+            const content = document.getElementById('envEditor').value;
+            const lines = content.split('\n');
+            const messages = [];
+            const variables = {};
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                
+                // Skip empty lines and comments
+                if (!trimmed || trimmed.startsWith('#')) return;
+                
+                // Check for valid format
+                if (!trimmed.includes('=')) {
+                    messages.push({
+                        type: 'error',
+                        text: `Line ${index + 1}: Invalid format - missing equals sign`
+                    });
+                    return;
+                }
+                
+                const [key, ...valueParts] = trimmed.split('=');
+                const value = valueParts.join('=');
+                
+                // Check for duplicate keys
+                if (variables[key]) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${index + 1}: Duplicate key "${key}"`
+                    });
+                }
+                
+                variables[key] = value;
+                
+                // Specific validations
+                if (key === 'PORT' && value) {
+                    const port = parseInt(value);
+                    if (isNaN(port) || port < 1 || port > 65535) {
+                        messages.push({
+                            type: 'error',
+                            text: `Line ${index + 1}: Invalid port number`
+                        });
+                    }
+                }
+                
+                if (key.includes('SECRET') && (!value || value.length < 16)) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${index + 1}: ${key} should be at least 16 characters`
+                    });
+                }
+                
+                if (key.includes('URL') && value && !isValidUrl(value)) {
+                    messages.push({
+                        type: 'warning',
+                        text: `Line ${index + 1}: ${key} might not be a valid URL`
+                    });
+                }
+            });
+            
+            // Check for required variables
+            const required = ['NODE_ENV', 'PORT'];
+            required.forEach(key => {
+                if (!variables[key]) {
+                    messages.push({
+                        type: 'error',
+                        text: `Missing required variable: ${key}`
+                    });
+                }
+            });
+            
+            // Display validation messages
+            displayValidationMessages(messages);
+        }
+
+        // Display validation messages
+        function displayValidationMessages(messages) {
+            const container = document.getElementById('validationMessages');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="validation-item success">
+                        <span>✓</span>
+                        <span>All environment variables are valid</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => `
+                <div class="validation-item ${msg.type}">
+                    <span>${msg.type === 'error' ? '✗' : '⚠'}</span>
+                    <span>${msg.text}</span>
+                </div>
+            `).join('');
+        }
+
+        // Check services
+        async function checkServices() {
+            // Simulate service checks
+            const services = [
+                { name: 'Docker', running: Math.random() > 0.3 },
+                { name: 'PostgreSQL', running: Math.random() > 0.5 },
+                { name: 'Redis', running: Math.random() > 0.5 },
+                { name: 'API Server', running: Math.random() > 0.4 }
+            ];
+            
+            const container = document.getElementById('serviceStatus');
+            container.innerHTML = services.map(service => `
+                <div class="service-item">
+                    <span class="service-name">${service.name}</span>
+                    <div class="service-status">
+                        <span class="status-indicator ${service.running ? 'running' : 'stopped'}"></span>
+                        <span>${service.running ? 'Running' : 'Stopped'}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Refresh every 10 seconds
+            setTimeout(checkServices, 10000);
+        }
+
+        // Check port availability
+        async function checkPort(port) {
+            const portToCheck = port || document.getElementById('portInput').value;
+            
+            if (!portToCheck || portToCheck < 1 || portToCheck > 65535) {
+                showPortResult('Invalid port number', false);
+                return;
+            }
+            
+            // Simulate port check
+            const isAvailable = Math.random() > 0.5;
+            const commonPorts = {
+                80: 'HTTP',
+                443: 'HTTPS',
+                3000: 'Node.js',
+                5432: 'PostgreSQL',
+                6379: 'Redis',
+                8080: 'Alternative HTTP',
+                27017: 'MongoDB'
+            };
+            
+            let message = isAvailable ? 
+                `Port ${portToCheck} is available` : 
+                `Port ${portToCheck} is in use`;
+                
+            if (commonPorts[portToCheck]) {
+                message += ` (commonly used for ${commonPorts[portToCheck]})`;
+            }
+            
+            showPortResult(message, isAvailable);
+        }
+
+        // Show port result
+        function showPortResult(message, isAvailable) {
+            const result = document.getElementById('portResult');
+            result.className = `port-result ${isAvailable ? 'available' : 'occupied'}`;
+            result.textContent = message;
+        }
+
+        // Generate secure key
+        function generateKey() {
+            const type = document.getElementById('keyType').value;
+            let key = '';
+            
+            switch (type) {
+                case 'jwt':
+                    key = generateRandomString(64);
+                    break;
+                case 'api':
+                    key = `sk_${generateRandomString(32)}`;
+                    break;
+                case 'password':
+                    key = generatePassword();
+                    break;
+                case 'uuid':
+                    key = generateUUID();
+                    break;
+            }
+            
+            document.getElementById('generatedKey').innerHTML = `
+                <div class="generated-key">${key}</div>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="copyToClipboard('${key}')">
+                    Copy to Clipboard
+                </button>
+            `;
+        }
+
+        // Apply AI suggestion
+        function applySuggestion(type) {
+            const editor = document.getElementById('envEditor');
+            let addition = '\n\n';
+            
+            switch (type) {
+                case 'database':
+                    addition += `# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/dbname
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+DATABASE_SSL=false`;
+                    break;
+                    
+                case 'redis':
+                    addition += `# Redis Cache Configuration
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=
+REDIS_DB=0
+CACHE_TTL=3600`;
+                    break;
+                    
+                case 'auth':
+                    addition += `# Authentication Configuration
+JWT_SECRET=${generateRandomString(64)}
+JWT_EXPIRES_IN=7d
+SESSION_SECRET=${generateRandomString(32)}
+BCRYPT_ROUNDS=10`;
+                    break;
+                    
+                case 'aws':
+                    addition += `# AWS Configuration
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+S3_BUCKET=
+S3_ENDPOINT=https://s3.amazonaws.com
+SES_FROM_EMAIL=noreply@example.com`;
+                    break;
+            }
+            
+            editor.value += addition;
+            updateLineNumbers();
+            validateEnvFile();
+            
+            // Scroll to bottom
+            editor.scrollTop = editor.scrollHeight;
+        }
+
+        // Utility functions
+        function generateRandomString(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function generatePassword() {
+            const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lower = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            const all = upper + lower + numbers + symbols;
+            
+            let password = '';
+            password += upper.charAt(Math.floor(Math.random() * upper.length));
+            password += lower.charAt(Math.floor(Math.random() * lower.length));
+            password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+            password += symbols.charAt(Math.floor(Math.random() * symbols.length));
+            
+            for (let i = 4; i < 16; i++) {
+                password += all.charAt(Math.floor(Math.random() * all.length));
+            }
+            
+            return password.split('').sort(() => Math.random() - 0.5).join('');
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy', 'error');
+            });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        function showNotification(message, type) {
+            // Simple notification (could be enhanced with a toast library)
+            console.log(`${type}: ${message}`);
+        }
+    </script>
+</body>
+</html>

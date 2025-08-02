@@ -1,0 +1,368 @@
+# Prometheus Alerting Rules for Media Server
+# Comprehensive monitoring and alerting for all media services
+
+groups:
+  # =============================================================================
+  # INFRASTRUCTURE ALERTS
+  # =============================================================================
+  
+  - name: infrastructure.rules
+    rules:
+      # Instance down alert
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+          runbook_url: "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes. Current value: {{ $value }}%"
+          threshold: "80%"
+          value: "{{ $value }}%"
+
+      # Critical CPU usage
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage detected"
+          description: "CPU usage is above 95% for more than 2 minutes. Immediate action required."
+          threshold: "95%"
+          value: "{{ $value }}%"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes. Current value: {{ $value }}%"
+          threshold: "85%"
+          value: "{{ $value }}%"
+
+      # Disk space running out
+      - alert: DiskSpaceRunningOut
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low on {{ $labels.mountpoint }}"
+          description: "Disk usage is above 85% on {{ $labels.mountpoint }}. Current value: {{ $value }}%"
+          threshold: "85%"
+          value: "{{ $value }}%"
+
+      # Critical disk space
+      - alert: CriticalDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk space on {{ $labels.mountpoint }}"
+          description: "Disk usage is above 95% on {{ $labels.mountpoint }}. Immediate action required!"
+          threshold: "95%"
+          value: "{{ $value }}%"
+
+  # =============================================================================
+  # MEDIA SERVER ALERTS
+  # =============================================================================
+  
+  - name: media-servers.rules
+    rules:
+      # Media server down
+      - alert: MediaServerDown
+        expr: up{job=~".*jellyfin.*|.*plex.*|.*emby.*"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Media server {{ $labels.job }} is down"
+          description: "{{ $labels.job }} media server has been unreachable for 30 seconds."
+
+      # High transcoding load
+      - alert: HighTranscodingLoad
+        expr: streaming_transcoding_sessions > 3
+        for: 2m
+        labels:
+          severity: warning
+          service: "{{ $labels.server }}"
+        annotations:
+          summary: "High transcoding load on {{ $labels.server }}"
+          description: "{{ $labels.server }} has {{ $value }} active transcoding sessions, which may impact performance."
+          threshold: "3"
+          value: "{{ $value }}"
+
+      # Critical transcoding load
+      - alert: CriticalTranscodingLoad
+        expr: streaming_transcoding_sessions > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.server }}"
+        annotations:
+          summary: "Critical transcoding load on {{ $labels.server }}"
+          description: "{{ $labels.server }} has {{ $value }} transcoding sessions. System may become unresponsive."
+          threshold: "5"
+          value: "{{ $value }}"
+
+      # No streaming activity (potential issue)
+      - alert: NoStreamingActivity
+        expr: streaming_active_sessions == 0 and hour() > 18 and hour() < 23
+        for: 30m
+        labels:
+          severity: info
+          service: "{{ $labels.server }}"
+        annotations:
+          summary: "No streaming activity detected during prime time"
+          description: "No active streaming sessions on {{ $labels.server }} during evening hours. This may indicate an issue."
+
+  # =============================================================================
+  # DOWNLOAD SYSTEM ALERTS
+  # =============================================================================
+  
+  - name: download-system.rules
+    rules:
+      # Download client down
+      - alert: DownloadClientDown
+        expr: up{job=~".*qbittorrent.*|.*sabnzbd.*|.*nzbget.*"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Download client {{ $labels.job }} is down"
+          description: "{{ $labels.job }} download client has been unreachable for 1 minute."
+
+      # Slow download speed
+      - alert: SlowDownloadSpeed
+        expr: download_speed_bytes_per_second / 1024 / 1024 < 5 and download_active_count > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.client }}"
+        annotations:
+          summary: "Slow download speed on {{ $labels.client }}"
+          description: "Download speed on {{ $labels.client }} is {{ $value | humanize }}MB/s for 10 minutes with active downloads."
+          threshold: "5 MB/s"
+          value: "{{ $value | humanize }}MB/s"
+
+      # Download queue stuck
+      - alert: DownloadQueueStuck
+        expr: increase(download_queue_size[1h]) == 0 and download_queue_size > 0
+        for: 2h
+        labels:
+          severity: warning
+          service: "{{ $labels.client }}"
+        annotations:
+          summary: "Download queue appears stuck on {{ $labels.client }}"
+          description: "Download queue on {{ $labels.client }} hasn't changed in 2 hours with {{ $value }} items."
+          value: "{{ $value }}"
+
+  # =============================================================================
+  # AUTOMATION ALERTS (ARR SUITE)
+  # =============================================================================
+  
+  - name: automation.rules
+    rules:
+      # Arr service down
+      - alert: ArrServiceDown
+        expr: up{job=~".*sonarr.*|.*radarr.*|.*lidarr.*|.*bazarr.*|.*prowlarr.*"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Automation service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} automation service has been unreachable for 2 minutes."
+
+      # Large download queue
+      - alert: LargeDownloadQueue
+        expr: download_queue_size{client=~"sonarr|radarr|lidarr"} > 50
+        for: 30m
+        labels:
+          severity: info
+          service: "{{ $labels.client }}"
+        annotations:
+          summary: "Large download queue in {{ $labels.client }}"
+          description: "{{ $labels.client }} has {{ $value }} items in download queue for 30 minutes."
+          value: "{{ $value }}"
+
+  # =============================================================================
+  # PERFORMANCE ALERTS
+  # =============================================================================
+  
+  - name: performance.rules
+    rules:
+      # High container CPU usage
+      - alert: HighContainerCPU
+        expr: container_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          container: "{{ $labels.container }}"
+        annotations:
+          summary: "High CPU usage in container {{ $labels.container }}"
+          description: "Container {{ $labels.container }} ({{ $labels.service }}) CPU usage is {{ $value }}% for 5 minutes."
+          threshold: "80%"
+          value: "{{ $value }}%"
+
+      # High container memory usage
+      - alert: HighContainerMemory
+        expr: (container_memory_usage_bytes / container_memory_limit_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          container: "{{ $labels.container }}"
+        annotations:
+          summary: "High memory usage in container {{ $labels.container }}"
+          description: "Container {{ $labels.container }} ({{ $labels.service }}) memory usage is {{ $value }}% of limit."
+          threshold: "90%"
+          value: "{{ $value }}%"
+
+      # High thermal temperature
+      - alert: HighTemperature
+        expr: thermal_status > 80
+        for: 5m
+        labels:
+          severity: warning
+          sensor: "{{ $labels.sensor }}"
+        annotations:
+          summary: "High temperature on sensor {{ $labels.sensor }}"
+          description: "Temperature on {{ $labels.sensor }} is {{ $value }}°C for 5 minutes."
+          threshold: "80°C"
+          value: "{{ $value }}°C"
+
+      # Critical temperature
+      - alert: CriticalTemperature
+        expr: thermal_status > 90
+        for: 1m
+        labels:
+          severity: critical
+          sensor: "{{ $labels.sensor }}"
+        annotations:
+          summary: "Critical temperature on sensor {{ $labels.sensor }}"
+          description: "Temperature on {{ $labels.sensor }} is {{ $value }}°C. System may throttle or shutdown."
+          threshold: "90°C"
+          value: "{{ $value }}°C"
+
+  # =============================================================================
+  # NETWORK & CONNECTIVITY ALERTS
+  # =============================================================================
+  
+  - name: network.rules
+    rules:
+      # High network latency
+      - alert: HighNetworkLatency
+        expr: probe_duration_seconds{job="blackbox-icmp"} > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          target: "{{ $labels.instance }}"
+        annotations:
+          summary: "High network latency to {{ $labels.instance }}"
+          description: "Network latency to {{ $labels.instance }} is {{ $value }}s for 5 minutes."
+          threshold: "100ms"
+          value: "{{ $value }}s"
+
+      # Service probe failure
+      - alert: ServiceProbeFailure
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.instance }}"
+        annotations:
+          summary: "Service probe failure for {{ $labels.instance }}"
+          description: "HTTP probe to {{ $labels.instance }} has been failing for 2 minutes."
+
+      # SSL certificate expiring
+      - alert: SSLCertificateExpiring
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          target: "{{ $labels.instance }}"
+        annotations:
+          summary: "SSL certificate expiring soon for {{ $labels.instance }}"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value }} days."
+          value: "{{ $value }}"
+
+  # =============================================================================
+  # STORAGE & LIBRARY ALERTS
+  # =============================================================================
+  
+  - name: storage.rules
+    rules:
+      # Media library growth rate high
+      - alert: HighLibraryGrowthRate
+        expr: increase(media_library_size_bytes[24h]) / 1024 / 1024 / 1024 > 100
+        for: 1h
+        labels:
+          severity: info
+          library_type: "{{ $labels.type }}"
+        annotations:
+          summary: "High growth rate in {{ $labels.type }} library"
+          description: "{{ $labels.type }} library grew by {{ $value }}GB in the last 24 hours."
+          value: "{{ $value }}GB"
+
+      # Disk I/O saturation
+      - alert: HighDiskIOSaturation
+        expr: rate(disk_io_detailed{type="read_time"}[5m]) + rate(disk_io_detailed{type="write_time"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          device: "{{ $labels.device }}"
+        annotations:
+          summary: "High disk I/O saturation on {{ $labels.device }}"
+          description: "Disk {{ $labels.device }} I/O saturation is {{ $value }} for 10 minutes."
+          threshold: "80%"
+          value: "{{ $value }}"
+
+  # =============================================================================
+  # SPEED TEST & EXTERNAL CONNECTIVITY
+  # =============================================================================
+  
+  - name: connectivity.rules
+    rules:
+      # Low internet speed
+      - alert: LowInternetSpeed
+        expr: speedtest_download_bits_per_second / 1000000 < 50
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low internet download speed detected"
+          description: "Internet download speed is {{ $value }}Mbps, which may impact streaming and downloads."
+          threshold: "50 Mbps"
+          value: "{{ $value }}Mbps"
+
+      # High internet latency
+      - alert: HighInternetLatency
+        expr: speedtest_ping_ms > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High internet latency detected"
+          description: "Internet ping latency is {{ $value }}ms for 15 minutes."
+          threshold: "100ms"
+          value: "{{ $value }}ms"

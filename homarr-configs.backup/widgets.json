@@ -1,0 +1,132 @@
+{
+  "widgets": [
+    {
+      "id": "system-monitor",
+      "type": "iframe",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 2
+      },
+      "properties": {
+        "url": "http://localhost:61208/",
+        "title": "System Monitor",
+        "height": "300px",
+        "refreshInterval": 5000
+      }
+    },
+    {
+      "id": "network-speed",
+      "type": "speedtest",
+      "position": {
+        "x": 4,
+        "y": 0,
+        "width": 2,
+        "height": 1
+      },
+      "properties": {
+        "title": "Network Speed",
+        "showPing": true,
+        "showDownload": true,
+        "showUpload": true
+      }
+    },
+    {
+      "id": "storage-usage",
+      "type": "disk-usage",
+      "position": {
+        "x": 6,
+        "y": 0,
+        "width": 2,
+        "height": 1
+      },
+      "properties": {
+        "title": "Storage Usage",
+        "path": "/media",
+        "showPercentage": true,
+        "warningThreshold": 80,
+        "criticalThreshold": 90
+      }
+    },
+    {
+      "id": "media-stats",
+      "type": "custom",
+      "position": {
+        "x": 0,
+        "y": 2,
+        "width": 4,
+        "height": 2
+      },
+      "properties": {
+        "title": "Media Library Stats",
+        "content": "<div class='media-stats-grid'><div class='stat-item'><div class='stat-label'>Movies</div><div class='stat-value' id='movie-count'>0</div></div><div class='stat-item'><div class='stat-label'>TV Shows</div><div class='stat-value' id='tv-count'>0</div></div><div class='stat-item'><div class='stat-label'>Music Albums</div><div class='stat-value' id='music-count'>0</div></div><div class='stat-item'><div class='stat-label'>Photos</div><div class='stat-value' id='photo-count'>0</div></div></div>",
+        "css": ".media-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 20px; } .stat-item { text-align: center; } .stat-label { color: #888; font-size: 0.9em; margin-bottom: 5px; } .stat-value { font-size: 2em; font-weight: bold; color: #00ffff; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }"
+      }
+    },
+    {
+      "id": "download-queue",
+      "type": "custom",
+      "position": {
+        "x": 4,
+        "y": 2,
+        "width": 4,
+        "height": 2
+      },
+      "properties": {
+        "title": "Active Downloads",
+        "content": "<div class='download-list'><div class='download-item'><div class='download-name'>Loading...</div><div class='progress-bar'><div class='progress-fill' style='width: 0%'></div></div><div class='download-stats'><span class='speed'>0 MB/s</span><span class='eta'>--:--</span></div></div></div>",
+        "css": ".download-list { padding: 15px; } .download-item { margin-bottom: 15px; } .download-name { color: #00ffff; margin-bottom: 5px; font-size: 0.9em; } .progress-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 5px; } .progress-fill { height: 100%; background: linear-gradient(90deg, #00ffff, #ff00ff); transition: width 0.3s; } .download-stats { display: flex; justify-content: space-between; font-size: 0.8em; color: #888; } .speed { color: #00ff88; } .eta { color: #ffaa00; }"
+      }
+    },
+    {
+      "id": "currently-streaming",
+      "type": "custom",
+      "position": {
+        "x": 0,
+        "y": 4,
+        "width": 8,
+        "height": 2
+      },
+      "properties": {
+        "title": "Currently Streaming",
+        "content": "<div class='streaming-grid'><div class='streaming-item'><div class='user-avatar'></div><div class='streaming-info'><div class='user-name'>No active streams</div><div class='media-title'>Start watching something!</div><div class='streaming-stats'><span class='quality'>--</span><span class='bandwidth'>--</span></div></div></div></div>",
+        "css": ".streaming-grid { display: flex; gap: 20px; padding: 20px; overflow-x: auto; } .streaming-item { display: flex; gap: 15px; padding: 15px; background: rgba(0,255,255,0.1); border-radius: 10px; border: 1px solid rgba(0,255,255,0.3); min-width: 300px; } .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #00ffff, #ff00ff); border-radius: 50%; } .streaming-info { flex: 1; } .user-name { color: #00ffff; font-weight: bold; margin-bottom: 5px; } .media-title { color: #fff; font-size: 0.9em; margin-bottom: 5px; } .streaming-stats { display: flex; gap: 15px; font-size: 0.8em; } .quality { color: #00ff88; } .bandwidth { color: #ffaa00; }"
+      }
+    },
+    {
+      "id": "server-health",
+      "type": "custom",
+      "position": {
+        "x": 0,
+        "y": 6,
+        "width": 3,
+        "height": 2
+      },
+      "properties": {
+        "title": "Server Health",
+        "content": "<div class='health-grid'><div class='health-item'><div class='health-icon cpu'></div><div class='health-label'>CPU</div><div class='health-value'>0%</div></div><div class='health-item'><div class='health-icon ram'></div><div class='health-label'>RAM</div><div class='health-value'>0%</div></div><div class='health-item'><div class='health-icon temp'></div><div class='health-label'>Temp</div><div class='health-value'>0°C</div></div></div>",
+        "css": ".health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; } .health-item { text-align: center; } .health-icon { width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 50%; background: linear-gradient(135deg, #00ffff, #ff00ff); box-shadow: 0 0 20px rgba(0,255,255,0.5); } .health-label { color: #888; font-size: 0.8em; margin-bottom: 5px; } .health-value { color: #00ff88; font-size: 1.2em; font-weight: bold; }"
+      }
+    },
+    {
+      "id": "recent-additions",
+      "type": "custom",
+      "position": {
+        "x": 3,
+        "y": 6,
+        "width": 5,
+        "height": 2
+      },
+      "properties": {
+        "title": "Recent Additions",
+        "content": "<div class='additions-list'><div class='addition-item'><div class='addition-poster'></div><div class='addition-info'><div class='addition-title'>Waiting for content...</div><div class='addition-date'>Check back soon</div></div></div></div>",
+        "css": ".additions-list { display: flex; gap: 15px; padding: 15px; overflow-x: auto; } .addition-item { display: flex; gap: 10px; min-width: 200px; } .addition-poster { width: 60px; height: 90px; background: linear-gradient(135deg, #ff00ff, #00ffff); border-radius: 5px; flex-shrink: 0; } .addition-info { flex: 1; display: flex; flex-direction: column; justify-content: center; } .addition-title { color: #fff; font-size: 0.9em; margin-bottom: 5px; } .addition-date { color: #888; font-size: 0.8em; }"
+      }
+    }
+  ],
+  "customScripts": {
+    "mediaStats": "// Fetch media statistics from APIs\nsetInterval(() => {\n  // This would connect to your actual APIs\n  document.getElementById('movie-count').textContent = Math.floor(Math.random() * 5000);\n  document.getElementById('tv-count').textContent = Math.floor(Math.random() * 500);\n  document.getElementById('music-count').textContent = Math.floor(Math.random() * 1000);\n  document.getElementById('photo-count').textContent = Math.floor(Math.random() * 10000);\n}, 5000);",
+    "systemHealth": "// Update system health metrics\nsetInterval(() => {\n  const cpuEl = document.querySelector('.health-item:nth-child(1) .health-value');\n  const ramEl = document.querySelector('.health-item:nth-child(2) .health-value');\n  const tempEl = document.querySelector('.health-item:nth-child(3) .health-value');\n  \n  if (cpuEl) cpuEl.textContent = Math.floor(Math.random() * 100) + '%';\n  if (ramEl) ramEl.textContent = Math.floor(Math.random() * 100) + '%';\n  if (tempEl) tempEl.textContent = Math.floor(Math.random() * 30 + 40) + '°C';\n}, 3000);"
+  }
+}

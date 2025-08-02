@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Ultimate Media Server 2025 - Status Dashboard</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 2.5rem; margin-bottom: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .service { 
+            background: rgba(255,255,255,0.1); 
+            padding: 20px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        .service:hover { transform: translateY(-5px); }
+        .service h3 { margin: 0 0 10px 0; color: #00ff88; font-size: 1.4rem; }
+        .service a { 
+            color: #fff; 
+            text-decoration: none; 
+            background: rgba(0,255,136,0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+        .service a:hover { background: rgba(0,255,136,0.4); }
+        .status { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #00ff88; 
+            margin-right: 8px; 
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .phase { 
+            background: rgba(255,255,255,0.05); 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border-left: 4px solid #00ff88;
+        }
+        .phase h2 { color: #00ff88; margin: 0 0 15px 0; }
+        .management-links {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+        .management-links a {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+        .management-links a:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Ultimate Media Server 2025</h1>
+        
+        <div class="management-links">
+            <h2 style="color: #00ff88; margin-bottom: 20px;">🔧 Management Interfaces</h2>
+            <a href="env-settings-manager.html" target="_blank">🔧 Environment Manager</a>
+            <a href="ultimate-fun-dashboard.html" target="_blank">🎮 Fun Dashboard</a>
+            <a href="http://localhost:3001" target="_blank">🏠 Homepage</a>
+            <a href="http://localhost:3011" target="_blank">📊 Uptime Monitor</a>
+        </div>
+
+        <div class="phase">
+            <h2>🏗️ Core Infrastructure</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Redis Cache</h3>
+                    <p>High-performance caching layer</p>
+                    <a href="http://localhost:6379" target="_blank">Port 6379</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>PostgreSQL</h3>
+                    <p>Primary database server</p>
+                    <a href="http://localhost:5432" target="_blank">Port 5432</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>🎬 Media Services</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Jellyfin</h3>
+                    <p>Your personal Netflix</p>
+                    <a href="http://localhost:8096" target="_blank">Launch Jellyfin</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Sonarr</h3>
+                    <p>TV show automation</p>
+                    <a href="http://localhost:8989" target="_blank">Launch Sonarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Radarr</h3>
+                    <p>Movie automation</p>
+                    <a href="http://localhost:7878" target="_blank">Launch Radarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Lidarr</h3>
+                    <p>Music management</p>
+                    <a href="http://localhost:8686" target="_blank">Launch Lidarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>AudioBookshelf</h3>
+                    <p>Audiobook server</p>
+                    <a href="http://localhost:13378" target="_blank">Launch AudioBookshelf</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Navidrome</h3>
+                    <p>Music streaming</p>
+                    <a href="http://localhost:4533" target="_blank">Launch Navidrome</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>🤖 Automation & Enhancement</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Prowlarr</h3>
+                    <p>Indexer management</p>
+                    <a href="http://localhost:9696" target="_blank">Launch Prowlarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Bazarr</h3>
+                    <p>Subtitle automation</p>
+                    <a href="http://localhost:6767" target="_blank">Launch Bazarr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Autobrr</h3>
+                    <p>Release automation</p>
+                    <a href="http://localhost:7474" target="_blank">Launch Autobrr</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>qBittorrent</h3>
+                    <p>Download client</p>
+                    <a href="http://localhost:8080" target="_blank">Launch qBittorrent</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="phase">
+            <h2>📊 Monitoring & Management</h2>
+            <div class="grid">
+                <div class="service">
+                    <h3><span class="status"></span>Homepage</h3>
+                    <p>Main dashboard</p>
+                    <a href="http://localhost:3001" target="_blank">Launch Homepage</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Uptime Kuma</h3>
+                    <p>Service monitoring</p>
+                    <a href="http://localhost:3011" target="_blank">Launch Uptime Kuma</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Tautulli</h3>
+                    <p>Media analytics</p>
+                    <a href="http://localhost:8181" target="_blank">Launch Tautulli</a>
+                </div>
+                <div class="service">
+                    <h3><span class="status"></span>Overseerr</h3>
+                    <p>Request management</p>
+                    <a href="http://localhost:5055" target="_blank">Launch Overseerr</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

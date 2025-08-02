@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/holographic.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+</head>
+<body>
+    <div id="webgl-container"></div>
+    
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-text">Testing Dashboard...</div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple test to hide loading screen
+        window.addEventListener('load', () => {
+            console.log('Window loaded, hiding loading screen...');
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loading-screen');
+                const progressBar = document.getElementById('loading-progress');
+                
+                // Animate progress
+                progressBar.style.width = '100%';
+                
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        console.log('Loading screen hidden!');
+                    }, 500);
+                }, 500);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

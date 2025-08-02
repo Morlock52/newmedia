@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Manager - Holographic Dashboard</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a14;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --holo-cyan: #00ffff;
+            --holo-magenta: #ff00ff;
+            --holo-yellow: #ffff00;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c0;
+            --success: #00ff00;
+            --warning: #ffaa00;
+            --error: #ff3366;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(255, 255, 0, 0.05) 0%, transparent 50%);
+        }
+
+        /* Header */
+        .header {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            background: linear-gradient(90deg, var(--holo-cyan), var(--holo-magenta), var(--holo-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glitch 3s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 2px 2px 0 rgba(0, 255, 255, 0.5), -2px -2px 0 rgba(255, 0, 255, 0.5); }
+            50% { text-shadow: -2px 2px 0 rgba(255, 255, 0, 0.5), 2px -2px 0 rgba(0, 255, 255, 0.5); }
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+            border-color: var(--holo-cyan);
+            color: var(--text-primary);
+        }
+
+        .nav-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Search Bar */
+        .search-section {
+            margin-bottom: 2rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 3rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Environment Variables Section */
+        .env-groups {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .env-group {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .env-group.collapsed .env-items {
+            display: none;
+        }
+
+        .env-group-header {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .env-group-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .env-group-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .env-group-icon {
+            font-size: 1.5rem;
+        }
+
+        .env-group-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .env-group-count {
+            background: rgba(0, 255, 255, 0.2);
+            color: var(--holo-cyan);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .env-group.collapsed .expand-icon {
+            transform: rotate(-90deg);
+        }
+
+        .env-items {
+            padding: 1.5rem;
+        }
+
+        .env-item {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .env-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .env-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .env-key {
+            font-family: 'Orbitron', monospace;
+            font-weight: 500;
+            color: var(--holo-cyan);
+            font-size: 0.875rem;
+        }
+
+        .env-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 5px;
+            background: rgba(0, 255, 0, 0.1);
+            color: var(--success);
+        }
+
+        .env-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .env-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .env-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .env-input.modified {
+            border-color: var(--warning);
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+        }
+
+        /* Docker Services Section */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .service-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--holo-cyan), var(--holo-magenta), var(--holo-yellow));
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .service-card:hover::before {
+            opacity: 0.5;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .service-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .service-icon {
+            font-size: 1.5rem;
+        }
+
+        .service-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            background: rgba(0, 255, 0, 0.2);
+            color: var(--success);
+        }
+
+        .status-stopped {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--error);
+        }
+
+        .status-restarting {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .service-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--holo-cyan);
+            font-family: 'Orbitron', monospace;
+        }
+
+        .service-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--holo-cyan), #0088ff);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--holo-cyan);
+        }
+
+        .btn-danger {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--error);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 51, 102, 0.3);
+        }
+
+        /* Action Bar */
+        .action-bar {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--holo-cyan);
+            border-radius: 15px;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            transition: bottom 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 -5px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .action-bar.show {
+            bottom: 2rem;
+        }
+
+        .changes-count {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        /* Logs Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            max-height: calc(80vh - 80px);
+            overflow-y: auto;
+        }
+
+        .log-viewer {
+            background: #000;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            color: #00ff00;
+        }
+
+        .log-line {
+            margin-bottom: 0.25rem;
+        }
+
+        .log-error {
+            color: var(--error);
+        }
+
+        .log-warning {
+            color: var(--warning);
+        }
+
+        .log-info {
+            color: var(--holo-cyan);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--holo-cyan);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <navigation-header 
+        title="Configuration Manager"
+        breadcrumbs="Home,Configuration"
+        current-page="Configuration"
+        back-url="main-app.html">
+    </navigation-header>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="switchTab('env')">🔧 Environment Variables</div>
+        <div class="nav-tab" onclick="switchTab('services')">🐳 Docker Services</div>
+        <div class="nav-tab" onclick="switchTab('backup')">💾 Backup & Restore</div>
+        <div style="margin-left: auto;">
+            <button class="btn btn-secondary" onclick="refreshAll()">
+                <span class="spinner" id="refreshSpinner" style="display: none;"></span>
+                <span>↻ Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="Search configuration..." onkeyup="handleSearch()">
+            </div>
+        </div>
+
+        <!-- Environment Variables Tab -->
+        <div class="tab-content active" id="env-tab">
+            <div class="env-groups" id="envGroups">
+                <!-- Environment groups will be populated here -->
+            </div>
+        </div>
+
+        <!-- Docker Services Tab -->
+        <div class="tab-content" id="services-tab">
+            <div class="services-grid" id="servicesGrid">
+                <!-- Service cards will be populated here -->
+            </div>
+        </div>
+
+        <!-- Backup & Restore Tab -->
+        <div class="tab-content" id="backup-tab">
+            <div style="text-align: center; padding: 3rem;">
+                <h2 style="margin-bottom: 2rem;">Backup & Restore Configuration</h2>
+                <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary" style="padding: 1rem 2rem;" onclick="backupConfig()">
+                        💾 Create Backup
+                    </button>
+                    <button class="btn btn-secondary" style="padding: 1rem 2rem;" onclick="document.getElementById('restoreFile').click()">
+                        📥 Restore from Backup
+                    </button>
+                    <input type="file" id="restoreFile" style="display: none;" accept=".env,.backup" onchange="restoreConfig(event)">
+                </div>
+                <div id="backupHistory" style="margin-top: 3rem;">
+                    <!-- Backup history will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar" id="actionBar">
+        <span><span class="changes-count" id="changesCount">0</span> unsaved changes</span>
+        <button class="btn btn-secondary" onclick="discardChanges()">Discard</button>
+        <button class="btn btn-primary" onclick="saveChanges()">Save Changes</button>
+    </div>
+
+    <!-- Logs Modal -->
+    <div class="modal" id="logsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Service Logs</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="log-viewer" id="logViewer">
+                    <!-- Logs will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Environment variable definitions
+        const envGroups = [
+            {
+                id: 'general',
+                name: 'General Settings',
+                icon: '⚙️',
+                vars: [
+                    { key: 'TZ', value: 'America/New_York', description: 'System timezone' },
+                    { key: 'PUID', value: '1000', description: 'User ID for file permissions' },
+                    { key: 'PGID', value: '1000', description: 'Group ID for file permissions' },
+                    { key: 'BASE_PATH', value: '/Users/morlock/fun/newmedia', description: 'Base directory for all services' },
+                    { key: 'MEDIA_PATH', value: './data/media', description: 'Media storage location' },
+                    { key: 'CONFIG_PATH', value: './config', description: 'Configuration files location' }
+                ]
+            },
+            {
+                id: 'auth',
+                name: 'Authentication & Security',
+                icon: '🔐',
+                vars: [
+                    { key: 'JWT_SECRET', value: '', description: 'JWT secret for authentication', type: 'password' },
+                    { key: 'ADMIN_PASSWORD', value: '', description: 'Admin password hash', type: 'password' },
+                    { key: 'SESSION_SECRET', value: '', description: 'Session secret key', type: 'password' },
+                    { key: 'API_KEY', value: '', description: 'Master API key', type: 'password' }
+                ]
+            },
+            {
+                id: 'media-services',
+                name: 'Media Service API Keys',
+                icon: '🎬',
+                vars: [
+                    { key: 'JELLYFIN_API_KEY', value: '', description: 'Jellyfin API key' },
+                    { key: 'SONARR_API_KEY', value: '79eecf2b23f34760b91cfcbf97189dd0', description: 'Sonarr API key' },
+                    { key: 'RADARR_API_KEY', value: '1c0fe63736a04e6394dacb3aa1160b1c', description: 'Radarr API key' },
+                    { key: 'PROWLARR_API_KEY', value: '5a35dd23f90c4d2bb69caa1eb0e1c534', description: 'Prowlarr API key' },
+                    { key: 'OVERSEERR_API_KEY', value: '', description: 'Overseerr API key' },
+                    { key: 'TAUTULLI_API_KEY', value: '', description: 'Tautulli API key' },
+                    { key: 'BAZARR_API_KEY', value: '', description: 'Bazarr API key' }
+                ]
+            },
+            {
+                id: 'cloudflare',
+                name: 'Cloudflare Settings',
+                icon: '☁️',
+                vars: [
+                    { key: 'CLOUDFLARE_TUNNEL_TOKEN', value: '', description: 'Cloudflare tunnel token', type: 'password' },
+                    { key: 'CLOUDFLARE_API_TOKEN', value: '', description: 'Cloudflare API token', type: 'password' },
+                    { key: 'CLOUDFLARE_ZONE_ID', value: '', description: 'Cloudflare zone ID' },
+                    { key: 'CLOUDFLARE_TUNNEL_UUID', value: '', description: 'Cloudflare tunnel UUID' }
+                ]
+            },
+            {
+                id: 'database',
+                name: 'Database Connections',
+                icon: '🗄️',
+                vars: [
+                    { key: 'MYSQL_HOST', value: 'localhost', description: 'MySQL host' },
+                    { key: 'MYSQL_PORT', value: '3306', description: 'MySQL port' },
+                    { key: 'MYSQL_DATABASE', value: 'media_server', description: 'MySQL database name' },
+                    { key: 'MYSQL_USER', value: 'media_user', description: 'MySQL username' },
+                    { key: 'MYSQL_PASSWORD', value: '', description: 'MySQL password', type: 'password' },
+                    { key: 'REDIS_HOST', value: 'localhost', description: 'Redis host' },
+                    { key: 'REDIS_PORT', value: '6379', description: 'Redis port' }
+                ]
+            },
+            {
+                id: 'monitoring',
+                name: 'Monitoring & Analytics',
+                icon: '📊',
+                vars: [
+                    { key: 'GRAFANA_ADMIN_USER', value: 'admin', description: 'Grafana admin username' },
+                    { key: 'GRAFANA_ADMIN_PASSWORD', value: '', description: 'Grafana admin password', type: 'password' },
+                    { key: 'PROMETHEUS_RETENTION', value: '30d', description: 'Prometheus data retention period' },
+                    { key: 'INFLUXDB_URL', value: 'http://localhost:8086', description: 'InfluxDB URL' }
+                ]
+            }
+        ];
+
+        // All available services
+        const allServices = [
+            { name: 'jellyfin', icon: '🎬', port: 8096, description: 'Media server' },
+            { name: 'sonarr', icon: '📺', port: 8989, description: 'TV show management' },
+            { name: 'radarr', icon: '🎞️', port: 7878, description: 'Movie management' },
+            { name: 'prowlarr', icon: '🔍', port: 9696, description: 'Indexer management' },
+            { name: 'qbittorrent', icon: '⬇️', port: 8080, description: 'Torrent client' },
+            { name: 'overseerr', icon: '🎭', port: 5055, description: 'Media requests' },
+            { name: 'tautulli', icon: '📊', port: 8181, description: 'Media statistics' },
+            { name: 'bazarr', icon: '💬', port: 6767, description: 'Subtitle management' },
+            { name: 'lidarr', icon: '🎵', port: 8686, description: 'Music management' },
+            { name: 'readarr', icon: '📚', port: 8787, description: 'Book management' },
+            { name: 'sabnzbd', icon: '📰', port: 8081, description: 'Usenet downloader' },
+            { name: 'nzbget', icon: '📥', port: 6789, description: 'Usenet alternative' },
+            { name: 'transmission', icon: '📡', port: 9091, description: 'Torrent client' },
+            { name: 'deluge', icon: '🌊', port: 8112, description: 'Torrent client' },
+            { name: 'jackett', icon: '🔎', port: 9117, description: 'Torrent indexer' },
+            { name: 'portainer', icon: '🐳', port: 9000, description: 'Docker management' },
+            { name: 'grafana', icon: '📊', port: 3000, description: 'Monitoring dashboards' },
+            { name: 'prometheus', icon: '🔥', port: 9090, description: 'Metrics collection' },
+            { name: 'organizr', icon: '🏠', port: 8082, description: 'Homepage organizer' },
+            { name: 'heimdall', icon: '🛡️', port: 8083, description: 'Application dashboard' },
+            { name: 'nextcloud', icon: '☁️', port: 8084, description: 'Cloud storage' },
+            { name: 'syncthing', icon: '🔄', port: 8384, description: 'File sync' },
+            { name: 'filebrowser', icon: '📂', port: 8085, description: 'File manager' },
+            { name: 'photoprism', icon: '📸', port: 2342, description: 'Photo management' },
+            { name: 'immich', icon: '🖼️', port: 2283, description: 'Photo backup' },
+            { name: 'navidrome', icon: '🎶', port: 4533, description: 'Music streaming' },
+            { name: 'airsonic', icon: '🎵', port: 4040, description: 'Music streaming' },
+            { name: 'audiobookshelf', icon: '📖', port: 13378, description: 'Audiobook server' },
+            { name: 'kavita', icon: '📚', port: 5002, description: 'Reading server' },
+            { name: 'komga', icon: '📖', port: 8090, description: 'Comic server' }
+        ];
+
+        // State management
+        let state = {
+            modifiedFields: new Set(),
+            services: {},
+            originalEnvValues: {}
+        };
+
+        // Initialize
+        window.addEventListener('load', () => {
+            loadEnvironmentVariables();
+            loadServices();
+            initializeEventListeners();
+            
+            // Auto-save draft
+            setInterval(saveDraft, 2000);
+        });
+
+        function loadEnvironmentVariables() {
+            const container = document.getElementById('envGroups');
+            container.innerHTML = '';
+            
+            envGroups.forEach(group => {
+                const groupEl = createEnvGroup(group);
+                container.appendChild(groupEl);
+                
+                // Store original values
+                group.vars.forEach(v => {
+                    state.originalEnvValues[v.key] = v.value;
+                });
+            });
+        }
+
+        function createEnvGroup(group) {
+            const div = document.createElement('div');
+            div.className = 'env-group';
+            div.id = `group-${group.id}`;
+            
+            div.innerHTML = `
+                <div class="env-group-header" onclick="toggleGroup('${group.id}')">
+                    <div class="env-group-title">
+                        <span class="env-group-icon">${group.icon}</span>
+                        <span class="env-group-name">${group.name}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="env-group-count">${group.vars.length} variables</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="env-items">
+                    ${group.vars.map(v => createEnvItem(v)).join('')}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function createEnvItem(variable) {
+            const inputType = variable.type === 'password' ? 'password' : 'text';
+            return `
+                <div class="env-item" data-key="${variable.key}">
+                    <div class="env-item-header">
+                        <span class="env-key">${variable.key}</span>
+                        <span class="env-status">Active</span>
+                    </div>
+                    <div class="env-description">${variable.description}</div>
+                    <input type="${inputType}" 
+                           class="env-input" 
+                           value="${variable.value}" 
+                           data-key="${variable.key}"
+                           onchange="markModified(this)"
+                           oninput="validateInput(this)">
+                </div>
+            `;
+        }
+
+        function loadServices() {
+            const container = document.getElementById('servicesGrid');
+            container.innerHTML = '';
+            
+            allServices.forEach(service => {
+                const card = createServiceCard(service);
+                container.appendChild(card);
+                
+                // Simulate random status
+                const statuses = ['running', 'stopped', 'running', 'running'];
+                const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                state.services[service.name] = {
+                    status: randomStatus,
+                    cpu: Math.random() * 50,
+                    memory: Math.random() * 2048,
+                    uptime: Math.random() * 86400
+                };
+            });
+            
+            // Start status updates
+            setInterval(updateServiceStats, 5000);
+        }
+
+        function createServiceCard(service) {
+            const div = document.createElement('div');
+            div.className = 'service-card';
+            div.setAttribute('data-service', service.name);
+            
+            const stats = state.services[service.name] || {
+                status: 'stopped',
+                cpu: 0,
+                memory: 0,
+                uptime: 0
+            };
+            
+            div.innerHTML = `
+                <div class="service-header">
+                    <div class="service-name">
+                        <span class="service-icon">${service.icon}</span>
+                        <span>${service.name}</span>
+                    </div>
+                    <span class="service-status status-${stats.status}">${stats.status}</span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                    ${service.description} • Port ${service.port}
+                </div>
+                <div class="service-stats">
+                    <div class="stat">
+                        <div class="stat-label">CPU</div>
+                        <div class="stat-value">${stats.cpu.toFixed(1)}%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Memory</div>
+                        <div class="stat-value">${(stats.memory / 1024).toFixed(1)}GB</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Uptime</div>
+                        <div class="stat-value">${formatUptime(stats.uptime)}</div>
+                    </div>
+                </div>
+                <div class="service-actions">
+                    ${stats.status === 'running' ? 
+                        `<button class="btn btn-danger" onclick="controlService('${service.name}', 'stop')">Stop</button>
+                         <button class="btn btn-secondary" onclick="controlService('${service.name}', 'restart')">Restart</button>` :
+                        `<button class="btn btn-primary" onclick="controlService('${service.name}', 'start')">Start</button>`
+                    }
+                    <button class="btn btn-secondary" onclick="viewLogs('${service.name}')">Logs</button>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function toggleGroup(groupId) {
+            const group = document.getElementById(`group-${groupId}`);
+            group.classList.toggle('collapsed');
+        }
+
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Search environment variables
+            document.querySelectorAll('.env-item').forEach(item => {
+                const key = item.dataset.key.toLowerCase();
+                const description = item.querySelector('.env-description').textContent.toLowerCase();
+                const matches = key.includes(query) || description.includes(query);
+                item.style.display = matches ? '' : 'none';
+            });
+            
+            // Hide empty groups
+            document.querySelectorAll('.env-group').forEach(group => {
+                const hasVisibleItems = group.querySelectorAll('.env-item:not([style*="display: none"])').length > 0;
+                group.style.display = hasVisibleItems ? '' : 'none';
+            });
+            
+            // Search services
+            document.querySelectorAll('.service-card').forEach(card => {
+                const name = card.dataset.service.toLowerCase();
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        function markModified(input) {
+            const key = input.dataset.key;
+            if (input.value !== state.originalEnvValues[key]) {
+                input.classList.add('modified');
+                state.modifiedFields.add(key);
+            } else {
+                input.classList.remove('modified');
+                state.modifiedFields.delete(key);
+            }
+            
+            updateActionBar();
+        }
+
+        function validateInput(input) {
+            // Add validation logic here
+            markModified(input);
+        }
+
+        function updateActionBar() {
+            const actionBar = document.getElementById('actionBar');
+            const count = document.getElementById('changesCount');
+            
+            if (state.modifiedFields.size > 0) {
+                actionBar.classList.add('show');
+                count.textContent = state.modifiedFields.size;
+            } else {
+                actionBar.classList.remove('show');
+            }
+        }
+
+        function saveChanges() {
+            // Simulate saving
+            console.log('Saving changes:', Array.from(state.modifiedFields));
+            
+            // Update original values
+            state.modifiedFields.forEach(key => {
+                const input = document.querySelector(`input[data-key="${key}"]`);
+                state.originalEnvValues[key] = input.value;
+                input.classList.remove('modified');
+            });
+            
+            state.modifiedFields.clear();
+            updateActionBar();
+            
+            // Show success message
+            showNotification('Changes saved successfully!', 'success');
+        }
+
+        function discardChanges() {
+            if (!confirm('Discard all unsaved changes?')) return;
+            
+            // Restore original values
+            state.modifiedFields.forEach(key => {
+                const input = document.querySelector(`input[data-key="${key}"]`);
+                input.value = state.originalEnvValues[key];
+                input.classList.remove('modified');
+            });
+            
+            state.modifiedFields.clear();
+            updateActionBar();
+        }
+
+        function controlService(service, action) {
+            console.log(`${action} service: ${service}`);
+            
+            // Simulate service control
+            const card = document.querySelector(`[data-service="${service}"]`);
+            const statusEl = card.querySelector('.service-status');
+            
+            if (action === 'start') {
+                statusEl.className = 'service-status status-restarting';
+                statusEl.textContent = 'starting';
+                
+                setTimeout(() => {
+                    state.services[service].status = 'running';
+                    updateServiceCard(service);
+                }, 2000);
+            } else if (action === 'stop') {
+                state.services[service].status = 'stopped';
+                updateServiceCard(service);
+            } else if (action === 'restart') {
+                statusEl.className = 'service-status status-restarting';
+                statusEl.textContent = 'restarting';
+                
+                setTimeout(() => {
+                    state.services[service].status = 'running';
+                    updateServiceCard(service);
+                }, 3000);
+            }
+        }
+
+        function updateServiceCard(serviceName) {
+            const service = allServices.find(s => s.name === serviceName);
+            const card = document.querySelector(`[data-service="${serviceName}"]`);
+            const newCard = createServiceCard(service);
+            card.parentNode.replaceChild(newCard, card);
+        }
+
+        function viewLogs(service) {
+            const modal = document.getElementById('logsModal');
+            const title = document.getElementById('modalTitle');
+            const viewer = document.getElementById('logViewer');
+            
+            title.textContent = `${service} Logs`;
+            
+            // Simulate logs
+            const logs = generateSampleLogs(service);
+            viewer.innerHTML = logs;
+            
+            modal.classList.add('show');
+            
+            // Auto-scroll to bottom
+            viewer.scrollTop = viewer.scrollHeight;
+        }
+
+        function generateSampleLogs(service) {
+            const timestamps = [];
+            const now = new Date();
+            
+            for (let i = 20; i >= 0; i--) {
+                const time = new Date(now - i * 60000);
+                const timeStr = time.toISOString();
+                const level = ['INFO', 'WARN', 'ERROR'][Math.floor(Math.random() * 3)];
+                const messages = [
+                    'Service started successfully',
+                    'Connected to database',
+                    'Processing media scan',
+                    'API request received',
+                    'Cache cleared',
+                    'Configuration reloaded'
+                ];
+                const msg = messages[Math.floor(Math.random() * messages.length)];
+                
+                const colorClass = level === 'ERROR' ? 'log-error' : 
+                                 level === 'WARN' ? 'log-warning' : 'log-info';
+                
+                timestamps.push(`<div class="log-line ${colorClass}">[${timeStr}] ${level}: ${msg}</div>`);
+            }
+            
+            return timestamps.join('');
+        }
+
+        function closeModal() {
+            document.getElementById('logsModal').classList.remove('show');
+        }
+
+        function updateServiceStats() {
+            Object.keys(state.services).forEach(service => {
+                if (state.services[service].status === 'running') {
+                    // Simulate changing stats
+                    state.services[service].cpu = Math.max(0, Math.min(100, 
+                        state.services[service].cpu + (Math.random() - 0.5) * 10));
+                    state.services[service].memory = Math.max(100, Math.min(4096, 
+                        state.services[service].memory + (Math.random() - 0.5) * 100));
+                    state.services[service].uptime += 5;
+                    
+                    // Update display
+                    const card = document.querySelector(`[data-service="${service}"]`);
+                    if (card) {
+                        const cpuEl = card.querySelector('.stat-value');
+                        const memEl = card.querySelectorAll('.stat-value')[1];
+                        const uptimeEl = card.querySelectorAll('.stat-value')[2];
+                        
+                        if (cpuEl) cpuEl.textContent = state.services[service].cpu.toFixed(1) + '%';
+                        if (memEl) memEl.textContent = (state.services[service].memory / 1024).toFixed(1) + 'GB';
+                        if (uptimeEl) uptimeEl.textContent = formatUptime(state.services[service].uptime);
+                    }
+                }
+            });
+        }
+
+        function formatUptime(seconds) {
+            if (seconds < 60) return `${Math.floor(seconds)}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+            return `${Math.floor(seconds / 86400)}d`;
+        }
+
+        function refreshAll() {
+            const spinner = document.getElementById('refreshSpinner');
+            if (spinner) spinner.style.display = 'inline-block';
+            
+            setTimeout(() => {
+                loadEnvironmentVariables();
+                loadServices();
+                if (spinner) spinner.style.display = 'none';
+                showNotification('Configuration refreshed', 'success');
+            }, 1000);
+        }
+
+        function saveDraft() {
+            if (state.modifiedFields.size > 0) {
+                localStorage.setItem('configDraft', JSON.stringify({
+                    fields: Array.from(state.modifiedFields),
+                    values: {}
+                }));
+            }
+        }
+
+        function backupConfig() {
+            const config = {};
+            envGroups.forEach(group => {
+                group.vars.forEach(v => {
+                    const input = document.querySelector(`input[data-key="${v.key}"]`);
+                    config[v.key] = input ? input.value : v.value;
+                });
+            });
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `.env.backup.${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Backup created successfully!', 'success');
+        }
+
+        function restoreConfig(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // Apply configuration
+                    Object.entries(config).forEach(([key, value]) => {
+                        const input = document.querySelector(`input[data-key="${key}"]`);
+                        if (input) {
+                            input.value = value;
+                            markModified(input);
+                        }
+                    });
+                    
+                    showNotification('Configuration restored. Review changes before saving.', 'info');
+                } catch (err) {
+                    showNotification('Failed to restore configuration: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification (you can enhance this)
+            const colors = {
+                success: '#00ff00',
+                error: '#ff3366',
+                info: '#00ffff',
+                warning: '#ffaa00'
+            };
+            
+            console.log(`%c${message}`, `color: ${colors[type]}; font-weight: bold;`);
+        }
+
+        function initializeEventListeners() {
+            // Close modal on escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+            
+            // Close modal on outside click
+            document.getElementById('logsModal').addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    closeModal();
+                }
+            });
+            
+            // Save on Ctrl+S
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    if (state.modifiedFields.size > 0) {
+                        saveChanges();
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,663 @@
+# OpenTelemetry Collector Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: media-platform-monitoring
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'kubernetes-pods'
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                  action: replace
+                  regex: ([^:]+)(?::\d+)?;(\d+)
+                  replacement: $1:$2
+                  target_label: __address__
+                  
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+          thrift_compact:
+            endpoint: 0.0.0.0:6831
+            
+      zipkin:
+        endpoint: 0.0.0.0:9411
+        
+      hostmetrics:
+        collection_interval: 10s
+        scrapers:
+          cpu:
+          disk:
+          filesystem:
+          load:
+          memory:
+          network:
+          process:
+          
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+        
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 1024
+        spike_limit_mib: 256
+        
+      resource:
+        attributes:
+          - key: cluster.name
+            value: media-platform-prod
+            action: insert
+          - key: environment
+            value: production
+            action: insert
+            
+      attributes:
+        actions:
+          - key: http.user_agent
+            action: delete
+          - key: http.request.header.authorization
+            action: delete
+            
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 100
+        expected_new_traces_per_sec: 10
+        policies:
+          - name: errors-policy
+            type: status_code
+            status_code: {status_codes: [ERROR]}
+          - name: slow-traces
+            type: latency
+            latency: {threshold_ms: 1000}
+          - name: probabilistic-policy
+            type: probabilistic
+            probabilistic: {sampling_percentage: 10}
+            
+      transform:
+        metric_statements:
+          - context: datapoint
+            statements:
+              - set(attributes["cluster"], "media-platform")
+              - set(attributes["namespace"], resource.attributes["k8s.namespace.name"])
+              
+    exporters:
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: media_platform
+        
+      prometheusremotewrite:
+        endpoint: http://thanos-receive:19291/api/v1/receive
+        headers:
+          X-Scope-OrgID: media-platform
+          
+      jaeger:
+        endpoint: jaeger-collector:14250
+        tls:
+          insecure: true
+          
+      loki:
+        endpoint: http://loki-gateway:3100/loki/api/v1/push
+        tenant_id: media-platform
+        
+      otlp:
+        endpoint: tempo:4317
+        tls:
+          insecure: true
+          
+      elasticsearch:
+        endpoint: http://elasticsearch:9200
+        logs_index: media-platform-logs
+        traces_index: media-platform-traces
+        metrics_index: media-platform-metrics
+        
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp, jaeger, zipkin]
+          processors: [memory_limiter, batch, resource, tail_sampling]
+          exporters: [jaeger, otlp, elasticsearch]
+          
+        metrics:
+          receivers: [otlp, prometheus, hostmetrics]
+          processors: [memory_limiter, batch, resource, transform]
+          exporters: [prometheus, prometheusremotewrite]
+          
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource, attributes]
+          exporters: [loki, elasticsearch]
+          
+      extensions: [health_check, pprof, zpages]
+      
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          level: detailed
+          address: 0.0.0.0:8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: media-platform-monitoring
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      serviceAccountName: otel-collector
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.88.0
+        command: ["/otelcol-contrib", "--config=/etc/otel-collector/otel-collector-config.yaml"]
+        ports:
+        - containerPort: 4317  # OTLP gRPC
+        - containerPort: 4318  # OTLP HTTP
+        - containerPort: 8889  # Prometheus metrics
+        - containerPort: 14250 # Jaeger gRPC
+        - containerPort: 14268 # Jaeger HTTP
+        - containerPort: 9411  # Zipkin
+        - containerPort: 8888  # Metrics
+        volumeMounts:
+        - name: config
+          mountPath: /etc/otel-collector
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 1
+          limits:
+            memory: 4Gi
+            cpu: 2
+      volumes:
+      - name: config
+        configMap:
+          name: otel-collector-config
+---
+# Thanos for long-term metrics storage
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-config
+  namespace: media-platform-monitoring
+data:
+  object-store.yaml: |
+    type: S3
+    config:
+      bucket: media-platform-metrics
+      endpoint: s3.amazonaws.com
+      region: us-east-1
+      access_key: "${S3_ACCESS_KEY}"
+      secret_key: "${S3_SECRET_KEY}"
+      insecure: false
+      sse_config:
+        type: "SSE-S3"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store
+  namespace: media-platform-monitoring
+spec:
+  replicas: 3
+  serviceName: thanos-store
+  selector:
+    matchLabels:
+      app: thanos-store
+  template:
+    metadata:
+      labels:
+        app: thanos-store
+    spec:
+      serviceAccountName: thanos
+      containers:
+      - name: thanos-store
+        image: quay.io/thanos/thanos:v0.32.5
+        args:
+        - store
+        - --data-dir=/data
+        - --objstore.config-file=/etc/thanos/object-store.yaml
+        - --http-address=0.0.0.0:19190
+        - --grpc-address=0.0.0.0:19090
+        - --index-cache-size=2GB
+        - --chunk-pool-size=2GB
+        ports:
+        - containerPort: 19190
+          name: http
+        - containerPort: 19090
+          name: grpc
+        volumeMounts:
+        - name: config
+          mountPath: /etc/thanos
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 1
+          limits:
+            memory: 4Gi
+            cpu: 2
+      volumes:
+      - name: config
+        configMap:
+          name: thanos-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: fast-ssd
+      resources:
+        requests:
+          storage: 100Gi
+---
+# Tempo for distributed tracing
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+  namespace: media-platform-monitoring
+data:
+  tempo.yaml: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+      
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+        jaeger:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:14250
+            thrift_http:
+              endpoint: 0.0.0.0:14268
+            thrift_compact:
+              endpoint: 0.0.0.0:6831
+        zipkin:
+          endpoint: 0.0.0.0:9411
+          
+    ingester:
+      trace_idle_period: 10s
+      max_block_bytes: 1_000_000
+      max_block_duration: 5m
+      
+    compactor:
+      compaction:
+        compaction_window: 1h
+        max_block_bytes: 100_000_000
+        block_retention: 72h
+        compacted_block_retention: 1h
+        
+    storage:
+      trace:
+        backend: s3
+        s3:
+          bucket: media-platform-traces
+          endpoint: s3.amazonaws.com
+          region: us-east-1
+          access_key: "${S3_ACCESS_KEY}"
+          secret_key: "${S3_SECRET_KEY}"
+        pool:
+          max_workers: 100
+          queue_depth: 10000
+          
+    querier:
+      frontend_worker:
+        frontend_address: tempo-query-frontend:9095
+        
+    query_frontend:
+      search:
+        max_duration: 24h
+      trace_by_id:
+        query_shards: 50
+---
+# Loki for log aggregation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: media-platform-monitoring
+data:
+  loki.yaml: |
+    auth_enabled: true
+    
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9095
+      
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 3
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: memberlist
+          
+    schema_config:
+      configs:
+        - from: 2023-01-01
+          store: boltdb-shipper
+          object_store: aws
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+            
+    storage_config:
+      aws:
+        s3: s3://us-east-1/media-platform-logs
+        region: us-east-1
+        access_key_id: "${S3_ACCESS_KEY}"
+        secret_access_key: "${S3_SECRET_KEY}"
+      boltdb_shipper:
+        active_index_directory: /loki/boltdb-shipper-active
+        cache_location: /loki/boltdb-shipper-cache
+        cache_ttl: 24h
+        shared_store: s3
+        
+    chunk_store_config:
+      max_look_back_period: 720h
+      
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 720h
+      
+    compactor:
+      working_directory: /loki/boltdb-shipper-compactor
+      shared_store: aws
+      
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      ingestion_rate_mb: 50
+      ingestion_burst_size_mb: 100
+      
+    ruler:
+      storage:
+        type: s3
+        s3:
+          s3: s3://us-east-1/media-platform-rules
+          region: us-east-1
+      rule_path: /loki/rules-temp
+      alertmanager_url: http://alertmanager:9093
+      ring:
+        kvstore:
+          store: memberlist
+      enable_api: true
+---
+# AIOps Integration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aiops-config
+  namespace: media-platform-monitoring
+data:
+  anomaly-detection.py: |
+    import numpy as np
+    import pandas as pd
+    from prophet import Prophet
+    from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+    import mlflow
+    import requests
+    from datetime import datetime, timedelta
+    import logging
+    
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    class AnomalyDetector:
+        def __init__(self, prometheus_url, pushgateway_url):
+            self.prometheus_url = prometheus_url
+            self.pushgateway_url = pushgateway_url
+            self.registry = CollectorRegistry()
+            self.anomaly_gauge = Gauge(
+                'media_platform_anomaly_score',
+                'Anomaly score for metrics',
+                ['metric_name', 'service'],
+                registry=self.registry
+            )
+            
+        def fetch_metric_data(self, metric_name, lookback_hours=168):
+            """Fetch historical metric data from Prometheus"""
+            end_time = datetime.now()
+            start_time = end_time - timedelta(hours=lookback_hours)
+            
+            query = f'{metric_name}[{lookback_hours}h]'
+            response = requests.get(
+                f'{self.prometheus_url}/api/v1/query_range',
+                params={
+                    'query': query,
+                    'start': start_time.timestamp(),
+                    'end': end_time.timestamp(),
+                    'step': '5m'
+                }
+            )
+            
+            data = response.json()
+            if data['status'] == 'success':
+                return self._parse_prometheus_data(data['data']['result'])
+            return None
+            
+        def _parse_prometheus_data(self, result):
+            """Parse Prometheus query result into DataFrame"""
+            dfs = []
+            for series in result:
+                metric = series['metric']
+                values = series['values']
+                
+                df = pd.DataFrame(values, columns=['timestamp', 'value'])
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+                df['value'] = df['value'].astype(float)
+                df['service'] = metric.get('service', 'unknown')
+                dfs.append(df)
+                
+            return pd.concat(dfs) if dfs else None
+            
+        def train_prophet_model(self, df, metric_name):
+            """Train Prophet model for anomaly detection"""
+            prophet_df = df[['timestamp', 'value']].rename(
+                columns={'timestamp': 'ds', 'value': 'y'}
+            )
+            
+            model = Prophet(
+                changepoint_prior_scale=0.05,
+                seasonality_mode='multiplicative',
+                daily_seasonality=True,
+                weekly_seasonality=True,
+                yearly_seasonality=False,
+                interval_width=0.95
+            )
+            
+            with mlflow.start_run():
+                model.fit(prophet_df)
+                
+                # Log model to MLflow
+                mlflow.prophet.log_model(model, "prophet_model")
+                mlflow.log_param("metric_name", metric_name)
+                mlflow.log_param("training_samples", len(prophet_df))
+                
+            return model
+            
+        def detect_anomalies(self, model, current_data):
+            """Detect anomalies using trained model"""
+            future = model.make_future_dataframe(periods=0)
+            forecast = model.predict(future)
+            
+            # Merge with actual data
+            anomalies = pd.merge(
+                current_data,
+                forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']],
+                left_on='timestamp',
+                right_on='ds',
+                how='left'
+            )
+            
+            # Calculate anomaly score
+            anomalies['anomaly_score'] = 0
+            anomalies.loc[
+                (anomalies['value'] < anomalies['yhat_lower']) |
+                (anomalies['value'] > anomalies['yhat_upper']),
+                'anomaly_score'
+            ] = abs(anomalies['value'] - anomalies['yhat']) / anomalies['yhat']
+            
+            return anomalies
+            
+        def run_detection_pipeline(self, metrics_to_monitor):
+            """Run anomaly detection pipeline for multiple metrics"""
+            for metric_name in metrics_to_monitor:
+                try:
+                    logger.info(f"Processing metric: {metric_name}")
+                    
+                    # Fetch data
+                    df = self.fetch_metric_data(metric_name)
+                    if df is None or df.empty:
+                        continue
+                    
+                    # Group by service
+                    for service, group_df in df.groupby('service'):
+                        # Train model
+                        model = self.train_prophet_model(group_df, f"{metric_name}_{service}")
+                        
+                        # Get recent data for anomaly detection
+                        recent_data = group_df.tail(12)  # Last hour
+                        
+                        # Detect anomalies
+                        anomalies = self.detect_anomalies(model, recent_data)
+                        
+                        # Update metrics
+                        max_anomaly_score = anomalies['anomaly_score'].max()
+                        self.anomaly_gauge.labels(
+                            metric_name=metric_name,
+                            service=service
+                        ).set(max_anomaly_score)
+                        
+                        # Alert if significant anomaly
+                        if max_anomaly_score > 0.2:
+                            self.send_alert(metric_name, service, max_anomaly_score)
+                            
+                except Exception as e:
+                    logger.error(f"Error processing {metric_name}: {str(e)}")
+                    
+            # Push metrics to Prometheus
+            push_to_gateway(self.pushgateway_url, job='aiops_anomaly_detector', registry=self.registry)
+            
+        def send_alert(self, metric_name, service, anomaly_score):
+            """Send alert for detected anomaly"""
+            alert_data = {
+                "receiver": "aiops-webhook",
+                "status": "firing",
+                "alerts": [{
+                    "status": "firing",
+                    "labels": {
+                        "alertname": "AIOpsAnomalyDetected",
+                        "severity": "warning" if anomaly_score < 0.5 else "critical",
+                        "metric": metric_name,
+                        "service": service
+                    },
+                    "annotations": {
+                        "description": f"Anomaly detected in {metric_name} for service {service}",
+                        "anomaly_score": str(anomaly_score)
+                    }
+                }]
+            }
+            
+            requests.post(
+                "http://alertmanager:9093/api/v1/alerts",
+                json=alert_data
+            )
+    
+    if __name__ == "__main__":
+        detector = AnomalyDetector(
+            prometheus_url="http://prometheus:9090",
+            pushgateway_url="http://pushgateway:9091"
+        )
+        
+        metrics_to_monitor = [
+            "http_request_duration_seconds",
+            "http_requests_total",
+            "streaming_active_connections",
+            "transcoding_queue_size",
+            "ml_inference_duration_seconds",
+            "database_connections_active"
+        ]
+        
+        detector.run_detection_pipeline(metrics_to_monitor)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aiops-anomaly-detector
+  namespace: media-platform-monitoring
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: aiops
+          containers:
+          - name: anomaly-detector
+            image: media-platform/aiops-detector:2.0.0
+            command: ["python", "/app/anomaly-detection.py"]
+            volumeMounts:
+            - name: config
+              mountPath: /app
+            env:
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow:5000
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            resources:
+              requests:
+                memory: 2Gi
+                cpu: 1
+              limits:
+                memory: 4Gi
+                cpu: 2
+          volumes:
+          - name: config
+            configMap:
+              name: aiops-config
+          restartPolicy: OnFailure

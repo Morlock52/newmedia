@@ -1,0 +1,175 @@
+# Diun Configuration - Docker Image Update Notifier
+# https://crazymax.dev/diun/
+
+# Database configuration
+db:
+  path: /data/diun.db
+
+# Watch configuration
+watch:
+  workers: 10
+  schedule: "0 */6 * * *"  # Check every 6 hours
+  jitter: 30s
+  firstCheckNotif: false
+  compareDigest: true
+  healthchecks:
+    baseURL: ${HEALTHCHECKS_URL:-}
+
+# Docker provider configuration
+providers:
+  docker:
+    # Watch all containers by default
+    watchByDefault: true
+    # Exclude stopped containers
+    watchStopped: false
+    # Include health status
+    includeHealthcheck: true
+    # Label-based configuration
+    # Use label "diun.enable=true" to watch
+    # Use label "diun.enable=false" to exclude
+    # Use label "diun.watch_repo=true" to watch all tags
+    # Use label "diun.max_tags=10" to limit tags
+    # Use label "diun.include_tags=^v\d+\.\d+\.\d+$" for regex
+    # Use label "diun.exclude_tags=^latest$" to exclude tags
+    
+# Registry options
+regopts:
+  - name: "docker.io"
+    timeout: 30s
+    selector: image
+  - name: "ghcr.io"
+    timeout: 30s
+    selector: image
+  - name: "quay.io"
+    timeout: 30s
+    selector: image
+
+# Notification configuration
+notif:
+  # Email notifications
+  mail:
+    host: ${SMTP_HOST:-smtp.gmail.com}
+    port: ${SMTP_PORT:-587}
+    ssl: false
+    insecureSkipVerify: false
+    username: ${SMTP_USERNAME:-}
+    password: ${SMTP_PASSWORD:-}
+    from: ${SMTP_FROM:-}
+    to: ${SMTP_TO:-}
+    templateTitle: "🐳 Docker Update Available"
+    templateBody: |
+      Docker image update notifications:
+      
+      {{range .Entries -}}
+      {{if (eq .Status "new")}}🆕{{else if (eq .Status "update")}}🔄{{else}}✅{{end}} **{{.Image}}**
+      {{- with .Manifest}}
+      Current: `{{.Tag}}` → Available: `{{.Tag}}`
+      Platform: `{{.Platform}}`
+      {{- end}}
+      {{- end}}
+      
+      Total images checked: {{len .Entries}}
+      Updates available: {{len .Entries}}
+
+  # Webhook notifications (Discord/Slack compatible)
+  webhook:
+    endpoint: ${WEBHOOK_URL:-}
+    method: POST
+    headers:
+      Content-Type: application/json
+    timeout: 10s
+    templateTitle: "🐳 Docker Updates"
+    templateBody: |
+      {
+        "username": "Diun",
+        "avatar_url": "https://raw.githubusercontent.com/crazy-max/diun/master/.github/diun.png",
+        "embeds": [{
+          "title": "Docker Image Updates Available",
+          "color": 3447003,
+          "fields": [
+            {{range $index, $entry := .Entries -}}
+            {{- if $index}},{{end}}
+            {
+              "name": "{{.Image}}",
+              "value": "{{if (eq .Status \"new\")}}🆕 New{{else if (eq .Status \"update\")}}🔄 Update{{else}}✅ Up-to-date{{end}}\n{{- with .Manifest}}Current: `{{.Tag}}`{{- end}}",
+              "inline": true
+            }
+            {{- end}}
+          ],
+          "footer": {
+            "text": "Total: {{len .Entries}} | Time: {{.Meta.Hostname}}"
+          }
+        }]
+      }
+
+  # Gotify notifications
+  gotify:
+    endpoint: ${GOTIFY_URL:-}
+    token: ${GOTIFY_TOKEN:-}
+    priority: 5
+    timeout: 10s
+    templateTitle: "Docker Updates Available"
+
+  # Matrix notifications
+  matrix:
+    homeserverURL: ${MATRIX_HOMESERVER:-}
+    user: ${MATRIX_USER:-}
+    password: ${MATRIX_PASSWORD:-}
+    roomID: ${MATRIX_ROOM:-}
+    msgType: "m.notice"
+    templateTitle: "🐳 Docker Updates"
+
+  # Ntfy notifications
+  ntfy:
+    endpoint: ${NTFY_URL:-https://ntfy.sh}
+    topic: ${NTFY_TOPIC:-docker-updates}
+    priority: 3
+    tags: ["whale", "docker"]
+    templateTitle: "Docker Updates Available"
+
+  # Script notifications (custom actions)
+  script:
+    cmd: /scripts/notify.sh
+    args:
+      - "{{.Entry.Image}}"
+      - "{{.Entry.Status}}"
+      - "{{.Entry.Manifest.Tag}}"
+
+# Logging configuration
+log:
+  level: info
+  json: false
+  caller: false
+
+# Server configuration (metrics & health)
+server:
+  address: :8080
+  metrics:
+    enabled: true
+    path: /metrics
+  health:
+    enabled: true
+    path: /health
+
+# Image filtering rules
+filters:
+  # Global exclusions
+  exclude:
+    - name: "^.*/(scratch|busybox|alpine).*$"
+    - name: "^.*-dev$"
+    - name: "^.*-debug$"
+  
+  # Critical services - notify immediately
+  critical:
+    - name: "traefik"
+    - name: "authelia"
+    - name: "postgres"
+    - name: "redis"
+  
+  # Auto-update approved list (safe to update)
+  autoUpdate:
+    - name: "nginx"
+    - name: "redis"
+    - name: "mariadb"
+    - name: "postgres"
+    - name: "mongo"

@@ -1,0 +1,433 @@
+version: '3.9'
+
+# Ultimate Performance Media Server Stack 2025
+# Combines all optimization layers for maximum performance
+
+x-gpu-common: &gpu-common
+  runtime: nvidia
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+
+x-performance-limits: &performance-limits
+  deploy:
+    resources:
+      limits:
+        cpus: '16.0'
+        memory: 32G
+      reservations:
+        cpus: '8.0'
+        memory: 16G
+
+networks:
+  media_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  
+  gpu_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.driver.mtu: 9000
+  
+  edge_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
+  
+  storage_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
+
+volumes:
+  nvme_cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nvme1/cache
+  
+  neural_cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=16g,uid=1000,gid=1000
+
+services:
+  # =====================================
+  # EDGE GATEWAY WITH NGINX & VARNISH
+  # =====================================
+  
+  nginx_edge:
+    image: nginx:mainline-alpine
+    container_name: nginx_edge
+    volumes:
+      - ./performance-optimization/nginx/8k-streaming.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nvme_cache:/var/cache/nginx
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    networks:
+      - edge_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+    sysctls:
+      - net.core.somaxconn=65535
+      - net.ipv4.tcp_max_syn_backlog=65535
+
+  varnish_cache:
+    image: varnish:7.4-alpine
+    container_name: varnish_cache
+    volumes:
+      - ./performance-optimization/edge-caching/varnish-config.vcl:/etc/varnish/default.vcl:ro
+      - nvme_cache:/var/lib/varnish
+    command: |
+      -F -f /etc/varnish/default.vcl
+      -s malloc,8G
+      -s file,/var/lib/varnish/varnish_storage.bin,100G
+      -p thread_pools=8
+      -p thread_pool_min=200
+      -p thread_pool_max=5000
+      -p thread_pool_timeout=300
+      -p http_resp_hdr_len=65536
+      -p http_resp_size=98304
+      -p workspace_backend=256k
+      -p workspace_client=256k
+    networks:
+      - edge_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+  # =====================================
+  # CLOUDFLARE INTEGRATION
+  # =====================================
+  
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - edge_network
+    restart: unless-stopped
+
+  cf_api_service:
+    extends:
+      file: ./performance-optimization/cdn-integration/cloudflare-config.yml
+      service: cf_api_service
+    networks:
+      - edge_network
+      - cache_network
+
+  # =====================================
+  # GPU-ACCELERATED MEDIA SERVICES
+  # =====================================
+  
+  jellyfin_8k:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin_8k
+    <<: *gpu-common
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=https://media.example.com
+      # Hardware acceleration
+      - JELLYFIN_FFmpeg__hwaccel=cuda
+      - JELLYFIN_FFmpeg__hwaccel_output_format=cuda
+      - JELLYFIN_ENABLE_HARDWARE_ENCODING=true
+      - JELLYFIN_HARDWARE_ACCELERATION_TYPE=nvenc
+      # AV1 support
+      - JELLYFIN_ENABLE_AV1_ENCODING=true
+      - JELLYFIN_ENABLE_AV1_DECODING=true
+      # 8K optimization
+      - JELLYFIN_FFmpeg__analyzeduration=500000000
+      - JELLYFIN_FFmpeg__probesize=2000000000
+      - JELLYFIN_FFmpeg__fflags=+genpts+discardcorrupt+fastseek
+    volumes:
+      - ./config/jellyfin:/config
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+      - nvme_cache:/cache
+      - /dev/shm:/transcode  # RAM for ultra-fast transcoding
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - "8096:8096"
+      - "8920:8920"  # HTTPS
+      - "7359:7359/udp"  # Local network discovery
+    networks:
+      - media_network
+      - gpu_network
+    restart: unless-stopped
+    <<: *performance-limits
+
+  # =====================================
+  # AV1 HARDWARE ENCODING
+  # =====================================
+  
+  av1_encoder:
+    extends:
+      file: ./performance-optimization/av1-codec/hardware-acceleration.yml
+      service: av1_encoder
+    <<: *gpu-common
+    networks:
+      - gpu_network
+      - media_network
+
+  # =====================================
+  # HIGH-PERFORMANCE STORAGE
+  # =====================================
+  
+  minio_cluster:
+    extends:
+      file: ./performance-optimization/nvme-storage/optimized-storage.yml
+      service: minio_cluster
+    networks:
+      - storage_network
+      - media_network
+    volumes:
+      - /mnt/nvme1/minio:/data1
+      - /mnt/nvme2/minio:/data2
+      - nvme_cache:/cache
+
+  # =====================================
+  # ULTRA-FAST DATABASE
+  # =====================================
+  
+  postgres_nvme:
+    extends:
+      file: ./performance-optimization/nvme-storage/optimized-storage.yml
+      service: postgres_nvme
+    networks:
+      - storage_network
+      - media_network
+    volumes:
+      - /mnt/nvme1/postgres:/var/lib/postgresql/data
+      - ./performance-optimization/database/query-optimization.sql:/docker-entrypoint-initdb.d/01-optimize.sql:ro
+
+  # =====================================
+  # ML-POWERED OPTIMIZATION
+  # =====================================
+  
+  ml_predictor:
+    image: tensorflow/tensorflow:latest-gpu
+    container_name: ml_predictor
+    <<: *gpu-common
+    environment:
+      - CUDA_VISIBLE_DEVICES=2
+      - TF_FORCE_GPU_ALLOW_GROWTH=true
+      - MODEL_PATH=/models/performance_predictor.h5
+      - REDIS_URL=redis://neural_cache:6379
+      - PREDICTION_MODE=realtime
+    volumes:
+      - ./ml-models:/models:ro
+      - ./ml-services/predictor:/app
+      - neural_cache:/cache
+    networks:
+      - gpu_network
+      - cache_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+  # =====================================
+  # NEURAL CACHE SYSTEM
+  # =====================================
+  
+  neural_cache:
+    image: redis/redis-stack:latest
+    container_name: neural_cache
+    command: |
+      redis-server
+      --maxmemory 16gb
+      --maxmemory-policy allkeys-lru
+      --io-threads 8
+      --io-threads-do-reads yes
+      --save ""
+      --appendonly no
+      --tcp-backlog 511
+      --timeout 0
+      --tcp-keepalive 300
+      --maxclients 50000
+      --lazyfree-lazy-eviction yes
+      --lazyfree-lazy-expire yes
+      --lazyfree-lazy-server-del yes
+      --replica-lazy-flush yes
+    volumes:
+      - neural_cache:/data
+    ports:
+      - "6379:6379"
+      - "8001:8001"  # RedisInsight
+    networks:
+      - cache_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+  # =====================================
+  # GPU RESOURCE MANAGER
+  # =====================================
+  
+  gpu_manager:
+    extends:
+      file: ./performance-optimization/gpu-transcoding/optimization-config.yml
+      service: gpu_resource_manager
+    <<: *gpu-common
+    networks:
+      - gpu_network
+      - cache_network
+    privileged: true
+
+  # =====================================
+  # ADVANCED MONITORING
+  # =====================================
+  
+  prometheus_perf:
+    image: prom/prometheus:latest
+    container_name: prometheus_perf
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.retention.size=100GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--query.max-concurrency=100'
+      - '--storage.tsdb.wal-compression'
+    volumes:
+      - ./monitoring/prometheus-performance.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/prometheus:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+
+  grafana_perf:
+    image: grafana/grafana-enterprise:latest
+    container_name: grafana_perf
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,redis-datasource,cloudflare-app
+      - GF_ENTERPRISE_LICENSE_TEXT=${GRAFANA_LICENSE}
+      - GF_FEATURE_TOGGLES_ENABLE=ngalert,perfTestDashboards,newTraceView
+      - GF_SERVER_ENABLE_GZIP=true
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres_nvme:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=${DB_USER:-postgres}
+      - GF_DATABASE_PASSWORD=${DB_PASSWORD:-postgres}
+    volumes:
+      - ./monitoring/grafana:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    networks:
+      - media_network
+      - storage_network
+    restart: unless-stopped
+    depends_on:
+      - postgres_nvme
+      - prometheus_perf
+
+  # =====================================
+  # LOAD BALANCER & AUTO-SCALER
+  # =====================================
+  
+  haproxy_lb:
+    image: haproxy:2.8-alpine
+    container_name: haproxy_lb
+    volumes:
+      - ./load-balancer/haproxy-performance.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8080:8080"  # Stats
+      - "8443:8443"  # Load balanced HTTPS
+    networks:
+      - edge_network
+      - media_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+
+  autoscaler:
+    image: python:3.11-slim
+    container_name: autoscaler
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PROMETHEUS_URL=http://prometheus_perf:9090
+      - SCALE_UP_THRESHOLD=80
+      - SCALE_DOWN_THRESHOLD=20
+      - MIN_REPLICAS=1
+      - MAX_REPLICAS=10
+      - COOLDOWN_PERIOD=300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./autoscaler:/app
+    networks:
+      - media_network
+    restart: unless-stopped
+    command: python /app/autoscaler.py
+
+  # =====================================
+  # PERFORMANCE TESTING
+  # =====================================
+  
+  performance_tester:
+    image: grafana/k6:latest
+    container_name: performance_tester
+    volumes:
+      - ./performance-tests:/scripts
+    networks:
+      - media_network
+    command: run /scripts/8k-streaming-test.js
+    deploy:
+      replicas: 0  # Scale up when testing
+
+# =====================================
+# CONFIGURATION SNIPPETS
+# =====================================
+
+configs:
+  nginx_8k_conf:
+    file: ./performance-optimization/nginx/8k-streaming.conf
+  
+  varnish_vcl:
+    file: ./performance-optimization/edge-caching/varnish-config.vcl
+  
+  network_tuning:
+    file: ./performance-optimization/network/10gbps-optimization.conf

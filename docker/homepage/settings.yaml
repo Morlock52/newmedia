@@ -1,0 +1,49 @@
+# Homepage Settings - Production Media Stack
+# ==========================================
+# Main dashboard configuration
+
+---
+title: Morloks Maze Media Center
+favicon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/jellyfin.png
+theme: dark
+color: slate
+target: _self
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: true
+  hideVisitURL: true
+
+layout:
+  Media:
+    style: row
+    columns: 3
+  Media Management:
+    style: row
+    columns: 4
+  Downloads:
+    style: row
+    columns: 2
+  Monitoring:
+    style: row
+    columns: 3
+  Management:
+    style: row
+    columns: 3
+
+providers:
+  openweathermap: openweathermap_api_key
+  weatherapi: weatherapi_key
+
+headerStyle: boxed
+hideErrors: false
+showStats: true
+statsOpen: false
+background: 
+  image: https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3
+  blur: sm
+  saturate: 100
+  brightness: 50
+  opacity: 20
+
+language: en
+hideVersion: false

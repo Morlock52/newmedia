@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  omega-simple:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: omega-media-server-simple
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8096:8096"  # Jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - JELLYFIN_PublishedServerUrl=http://localhost
+    volumes:
+      - ./config:/config
+      - ./media:/media
+      - ./downloads:/downloads
+      - ./transcode:/transcode
+    devices:
+      # Intel GPU for hardware acceleration (optional)
+      - /dev/dri:/dev/dri
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Single container - no additional services needed!

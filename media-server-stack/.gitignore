@@ -1,0 +1,69 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Secrets and sensitive data
+secrets/
+*.key
+*.pem
+*.crt
+*_password*
+*_secret*
+
+# Data directories
+data/
+backups/
+
+# Configuration directories with sensitive data
+config/*/auth.json
+config/*/config.xml
+config/*/settings.json
+config/*/cookies.txt
+config/*/qBittorrent.conf
+
+# Logs
+*.log
+logs/
+
+# Docker volume data
+volumes/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+backup_*/
+
+# SSL certificates
+*.crt
+*.key
+*.pem
+acme.json
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+alertmanager_data/
+loki_data/

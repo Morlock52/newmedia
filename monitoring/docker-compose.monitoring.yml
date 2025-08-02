@@ -1,0 +1,395 @@
+version: "3.9"
+
+networks:
+  monitoring:
+    driver: bridge
+  media_network:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  alertmanager_data:
+
+services:
+  # =========================
+  # Metrics Collection
+  # =========================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9090"
+
+  # =========================
+  # Container Metrics
+  # =========================
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    ports:
+      - 8083:8080
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=8080"
+
+  # =========================
+  # Host Metrics
+  # =========================
+  
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - 9100:9100
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9100"
+
+  # =========================
+  # Docker Metrics
+  # =========================
+  
+  docker-exporter:
+    image: prometheusnet/docker_exporter:latest
+    container_name: docker-exporter
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 9417:9417
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9417"
+
+  # =========================
+  # Log Aggregation
+  # =========================
+  
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    ports:
+      - 3100:3100
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./loki/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # =========================
+  # Visualization
+  # =========================
+  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,alexanderzobnin-zabbix-app
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - 3000:3000
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+
+  # =========================
+  # Alerting
+  # =========================
+  
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - 9093:9093
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # =========================
+  # Process Monitoring
+  # =========================
+  
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    container_name: process-exporter
+    command:
+      - '--procfs=/host/proc'
+      - '--config.path=/etc/process-exporter/config.yml'
+    volumes:
+      - /proc:/host/proc:ro
+      - ./prometheus/process-exporter.yml:/etc/process-exporter/config.yml:ro
+    ports:
+      - 9256:9256
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9256"
+
+  # =========================
+  # BlackBox Monitoring
+  # =========================
+  
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    command:
+      - '--config.file=/etc/blackbox_exporter/config.yml'
+    volumes:
+      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    ports:
+      - 9115:9115
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9115"
+
+  # =========================
+  # SNMP Monitoring (Optional)
+  # =========================
+  
+  snmp-exporter:
+    image: prom/snmp-exporter:latest
+    container_name: snmp-exporter
+    volumes:
+      - ./prometheus/snmp.yml:/etc/snmp_exporter/snmp.yml:ro
+    ports:
+      - 9116:9116
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9116"
+
+  # =========================
+  # Monitoring Dashboard
+  # =========================
+  
+  prometheus-pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    ports:
+      - 9091:9091
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9091"
+
+  # =========================
+  # Media Specific Monitoring
+  # =========================
+  
+  tautulli-exporter:
+    image: nwalke/tautulli_exporter:latest
+    container_name: tautulli-exporter
+    environment:
+      - TAUTULLI_URL=http://tautulli:8181
+      - TAUTULLI_API_KEY=${TAUTULLI_API_KEY:-your-api-key}
+    ports:
+      - 9487:9487
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9487"
+
+  # Custom Metrics Collection
+  media-server-exporter:
+    image: python:3.11-alpine
+    container_name: media-server-exporter
+    command: |
+      sh -c '
+        pip install prometheus_client requests && 
+        python /app/media_server_exporter.py
+      '
+    volumes:
+      - ./exporters/media_server_exporter.py:/app/media_server_exporter.py:ro
+      - ${MEDIA_PATH:-./media}:/media:ro
+    ports:
+      - 9500:9500
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    environment:
+      - JELLYFIN_URL=http://jellyfin:8096
+      - SONARR_URL=http://sonarr:8989
+      - RADARR_URL=http://radarr:7878
+      - QBITTORRENT_URL=http://qbittorrent:8080
+      - MEDIA_PATH=/media
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9500"
+
+  # Speed Test Monitor
+  speedtest-exporter:
+    image: miguelndecarvalho/speedtest-exporter:latest
+    container_name: speedtest-exporter
+    ports:
+      - 9798:9798
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9798"
+
+  # Hardware Monitoring
+  smartctl-exporter:
+    image: prometheuscommunity/smartctl-exporter:latest
+    container_name: smartctl-exporter
+    privileged: true
+    volumes:
+      - /dev:/hostdev:ro
+    command:
+      - '--smartctl.path=/usr/sbin/smartctl'
+      - '--smartctl.device-exclude=^(ram|loop|fd|(h|s|v)d[a-z]|nvme\d+n\d+p)\d+$'
+    ports:
+      - 9633:9633
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9633"
+
+  # =========================
+  # Log Processing Enhancement
+  # =========================
+  
+  vector:
+    image: timberio/vector:latest-alpine
+    container_name: vector
+    volumes:
+      - ./vector/vector.toml:/etc/vector/vector.toml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # =========================
+  # Performance Testing
+  # =========================
+  
+  performance-monitor:
+    image: python:3.11-alpine
+    container_name: performance-monitor
+    command: |
+      sh -c '
+        pip install prometheus_client requests psutil docker && 
+        python /app/performance_monitor.py
+      '
+    volumes:
+      - ./exporters/performance_monitor.py:/app/performance_monitor.py:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    environment:
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+    ports:
+      - 9501:9501
+    networks:
+      - monitoring
+      - media_network
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9501"

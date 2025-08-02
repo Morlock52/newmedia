@@ -1,0 +1,307 @@
+# Falco Rules for Consensus System Security
+# Enhanced runtime security monitoring
+
+# Macro: Consensus containers
+- macro: consensus_containers
+  condition: >
+    (container.image.repository contains "consensus" or
+     container.name startswith "consensus-" or
+     k8s.ns.name = "consensus-system")
+
+# Macro: Allowed consensus processes
+- macro: consensus_allowed_processes
+  condition: >
+    (proc.name in (consensus-node, geth, prysm, lighthouse, teku,
+                   node, python, java, go, sh, bash) or
+     proc.pname in (consensus-node, supervisord, systemd))
+
+# Macro: Sensitive file paths
+- macro: consensus_sensitive_paths
+  condition: >
+    (fd.name startswith /etc/consensus/ or
+     fd.name startswith /var/lib/consensus/keys/ or
+     fd.name startswith /opt/consensus/config/ or
+     fd.name contains "private" or
+     fd.name contains "secret" or
+     fd.name contains ".key" or
+     fd.name contains ".pem")
+
+# Macro: Network monitoring paths
+- macro: network_monitoring_paths
+  condition: >
+    (fd.name in (/proc/net, /proc/net/tcp, /proc/net/tcp6,
+                 /proc/net/udp, /proc/net/udp6, /proc/net/raw,
+                 /proc/net/packet, /proc/net/arp))
+
+# Rule: Detect unauthorized process execution in consensus containers
+- rule: Unauthorized Consensus Process
+  desc: Detect unauthorized process execution in consensus containers
+  condition: >
+    consensus_containers and
+    spawned_process and
+    not consensus_allowed_processes and
+    not proc.pname in (runc:[0:PARENT], runc:[1:CHILD], runc)
+  output: >
+    Unauthorized process in consensus container
+    (user=%user.name container=%container.name process=%proc.name
+     parent=%proc.pname cmdline=%proc.cmdline terminal=%proc.tty %container.info)
+  priority: CRITICAL
+  tags: [consensus, process, container, T1055]
+
+# Rule: Detect sensitive file access
+- rule: Consensus Sensitive File Access
+  desc: Detect access to sensitive consensus files
+  condition: >
+    consensus_containers and
+    open_read and
+    consensus_sensitive_paths and
+    not proc.name in (consensus-node, vault, supervisord) and
+    not user.name = "root"
+  output: >
+    Sensitive file accessed in consensus container
+    (user=%user.name process=%proc.name file=%fd.name container=%container.name
+     cmdline=%proc.cmdline %container.info)
+  priority: WARNING
+  tags: [consensus, filesystem, secrets, T1552]
+
+# Rule: Detect container escape attempts
+- rule: Container Escape Attempt
+  desc: Detect potential container escape via sensitive mount
+  condition: >
+    consensus_containers and
+    (container.mounts contains /proc or
+     container.mounts contains /sys or
+     container.mounts contains /dev) and
+    (open_write or chmod or rename) and
+    (fd.name startswith /proc/sys or
+     fd.name startswith /sys/kernel or
+     fd.name startswith /dev/)
+  output: >
+    Potential container escape attempt detected
+    (user=%user.name process=%proc.name file=%fd.name container=%container.name
+     operation=%evt.type %container.info)
+  priority: CRITICAL
+  tags: [consensus, container_escape, T1611]
+
+# Rule: Detect cryptocurrency mining
+- rule: Crypto Mining Detection
+  desc: Detect cryptocurrency mining activities
+  condition: >
+    consensus_containers and
+    spawned_process and
+    (proc.name in (minerd, xmrig, minergate, ethminer, equihash, ccminer,
+                   xmr-stak, cpuminer, bfgminer, cgminer, miner, mine) or
+     proc.cmdline contains "stratum+tcp" or
+     proc.cmdline contains "pool." or
+     proc.cmdline contains "mining" or
+     proc.cmdline contains "hashrate")
+  output: >
+    Crypto mining process detected in container
+    (user=%user.name process=%proc.name cmdline=%proc.cmdline
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, cryptomining, T1496]
+
+# Rule: Detect network scanning
+- rule: Network Scanning Activity
+  desc: Detect network scanning or discovery attempts
+  condition: >
+    consensus_containers and
+    (spawned_process and proc.name in (nmap, zmap, masscan, netcat, nc, ncat, tcpdump) or
+     (open_read and network_monitoring_paths))
+  output: >
+    Network scanning detected in consensus container
+    (user=%user.name process=%proc.name container=%container.name
+     cmdline=%proc.cmdline %container.info)
+  priority: HIGH
+  tags: [consensus, network, discovery, T1046]
+
+# Rule: Detect privilege escalation
+- rule: Privilege Escalation Attempt
+  desc: Detect attempts to escalate privileges
+  condition: >
+    consensus_containers and
+    (proc.name in (sudo, su, chroot, setuid, setgid) or
+     (spawned_process and proc.euid=0 and proc.pname.euid!=0) or
+     (evt.type=setuid and evt.arg.uid=0))
+  output: >
+    Privilege escalation attempt in consensus container
+    (user=%user.name process=%proc.name euid=%proc.euid parent=%proc.pname
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, privilege_escalation, T1068]
+
+# Rule: Detect reverse shell
+- rule: Reverse Shell Connection
+  desc: Detect reverse shell connection attempts
+  condition: >
+    consensus_containers and
+    ((proc.name in (bash, sh, ash, zsh, dash, ksh, fish) and proc.cmdline contains "-i") or
+     (proc.cmdline contains "bash -i" or
+      proc.cmdline contains "sh -i" or
+      proc.cmdline contains "/dev/tcp/" or
+      proc.cmdline contains "/dev/udp/" or
+      proc.cmdline contains "nc -e" or
+      proc.cmdline contains "ncat -e" or
+      proc.cmdline contains "socat exec"))
+  output: >
+    Reverse shell connection attempt detected
+    (user=%user.name process=%proc.name cmdline=%proc.cmdline
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, reverse_shell, T1059]
+
+# Rule: Detect data exfiltration
+- rule: Data Exfiltration Attempt
+  desc: Detect potential data exfiltration via network tools
+  condition: >
+    consensus_containers and
+    spawned_process and
+    (proc.name in (curl, wget, scp, sftp, rsync, ftp) or
+     (proc.name in (python, python3, ruby, perl, php) and
+      proc.cmdline contains "http")) and
+    (fd.name contains "consensus" or
+     fd.name contains "private" or
+     fd.name contains "secret" or
+     fd.name contains "key")
+  output: >
+    Potential data exfiltration attempt
+    (user=%user.name process=%proc.name cmdline=%proc.cmdline
+     container=%container.name file=%fd.name %container.info)
+  priority: HIGH
+  tags: [consensus, exfiltration, T1041]
+
+# Rule: Detect suspicious kernel module activity
+- rule: Kernel Module Manipulation
+  desc: Detect kernel module loading/unloading
+  condition: >
+    consensus_containers and
+    (proc.name in (insmod, modprobe, rmmod) or
+     (evt.type in (init_module, finit_module, delete_module)))
+  output: >
+    Kernel module manipulation detected
+    (user=%user.name process=%proc.name operation=%evt.type
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, kernel_module, T1547]
+
+# Rule: Detect log tampering
+- rule: Log Tampering Detection
+  desc: Detect attempts to tamper with logs
+  condition: >
+    consensus_containers and
+    (open_write or rename or remove) and
+    (fd.name contains "/var/log" or
+     fd.name contains "audit" or
+     fd.name contains ".log") and
+    not proc.name in (logrotate, rsyslog, syslog-ng, journald, fluentd, filebeat)
+  output: >
+    Log tampering attempt detected
+    (user=%user.name process=%proc.name file=%fd.name operation=%evt.type
+     container=%container.name %container.info)
+  priority: HIGH
+  tags: [consensus, log_tampering, T1070]
+
+# Rule: Detect persistence mechanisms
+- rule: Persistence Mechanism Creation
+  desc: Detect creation of persistence mechanisms
+  condition: >
+    consensus_containers and
+    (open_write or rename) and
+    (fd.name in (/etc/crontab, /etc/cron.d/, /etc/cron.daily/,
+                 /etc/cron.hourly/, /etc/cron.monthly/, /etc/cron.weekly/) or
+     fd.name startswith /etc/systemd/system/ or
+     fd.name startswith /etc/init.d/ or
+     fd.name contains ".bashrc" or
+     fd.name contains ".bash_profile" or
+     fd.name contains ".profile")
+  output: >
+    Persistence mechanism created
+    (user=%user.name process=%proc.name file=%fd.name
+     container=%container.name %container.info)
+  priority: HIGH
+  tags: [consensus, persistence, T1053]
+
+# Rule: Detect lateral movement
+- rule: Lateral Movement Detection
+  desc: Detect potential lateral movement activities
+  condition: >
+    consensus_containers and
+    (proc.name in (ssh, sshd, scp, sftp) or
+     (proc.name = "python" and proc.cmdline contains "paramiko") or
+     (proc.name in (psexec, wmiexec, smbexec)) or
+     (evt.type in (accept, accept4) and evt.dir=< and
+      (proc.name != "consensus-node" or fd.sport not in (8545, 30303))))
+  output: >
+    Potential lateral movement detected
+    (user=%user.name process=%proc.name cmdline=%proc.cmdline
+     container=%container.name connection=%fd.name %container.info)
+  priority: HIGH
+  tags: [consensus, lateral_movement, T1021]
+
+# Rule: Detect abnormal consensus node behavior
+- rule: Abnormal Consensus Node Behavior
+  desc: Detect abnormal behavior in consensus node process
+  condition: >
+    consensus_containers and
+    proc.name = "consensus-node" and
+    (proc.cmdline contains "/bin/sh" or
+     proc.cmdline contains "/bin/bash" or
+     proc.cmdline contains "eval" or
+     proc.cmdline contains "exec" or
+     proc.cmdline contains "|" or
+     proc.cmdline contains ";" or
+     proc.cmdline contains "&&")
+  output: >
+    Abnormal consensus node behavior detected
+    (user=%user.name process=%proc.name cmdline=%proc.cmdline
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, injection, T1055]
+
+# Rule: Detect unauthorized API access
+- rule: Unauthorized API Access
+  desc: Detect unauthorized access to consensus APIs
+  condition: >
+    consensus_containers and
+    ((evt.type in (accept, accept4) and evt.dir=< and
+      fd.sport in (8545, 8546, 9090) and
+      not fd.cip in (127.0.0.1, ::1) and
+      not fd.cip startswith "172.30.") or
+     (proc.name in (curl, wget, nc) and
+      proc.cmdline contains "localhost:8545"))
+  output: >
+    Unauthorized API access attempt
+    (user=%user.name process=%proc.name source=%fd.cip:%fd.cport
+     destination=%fd.sip:%fd.sport container=%container.name %container.info)
+  priority: HIGH
+  tags: [consensus, api_abuse, T1106]
+
+# Rule: Detect memory dumping
+- rule: Memory Dumping Detection
+  desc: Detect attempts to dump process memory
+  condition: >
+    consensus_containers and
+    ((proc.name in (gdb, gcore, procdump, mimikatz) or
+      (open_read and (fd.name = /proc/*/mem or
+                      fd.name = /proc/*/maps or
+                      fd.name = /proc/*/environ))) and
+     not proc.name in (consensus-node))
+  output: >
+    Memory dumping attempt detected
+    (user=%user.name process=%proc.name target=%fd.name
+     container=%container.name %container.info)
+  priority: CRITICAL
+  tags: [consensus, credential_dumping, T1003]
+
+# Custom macro for performance optimization
+- macro: high_volume_consensus_activity
+  condition: >
+    (proc.name = "consensus-node" and
+     (evt.type in (read, write, sendto, recvfrom) or
+      syscall.type in (read, write, sendto, recvfrom)))
+
+# List to not log high-volume consensus activities
+- list: falco_priority_filters
+  items:
+    - high_volume_consensus_activity

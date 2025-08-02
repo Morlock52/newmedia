@@ -1,0 +1,364 @@
+version: '3.9'
+
+# NVMe Storage Optimization Configuration
+# Optimized for ultra-high IOPS and low latency media streaming
+
+services:
+  # High-Performance Storage Manager
+  storage_manager:
+    image: alpine:latest
+    container_name: storage_manager
+    build:
+      context: ./storage-manager
+      dockerfile: Dockerfile
+    environment:
+      - STORAGE_TIER_1=/nvme1  # Fastest NVMe for hot data
+      - STORAGE_TIER_2=/nvme2  # Secondary NVMe for warm data
+      - STORAGE_TIER_3=/ssd    # SSD for cold data
+      - STORAGE_TIER_4=/hdd    # HDD for archive
+      - TIER_PROMOTION_THRESHOLD=10  # Access count for promotion
+      - TIER_DEMOTION_DAYS=30        # Days inactive before demotion
+      - ENABLE_COMPRESSION=true
+      - COMPRESSION_ALGORITHM=zstd
+      - COMPRESSION_LEVEL=3
+      - ENABLE_DEDUPLICATION=true
+      - ENABLE_SMART_PREFETCH=true
+    volumes:
+      - /mnt/nvme1:/nvme1
+      - /mnt/nvme2:/nvme2
+      - /mnt/ssd:/ssd
+      - /mnt/hdd:/hdd
+      - ./storage-manager:/app
+      - ./logs/storage:/var/log/storage
+    privileged: true  # Required for storage operations
+    network_mode: host
+    restart: unless-stopped
+    command: |
+      sh -c "
+      # Install required tools
+      apk add --no-cache python3 py3-pip fio hdparm smartmontools nvme-cli lvm2 bcache-tools
+      pip3 install psutil prometheus_client redis
+      
+      # Configure storage optimizations
+      
+      # 1. Set NVMe optimal settings
+      for nvme in /dev/nvme*n1; do
+        if [ -e $$nvme ]; then
+          # Enable write cache
+          nvme set-feature $$nvme -f 0x06 -v 1
+          
+          # Set power state for performance
+          nvme set-feature $$nvme -f 0x02 -v 0
+          
+          # Configure IO queue depth
+          echo 1024 > /sys/block/$${nvme##*/}/queue/nr_requests
+          
+          # Set scheduler to none for NVMe
+          echo none > /sys/block/$${nvme##*/}/queue/scheduler
+          
+          # Enable multi-queue
+          echo 8 > /sys/block/$${nvme##*/}/queue/nr_hw_queues
+        fi
+      done
+      
+      # 2. Configure kernel parameters for storage performance
+      echo 0 > /proc/sys/vm/swappiness
+      echo 1000000 > /proc/sys/vm/dirty_expire_centisecs
+      echo 1000000 > /proc/sys/vm/dirty_writeback_centisecs
+      echo 90 > /proc/sys/vm/dirty_ratio
+      echo 80 > /proc/sys/vm/dirty_background_ratio
+      echo 8192 > /proc/sys/vm/min_free_kbytes
+      echo 3 > /proc/sys/vm/drop_caches
+      
+      # 3. Mount with optimal options
+      mount -o remount,noatime,nodiratime,nobarrier /nvme1
+      mount -o remount,noatime,nodiratime,nobarrier /nvme2
+      
+      # 4. Start storage manager service
+      python3 /app/storage_manager.py
+      "
+
+  # BCache Configuration for SSD Caching
+  bcache_manager:
+    image: ubuntu:22.04
+    container_name: bcache_manager
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - /sys:/sys
+      - ./bcache:/app
+    network_mode: host
+    restart: unless-stopped
+    command: |
+      bash -c "
+      apt-get update && apt-get install -y bcache-tools
+      
+      # Configure bcache for HDD with NVMe cache
+      # Check if bcache is already configured
+      if [ ! -e /dev/bcache0 ]; then
+        # Make cache device on NVMe
+        make-bcache -C /dev/nvme1n1p2 --bucket 64k --block 4k
+        
+        # Make backing device on HDD
+        make-bcache -B /dev/sda1 --bucket 64k --block 4k
+        
+        # Attach cache to backing device
+        echo /dev/nvme1n1p2 > /sys/fs/bcache/register
+        echo /dev/sda1 > /sys/fs/bcache/register
+        
+        # Configure cache mode
+        echo writeback > /sys/block/bcache0/bcache/cache_mode
+        echo 0 > /sys/block/bcache0/bcache/sequential_cutoff
+        echo 10 > /sys/block/bcache0/bcache/writeback_percent
+        echo 40 > /sys/block/bcache0/bcache/writeback_delay
+      fi
+      
+      # Monitor bcache performance
+      while true; do
+        cat /sys/block/bcache0/bcache/stats_total/* > /app/bcache_stats_$$(date +%s).log
+        sleep 60
+      done
+      "
+
+  # Distributed Storage with GlusterFS
+  gluster_node:
+    image: gluster/gluster-centos:latest
+    container_name: gluster_node
+    privileged: true
+    environment:
+      - GLUSTER_REPLICA_COUNT=3
+      - GLUSTER_BRICK_PATH=/data/brick
+      - GLUSTER_VOLUME_NAME=media-distributed
+      - GLUSTER_PEERS=gluster_node2,gluster_node3
+    volumes:
+      - /mnt/nvme1/gluster:/data/brick
+      - ./gluster/config:/etc/glusterfs
+      - /dev:/dev
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    networks:
+      - storage_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+
+  # MinIO for S3-Compatible Object Storage
+  minio_cluster:
+    image: minio/minio:latest
+    container_name: minio_cluster
+    command: server /data{1...4} --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-password}
+      - MINIO_STORAGE_CLASS_STANDARD=EC:2
+      - MINIO_STORAGE_CLASS_RRS=EC:1
+      - MINIO_BROWSER=on
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_CACHE=on
+      - MINIO_CACHE_DRIVES=/cache{1...4}
+      - MINIO_CACHE_EXCLUDE=*.log,*.tmp
+      - MINIO_CACHE_QUOTA=90
+      - MINIO_CACHE_AFTER=1
+      - MINIO_CACHE_WATERMARK_LOW=70
+      - MINIO_CACHE_WATERMARK_HIGH=85
+    volumes:
+      - /mnt/nvme1/minio:/data1
+      - /mnt/nvme2/minio:/data2
+      - /mnt/ssd/minio:/data3
+      - /mnt/hdd/minio:/data4
+      - /mnt/nvme1/cache:/cache1
+      - /mnt/nvme2/cache:/cache2
+      - /mnt/ssd/cache:/cache3
+      - /mnt/hdd/cache:/cache4
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - storage_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # High-Performance Database Storage
+  postgres_nvme:
+    image: postgres:16-alpine
+    container_name: postgres_nvme
+    environment:
+      - POSTGRES_DB=${DB_NAME:-mediaserver}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --data-checksums
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    volumes:
+      - /mnt/nvme1/postgres:/var/lib/postgresql/data
+      - ./postgres/nvme-optimized.conf:/etc/postgresql/postgresql.conf:ro
+    command: |
+      postgres 
+      -c shared_buffers=8GB
+      -c effective_cache_size=24GB
+      -c maintenance_work_mem=2GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=32MB
+      -c default_statistics_target=200
+      -c random_page_cost=1.0
+      -c effective_io_concurrency=200
+      -c work_mem=64MB
+      -c huge_pages=try
+      -c max_worker_processes=16
+      -c max_parallel_workers_per_gather=8
+      -c max_parallel_workers=16
+      -c max_parallel_maintenance_workers=8
+      -c checkpoint_segments=64
+      -c checkpoint_timeout=30min
+      -c max_wal_size=16GB
+      -c min_wal_size=4GB
+      -c wal_compression=on
+      -c wal_init_zero=off
+      -c wal_recycle=on
+      -c synchronous_commit=off
+      -c full_page_writes=off
+      -c fsync=on
+      -c data_sync_retry=on
+    networks:
+      - storage_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '16.0'
+          memory: 32G
+    shm_size: 2gb
+
+  # Storage Performance Monitor
+  storage_monitor:
+    image: python:3.11-slim
+    container_name: storage_monitor
+    environment:
+      - PROMETHEUS_URL=http://prometheus_optimized:9090
+      - CHECK_INTERVAL=10
+      - ENABLE_PREDICTIVE_IO=true
+    volumes:
+      - ./storage-monitor:/app
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /mnt:/mnt:ro
+    networks:
+      - storage_network
+    restart: unless-stopped
+    command: |
+      python -c "
+      import os
+      import time
+      import psutil
+      import subprocess
+      from prometheus_client import start_http_server, Gauge
+      
+      # Prometheus metrics
+      disk_read_bytes = Gauge('disk_read_bytes_total', 'Total disk read bytes', ['device'])
+      disk_write_bytes = Gauge('disk_write_bytes_total', 'Total disk write bytes', ['device'])
+      disk_read_iops = Gauge('disk_read_iops', 'Disk read IOPS', ['device'])
+      disk_write_iops = Gauge('disk_write_iops', 'Disk write IOPS', ['device'])
+      disk_latency = Gauge('disk_latency_ms', 'Disk latency in milliseconds', ['device'])
+      disk_queue_size = Gauge('disk_queue_size', 'Disk queue size', ['device'])
+      
+      def get_nvme_stats():
+          stats = {}
+          try:
+              # Get NVMe specific stats
+              result = subprocess.run(['nvme', 'list'], capture_output=True, text=True)
+              if result.returncode == 0:
+                  # Parse NVMe devices
+                  for line in result.stdout.splitlines()[2:]:  # Skip header
+                      if line.strip():
+                          parts = line.split()
+                          device = parts[0]
+                          
+                          # Get detailed stats
+                          smart = subprocess.run(['nvme', 'smart-log', device], 
+                                               capture_output=True, text=True)
+                          if smart.returncode == 0:
+                              stats[device] = parse_nvme_smart(smart.stdout)
+          except Exception as e:
+              print(f'Error getting NVMe stats: {e}')
+          return stats
+      
+      def monitor_storage():
+          start_http_server(9105)  # Metrics port
+          
+          while True:
+              # Get disk I/O stats
+              disk_io = psutil.disk_io_counters(perdisk=True)
+              
+              for disk, stats in disk_io.items():
+                  disk_read_bytes.labels(device=disk).set(stats.read_bytes)
+                  disk_write_bytes.labels(device=disk).set(stats.write_bytes)
+                  disk_read_iops.labels(device=disk).set(stats.read_count)
+                  disk_write_iops.labels(device=disk).set(stats.write_count)
+                  
+                  # Calculate latency if available
+                  if stats.read_time > 0 and stats.read_count > 0:
+                      read_latency = stats.read_time / stats.read_count
+                      disk_latency.labels(device=disk).set(read_latency)
+              
+              # Get NVMe specific metrics
+              nvme_stats = get_nvme_stats()
+              
+              time.sleep(int(os.environ.get('CHECK_INTERVAL', 10)))
+      
+      if __name__ == '__main__':
+          monitor_storage()
+      "
+
+  # Intelligent Cache Preloader
+  cache_preloader:
+    image: redis:7.2-alpine
+    container_name: cache_preloader
+    command: |
+      sh -c "
+      redis-server --maxmemory 16gb --maxmemory-policy allkeys-lru &
+      
+      # Preload popular content into cache
+      while true; do
+        # Get access patterns from analytics
+        POPULAR_CONTENT=$$(redis-cli -h neural_cache ZREVRANGE media:popularity 0 100)
+        
+        for content in $$POPULAR_CONTENT; do
+          # Check if content is in fast storage
+          if [ ! -f /nvme1/cache/$$content ]; then
+            # Copy to fast storage
+            cp /media/$$content /nvme1/cache/$$content 2>/dev/null || true
+          fi
+        done
+        
+        sleep 300  # Run every 5 minutes
+      done
+      "
+    volumes:
+      - /mnt/nvme1/cache:/nvme1/cache
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+    networks:
+      - storage_network
+      - cache_network
+    restart: unless-stopped
+
+networks:
+  storage_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24
+        
+  cache_network:
+    external: true

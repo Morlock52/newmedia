@@ -1,0 +1,207 @@
+version: '3.9'
+
+networks:
+  orchestrator_network:
+    driver: bridge
+  media_network:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  vault_data:
+
+services:
+  # =========================
+  # Orchestrator API
+  # =========================
+  
+  orchestrator-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orchestrator-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://orchestrator:${DB_PASSWORD:-secure_password}@postgres:5432/orchestrator
+      - REDIS_URL=redis://redis:6379
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - JWT_SECRET=${JWT_SECRET:-change_me_in_production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../../:/workspace
+      - ./config:/app/config
+    ports:
+      - "3000:3000"
+    networks:
+      - orchestrator_network
+      - media_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # =========================
+  # Database
+  # =========================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: orchestrator-postgres
+    environment:
+      - POSTGRES_USER=orchestrator
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-secure_password}
+      - POSTGRES_DB=orchestrator
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - orchestrator_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestrator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =========================
+  # Cache
+  # =========================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: orchestrator-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - orchestrator_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =========================
+  # Message Queue
+  # =========================
+  
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: orchestrator-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=orchestrator
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-rabbitmq_password}
+      - RABBITMQ_DEFAULT_VHOST=orchestrator
+    volumes:
+      - ./config/rabbitmq:/etc/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - orchestrator_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # =========================
+  # Secret Management
+  # =========================
+  
+  vault:
+    image: vault:1.15
+    container_name: orchestrator-vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_TOKEN:-dev-token}
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    volumes:
+      - vault_data:/vault/data
+      - ./config/vault:/vault/config
+    ports:
+      - "8200:8200"
+    networks:
+      - orchestrator_network
+    command: server -dev
+    restart: unless-stopped
+
+  # =========================
+  # Monitoring
+  # =========================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: orchestrator-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - orchestrator_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: orchestrator-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    networks:
+      - orchestrator_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # =========================
+  # Development Tools
+  # =========================
+  
+  adminer:
+    image: adminer:latest
+    container_name: orchestrator-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - orchestrator_network
+    environment:
+      - ADMINER_DESIGN=pepa-linha-dark
+    restart: unless-stopped
+
+# Volume declarations
+volumes:
+  prometheus_data:
+  grafana_data:

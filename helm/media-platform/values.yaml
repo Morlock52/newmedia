@@ -1,0 +1,386 @@
+# Default values for media-platform
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  # Cloud provider: aws, gcp, azure, on-premise
+  cloudProvider: aws
+  
+  # Domain configuration
+  domain: media.example.com
+  
+  # Storage configuration
+  storageClass: fast-ssd
+  
+  # Image pull secrets
+  imagePullSecrets: []
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    
+  # Node selectors
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Pod Anti-affinity
+  antiAffinity: soft
+
+# Service configurations
+services:
+  # GraphQL Gateway
+  graphqlGateway:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: media-platform/graphql-gateway
+      tag: 2.0.0
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+  # Media Service
+  mediaService:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: media-platform/media-service
+      tag: 2.0.0
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "1000m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
+        
+  # Streaming Service
+  streamingService:
+    enabled: true
+    replicaCount: 5
+    image:
+      repository: media-platform/streaming-service
+      tag: 2.0.0
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "2000m"
+      limits:
+        memory: "4Gi"
+        cpu: "4000m"
+    features:
+      adaptiveBitrate: true
+      p2pDistribution: true
+      webrtc: true
+      
+  # ML Services
+  mlServices:
+    enabled: true
+    recommendationEngine:
+      replicaCount: 3
+      image:
+        repository: media-platform/recommendation-engine
+        tag: 2.0.0
+      resources:
+        requests:
+          memory: "4Gi"
+          cpu: "2000m"
+          nvidia.com/gpu: "1"
+        limits:
+          memory: "8Gi"
+          cpu: "4000m"
+          nvidia.com/gpu: "1"
+      modelRepository: s3://media-platform-models/
+      
+    contentAnalysis:
+      enabled: true
+      replicaCount: 2
+      image:
+        repository: media-platform/content-analysis
+        tag: 2.0.0
+        
+  # Transcoding Service
+  transcodingService:
+    enabled: true
+    workers: 10
+    image:
+      repository: media-platform/transcoding-worker
+      tag: 2.0.0
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "4000m"
+      limits:
+        memory: "8Gi"
+        cpu: "8000m"
+    profiles:
+      - name: "4k-hevc"
+        codec: "hevc"
+        preset: "slow"
+        bitrate: "15M"
+      - name: "1080p-h264"
+        codec: "h264"
+        preset: "medium"
+        bitrate: "5M"
+      - name: "720p-h264"
+        codec: "h264"
+        preset: "fast"
+        bitrate: "2.5M"
+      - name: "adaptive"
+        type: "hls"
+        variants: ["4k", "1080p", "720p", "480p"]
+
+# Edge Computing
+edgeComputing:
+  enabled: true
+  providers:
+    - cloudflare:
+        enabled: true
+        accountId: "your-account-id"
+        apiToken: "your-api-token"
+    - fastly:
+        enabled: false
+        serviceId: "your-service-id"
+        apiKey: "your-api-key"
+  wasmModules:
+    - name: image-optimizer
+      source: s3://media-platform-wasm/image-optimizer.wasm
+    - name: manifest-optimizer
+      source: s3://media-platform-wasm/manifest-optimizer.wasm
+    - name: security-filter
+      source: s3://media-platform-wasm/security-filter.wasm
+
+# Databases
+postgresql:
+  enabled: true
+  architecture: replication
+  auth:
+    postgresPassword: "changeme"
+    database: media_platform
+  primary:
+    persistence:
+      size: 100Gi
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      size: 100Gi
+      
+mongodb:
+  enabled: true
+  architecture: replicaset
+  auth:
+    rootPassword: "changeme"
+    database: media_content
+  persistence:
+    size: 200Gi
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+      
+elasticsearch:
+  enabled: true
+  replicas: 3
+  minimumMasterNodes: 2
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 200Gi
+
+# Caching
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    password: "changeme"
+  master:
+    persistence:
+      size: 50Gi
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+  replica:
+    replicaCount: 2
+    persistence:
+      size: 50Gi
+
+# Message Queue
+kafka:
+  enabled: true
+  replicaCount: 5
+  auth:
+    clientProtocol: sasl_tls
+    interBrokerProtocol: tls
+    sasl:
+      jaas:
+        clientPassword: "changeme"
+  persistence:
+    size: 1Ti
+  resources:
+    requests:
+      memory: "8Gi"
+      cpu: "4000m"
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
+
+# Service Mesh
+istio:
+  enabled: true
+  pilot:
+    autoscaleEnabled: true
+    autoscaleMin: 3
+    autoscaleMax: 10
+  gateways:
+    istio-ingressgateway:
+      autoscaleEnabled: true
+      autoscaleMin: 3
+      autoscaleMax: 20
+      
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    retention: 30d
+    storageSize: 500Gi
+  grafana:
+    adminPassword: "changeme"
+    persistence:
+      enabled: true
+      size: 10Gi
+  loki:
+    persistence:
+      enabled: true
+      size: 100Gi
+  tempo:
+    persistence:
+      enabled: true
+      size: 100Gi
+
+# ML Platform
+ml:
+  enabled: true
+  seldon:
+    usageMetrics:
+      enabled: true
+    predictiveUnit:
+      defaultEnvSecretRefName: seldon-init-secret
+      
+# Object Storage
+objectStorage:
+  enabled: true
+  mode: distributed
+  replicas: 4
+  persistence:
+    size: 1Ti
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.media.example.com
+      paths:
+        - path: /graphql
+          pathType: Prefix
+          service: graphql-gateway
+        - path: /rest
+          pathType: Prefix
+          service: rest-gateway
+    - host: stream.media.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: streaming-service
+  tls:
+    - secretName: media-platform-tls
+      hosts:
+        - api.media.example.com
+        - stream.media.example.com
+
+# Security
+security:
+  podSecurityPolicy:
+    enabled: true
+  networkPolicies:
+    enabled: true
+  oauth2:
+    enabled: true
+    provider: keycloak
+    clientId: media-platform
+    clientSecret: "changeme"
+    discoveryUrl: https://auth.media.example.com/.well-known/openid-configuration
+    
+# Backup and disaster recovery
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  retention: 30
+  s3:
+    bucket: media-platform-backups
+    region: us-east-1
+    accessKey: "changeme"
+    secretKey: "changeme"
+
+# Cost optimization
+costOptimization:
+  enabled: true
+  spotInstances:
+    enabled: true
+    onDemandBaseCapacity: 30
+    onDemandPercentageAboveBaseCapacity: 25
+  autoScaling:
+    enabled: true
+    scaleDownDelay: 300
+    utilizationThreshold: 70
+  resourceQuotas:
+    enabled: true
+    maxCPU: "1000"
+    maxMemory: "2000Gi"
+    maxStorage: "50Ti"

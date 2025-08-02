@@ -1,0 +1,626 @@
+version: '3.8'
+
+services:
+  # Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.middlewares=default-headers@docker
+      - --entrypoints.web.forwardedHeaders.insecure=true
+      - --accesslog=true
+      - --log.level=INFO
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.forwardingTimeouts.responseHeaderTimeout=30s
+      - --serversTransport.forwardingTimeouts.idleConnTimeout=90s
+      - --entrypoints.web.forwardedHeaders.trustedIPs=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,172.25.0.0/24
+      - --entrypoints.websecure.forwardedHeaders.trustedIPs=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,172.25.0.0/24
+      - --entrypoints.web.forwardedHeaders.insecure=true
+      - --serversTransport.insecureSkipVerify=true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/letsencrypt
+    networks:
+      traefik_network:
+        ipv4_address: 172.25.0.2
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-web.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-web.entrypoints=web"
+      - "traefik.http.routers.traefik-web.service=api@internal"
+      - "traefik.http.routers.api.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.api.entrypoints=traefik"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.tls=true"
+    secrets:
+      - traefik_dashboard_auth
+
+  # VPN Gateway
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    cap_drop:
+      - ALL
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8080:8080"  # qBittorrent UI
+      - "6881:6881"  # qBittorrent listening
+      - "8000:8000"  # Gluetun health check
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-pia}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-on}
+      - VPN_PORT_FORWARDING_PORT=${VPN_PORT_FORWARDING_PORT:-6881}
+      - FIREWALL_KILL_SWITCH=on
+      - WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wg_private_key
+      - SERVER_REGIONS=${PIA_REGION:-us_east}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES:-10.0.0.0/8}
+      - HEALTH_VPN_DURATION_INITIAL=30s
+      - HEALTH_VPN_DURATION_ADDITION=5s
+      - LOG_LEVEL=info
+      - DOT=on
+      - FIREWALL_DEBUG=off
+    secrets:
+      - wg_private_key
+    volumes:
+      - gluetun_data:/gluetun
+    networks:
+      - download_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Download Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - media_data:/data/torrents
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Core Media Server
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAIN}
+    volumes:
+      - jellyfin_config:/config
+      - media_data:/data/media:ro
+      - /dev/shm:/data/transcode
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin-web.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin-web.entrypoints=web"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.jellyfin-secure.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin-secure.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin-secure.tls=true"
+
+  # TV Series Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - sonarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr-web.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr-web.entrypoints=web"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.sonarr-secure.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.sonarr-secure.tls=true"
+
+  # Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - radarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr-web.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr-web.entrypoints=web"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.radarr-secure.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.radarr-secure.tls=true"
+
+  # Music Management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - lidarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr-web.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr-web.entrypoints=web"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.lidarr-secure.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.lidarr-secure.tls=true"
+
+  # Book Management
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - readarr_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - prowlarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr-web.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr-web.entrypoints=web"
+      - "traefik.http.services.readarr.loadbalancer.server.port=8787"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.readarr-secure.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.readarr-secure.tls=true"
+
+  # Subtitle Management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - bazarr_config:/config
+      - media_data:/data/media
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - sonarr
+      - radarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr-web.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr-web.entrypoints=web"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.bazarr-secure.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.bazarr-secure.tls=true"
+
+  # Indexer Management
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr_config:/config
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr-web.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr-web.entrypoints=web"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.prowlarr-secure.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr-secure.tls=true"
+
+  # Request Management
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - overseerr_config:/config
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - sonarr
+      - radarr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr-web.rule=Host(`overseerr.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr-web.entrypoints=web"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.overseerr-secure.rule=Host(`overseerr.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr-secure.entrypoints=websecure"
+      - "traefik.http.routers.overseerr-secure.tls=true"
+
+  # Jellyfin Analytics
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - tautulli_config:/config
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - jellyfin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli-web.rule=Host(`tautulli.${DOMAIN}`)"
+      - "traefik.http.routers.tautulli-web.entrypoints=web"
+      - "traefik.http.services.tautulli.loadbalancer.server.port=8181"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.tautulli-secure.rule=Host(`tautulli.${DOMAIN}`)"
+      - "traefik.http.routers.tautulli-secure.entrypoints=websecure"
+      - "traefik.http.routers.tautulli-secure.tls=true"
+
+  # Comic Management
+  mylar:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - mylar_config:/config
+      - media_data:/data
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mylar-web.rule=Host(`mylar.${DOMAIN}`)"
+      - "traefik.http.routers.mylar-web.entrypoints=web"
+      - "traefik.http.services.mylar.loadbalancer.server.port=8090"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.mylar-secure.rule=Host(`mylar.${DOMAIN}`)"
+      - "traefik.http.routers.mylar-secure.entrypoints=websecure"
+      - "traefik.http.routers.mylar-secure.tls=true"
+
+  # Podcast Management
+  podgrab:
+    image: akhilrex/podgrab:latest
+    container_name: podgrab
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - podgrab_config:/config
+      - media_data:/data/podcasts
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.podgrab-web.rule=Host(`podgrab.${DOMAIN}`)"
+      - "traefik.http.routers.podgrab-web.entrypoints=web"
+      - "traefik.http.services.podgrab.loadbalancer.server.port=8080"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.podgrab-secure.rule=Host(`podgrab.${DOMAIN}`)"
+      - "traefik.http.routers.podgrab-secure.entrypoints=websecure"
+      - "traefik.http.routers.podgrab-secure.tls=true"
+
+  # YouTube Downloader
+  youtube-dl-material:
+    image: tzahi12345/youtubedl-material:latest
+    container_name: youtube-dl-material
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - ytdl_mongodb_connection_string=mongodb://ytdl-mongo-db:27017
+      - ytdl_use_local_db=false
+      - write_ytdl_config=true
+    volumes:
+      - youtube-dl-config:/app/appdata
+      - media_data:/data/online-videos
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - ytdl-mongo-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.youtube-dl-web.rule=Host(`youtube-dl.${DOMAIN}`)"
+      - "traefik.http.routers.youtube-dl-web.entrypoints=web"
+      - "traefik.http.services.youtube-dl.loadbalancer.server.port=17442"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.youtube-dl-secure.rule=Host(`youtube-dl.${DOMAIN}`)"
+      - "traefik.http.routers.youtube-dl-secure.entrypoints=websecure"
+      - "traefik.http.routers.youtube-dl-secure.tls=true"
+
+  # YouTube-DL Database
+  ytdl-mongo-db:
+    image: mongo:4
+    container_name: ytdl-mongo-db
+    logging:
+      driver: "none"
+    volumes:
+      - youtube-dl-db:/data/db
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # Photo Management
+  photoprism:
+    image: photoprism/photoprism:latest
+    container_name: photoprism
+    depends_on:
+      - photoprism-db
+    environment:
+      - PHOTOPRISM_ADMIN_PASSWORD_FILE=/run/secrets/photoprism_admin_password
+      - PHOTOPRISM_ORIGINALS_LIMIT=5000
+      - PHOTOPRISM_HTTP_COMPRESSION=gzip
+      - PHOTOPRISM_LOG_LEVEL=info
+      - PHOTOPRISM_READONLY=false
+      - PHOTOPRISM_EXPERIMENTAL=false
+      - PHOTOPRISM_DISABLE_CHOWN=false
+      - PHOTOPRISM_DISABLE_WEBDAV=false
+      - PHOTOPRISM_DISABLE_SETTINGS=false
+      - PHOTOPRISM_DISABLE_TENSORFLOW=false
+      - PHOTOPRISM_DISABLE_FACES=false
+      - PHOTOPRISM_DISABLE_CLASSIFICATION=false
+      - PHOTOPRISM_DISABLE_RAW=false
+      - PHOTOPRISM_RAW_PRESETS=false
+      - PHOTOPRISM_JPEG_QUALITY=85
+      - PHOTOPRISM_DETECT_NSFW=false
+      - PHOTOPRISM_UPLOAD_NSFW=true
+      - PHOTOPRISM_DATABASE_DRIVER=mysql
+      - PHOTOPRISM_DATABASE_SERVER=photoprism-db:3306
+      - PHOTOPRISM_DATABASE_NAME=photoprism
+      - PHOTOPRISM_DATABASE_USER=photoprism
+      - PHOTOPRISM_DATABASE_PASSWORD=insecure
+      - PHOTOPRISM_SITE_URL=https://photoprism.${DOMAIN}
+      - PHOTOPRISM_SITE_TITLE=PhotoPrism
+    secrets:
+      - photoprism_admin_password
+    volumes:
+      - photoprism_originals:/photoprism/originals
+      - photoprism_storage:/photoprism/storage
+    networks:
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.photoprism-web.rule=Host(`photoprism.${DOMAIN}`)"
+      - "traefik.http.routers.photoprism-web.entrypoints=web"
+      - "traefik.http.services.photoprism.loadbalancer.server.port=2342"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.photoprism-secure.rule=Host(`photoprism.${DOMAIN}`)"
+      - "traefik.http.routers.photoprism-secure.entrypoints=websecure"
+      - "traefik.http.routers.photoprism-secure.tls=true"
+
+  # PhotoPrism Database
+  photoprism-db:
+    image: mariadb:10.11
+    container_name: photoprism-db
+    restart: unless-stopped
+    stop_grace_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    command: mysqld --innodb-buffer-pool-size=512M --transaction-isolation=READ-COMMITTED --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-connections=512 --innodb-rollback-on-timeout=OFF --innodb-lock-wait-timeout=120
+    volumes:
+      - photoprism_db:/var/lib/mysql
+    networks:
+      - media_network
+    environment:
+      - MARIADB_AUTO_UPGRADE=1
+      - MARIADB_INITDB_SKIP_TZINFO=1
+      - MARIADB_DATABASE=photoprism
+      - MARIADB_USER=photoprism
+      - MARIADB_PASSWORD=insecure
+      - MARIADB_ROOT_PASSWORD=insecure
+
+  # Cloudflare Tunnel for external access
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      traefik_network:
+        ipv4_address: 172.25.0.5
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  traefik_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+          gateway: 172.25.0.1
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
+  download_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.32.0.0/24
+          gateway: 172.32.0.1
+
+secrets:
+  traefik_dashboard_auth:
+    file: ./secrets/traefik_dashboard_auth.txt
+  wg_private_key:
+    file: ./secrets/wg_private_key.txt
+  photoprism_admin_password:
+    file: ./secrets/photoprism_admin_password.txt
+
+volumes:
+  traefik_data:
+  gluetun_data:
+  jellyfin_config:
+  sonarr_config:
+  radarr_config:
+  lidarr_config:
+  readarr_config:
+  bazarr_config:
+  prowlarr_config:
+  overseerr_config:
+  qbittorrent_config:
+  tautulli_config:
+  mylar_config:
+  podgrab_config:
+  youtube-dl-config:
+  youtube-dl-db:
+  photoprism_originals:
+  photoprism_storage:
+  photoprism_db:
+  media_data:

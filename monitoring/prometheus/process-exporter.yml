@@ -1,0 +1,47 @@
+process_names:
+  # Media servers
+  - name: "{{.Comm}}"
+    cmdline:
+    - jellyfin
+    - plex
+    - emby
+
+  # Arr suite
+  - name: "{{.Comm}}"
+    cmdline:
+    - sonarr
+    - radarr
+    - lidarr
+    - bazarr
+    - prowlarr
+
+  # Download clients
+  - name: "{{.Comm}}"
+    cmdline:
+    - qbittorrent
+    - transmission
+    - deluge
+    - sabnzbd
+    - nzbget
+
+  # Databases
+  - name: "{{.Comm}}"
+    cmdline:
+    - postgres
+    - mysql
+    - redis
+
+  # Web servers
+  - name: "{{.Comm}}"
+    cmdline:
+    - nginx
+    - apache
+    - traefik
+    - caddy
+
+  # System processes
+  - name: "{{.Comm}}"
+    cmdline:
+    - dockerd
+    - containerd
+    - systemd

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR Compatibility Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        
+        h1 {
+            color: #4a90e2;
+        }
+        
+        .test-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .test-item h3 {
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .status {
+            font-weight: bold;
+        }
+        
+        .status.supported {
+            color: #4ae290;
+        }
+        
+        .status.not-supported {
+            color: #e24a4a;
+        }
+        
+        .status.partial {
+            color: #e2904a;
+        }
+        
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        button:hover {
+            background: #357abd;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        #results {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebXR Compatibility Test</h1>
+    <p>This page tests your browser's WebXR capabilities.</p>
+    
+    <div class="test-item">
+        <h3>WebXR Support</h3>
+        <p>Basic WebXR API availability: <span id="webxr-support" class="status">Testing...</span></p>
+    </div>
+    
+    <div class="test-item">
+        <h3>VR Support</h3>
+        <p>Immersive VR sessions: <span id="vr-support" class="status">Testing...</span></p>
+        <button id="test-vr" disabled>Test VR Session</button>
+    </div>
+    
+    <div class="test-item">
+        <h3>AR Support</h3>
+        <p>Immersive AR sessions: <span id="ar-support" class="status">Testing...</span></p>
+        <button id="test-ar" disabled>Test AR Session</button>
+    </div>
+    
+    <div class="test-item">
+        <h3>Optional Features</h3>
+        <div id="optional-features"></div>
+    </div>
+    
+    <div class="test-item">
+        <h3>Device Information</h3>
+        <p>User Agent: <code id="user-agent"></code></p>
+        <p>Platform: <span id="platform"></span></p>
+    </div>
+    
+    <div class="test-item">
+        <h3>Test Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        // Display user agent
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        
+        // Detect platform
+        function detectPlatform() {
+            const ua = navigator.userAgent.toLowerCase();
+            
+            if (ua.includes('visionos') || ua.includes('vision pro')) {
+                return 'Apple Vision Pro';
+            } else if (ua.includes('quest') || ua.includes('oculus')) {
+                return 'Meta Quest';
+            } else if (ua.includes('pico')) {
+                return 'Pico';
+            } else if (ua.includes('magic leap')) {
+                return 'Magic Leap';
+            } else if (ua.includes('hololens')) {
+                return 'HoloLens';
+            }
+            
+            return 'Unknown/Desktop';
+        }
+        
+        document.getElementById('platform').textContent = detectPlatform();
+        
+        // Test WebXR support
+        async function testWebXR() {
+            const results = [];
+            
+            // Check basic WebXR support
+            const webxrSupported = 'xr' in navigator;
+            updateStatus('webxr-support', webxrSupported);
+            results.push(`WebXR API: ${webxrSupported ? '✅' : '❌'}`);
+            
+            if (!webxrSupported) {
+                results.push('WebXR not supported in this browser');
+                displayResults(results);
+                return;
+            }
+            
+            // Check VR support
+            try {
+                const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+                updateStatus('vr-support', vrSupported);
+                results.push(`VR Support: ${vrSupported ? '✅' : '❌'}`);
+                
+                if (vrSupported) {
+                    document.getElementById('test-vr').disabled = false;
+                }
+            } catch (e) {
+                updateStatus('vr-support', false);
+                results.push(`VR Support: ❌ (${e.message})`);
+            }
+            
+            // Check AR support
+            try {
+                const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                updateStatus('ar-support', arSupported);
+                results.push(`AR Support: ${arSupported ? '✅' : '❌'}`);
+                
+                if (arSupported) {
+                    document.getElementById('test-ar').disabled = false;
+                }
+            } catch (e) {
+                updateStatus('ar-support', false);
+                results.push(`AR Support: ❌ (${e.message})`);
+            }
+            
+            // Test optional features
+            const features = [
+                'hand-tracking',
+                'eye-tracking',
+                'anchors',
+                'plane-detection',
+                'mesh-detection',
+                'hit-test',
+                'dom-overlay',
+                'layers',
+                'light-estimation',
+                'depth-sensing'
+            ];
+            
+            const featureResults = [];
+            const featuresContainer = document.getElementById('optional-features');
+            featuresContainer.innerHTML = '';
+            
+            for (const feature of features) {
+                let supported = false;
+                
+                try {
+                    // Try with VR first
+                    supported = await navigator.xr.isSessionSupported('immersive-vr', {
+                        optionalFeatures: [feature]
+                    });
+                } catch (e) {
+                    // Try with AR
+                    try {
+                        supported = await navigator.xr.isSessionSupported('immersive-ar', {
+                            optionalFeatures: [feature]
+                        });
+                    } catch (e2) {
+                        // Feature not supported
+                    }
+                }
+                
+                const status = supported ? '✅' : '❌';
+                featureResults.push(`${feature}: ${status}`);
+                
+                const featureDiv = document.createElement('div');
+                featureDiv.innerHTML = `${feature}: <span class="status ${supported ? 'supported' : 'not-supported'}">${supported ? 'Supported' : 'Not Supported'}</span>`;
+                featuresContainer.appendChild(featureDiv);
+            }
+            
+            results.push('\nOptional Features:');
+            results.push(...featureResults);
+            
+            displayResults(results);
+        }
+        
+        function updateStatus(elementId, supported) {
+            const element = document.getElementById(elementId);
+            element.textContent = supported ? 'Supported' : 'Not Supported';
+            element.className = `status ${supported ? 'supported' : 'not-supported'}`;
+        }
+        
+        function displayResults(results) {
+            document.getElementById('results').textContent = results.join('\n');
+        }
+        
+        // Test VR session
+        document.getElementById('test-vr').addEventListener('click', async () => {
+            try {
+                const session = await navigator.xr.requestSession('immersive-vr', {
+                    optionalFeatures: ['local-floor', 'hand-tracking']
+                });
+                
+                alert('VR session started successfully! Close this dialog to end session.');
+                await session.end();
+            } catch (e) {
+                alert(`Failed to start VR session: ${e.message}`);
+            }
+        });
+        
+        // Test AR session
+        document.getElementById('test-ar').addEventListener('click', async () => {
+            try {
+                const session = await navigator.xr.requestSession('immersive-ar', {
+                    requiredFeatures: ['hit-test'],
+                    optionalFeatures: ['dom-overlay', 'anchors']
+                });
+                
+                alert('AR session started successfully! Close this dialog to end session.');
+                await session.end();
+            } catch (e) {
+                alert(`Failed to start AR session: ${e.message}`);
+            }
+        });
+        
+        // Run tests on load
+        testWebXR();
+    </script>
+</body>
+</html>

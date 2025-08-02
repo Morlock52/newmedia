@@ -1,0 +1,125 @@
+apiVersion: v2
+name: media-platform
+description: Cloud-native media server platform with AI/ML capabilities
+type: application
+version: 2.0.0
+appVersion: "2025.1.0"
+home: https://github.com/media-platform/media-platform
+icon: https://media-platform.io/logo.png
+keywords:
+  - media
+  - streaming
+  - kubernetes
+  - cloud-native
+  - ai
+  - ml
+  - edge-computing
+  - webassembly
+maintainers:
+  - name: Media Platform Team
+    email: team@media-platform.io
+    url: https://media-platform.io
+
+dependencies:
+  # Databases
+  - name: postgresql-ha
+    version: "11.9.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+    tags:
+      - database
+    
+  - name: mongodb
+    version: "13.18.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: mongodb.enabled
+    tags:
+      - database
+      
+  - name: elasticsearch
+    version: "8.11.1"
+    repository: "https://helm.elastic.co"
+    condition: elasticsearch.enabled
+    tags:
+      - search
+      - logging
+      
+  # Caching
+  - name: redis-cluster
+    version: "8.8.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+    tags:
+      - cache
+      
+  # Message Queue
+  - name: kafka
+    version: "26.4.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: kafka.enabled
+    tags:
+      - messaging
+      - streaming
+      
+  # Service Mesh
+  - name: istio-base
+    version: "1.20.0"
+    repository: "https://istio-release.storage.googleapis.com/charts"
+    condition: istio.enabled
+    tags:
+      - service-mesh
+      
+  - name: istio-control
+    version: "1.20.0"
+    repository: "https://istio-release.storage.googleapis.com/charts"
+    alias: istiod
+    condition: istio.enabled
+    tags:
+      - service-mesh
+      
+  # Monitoring
+  - name: kube-prometheus-stack
+    version: "54.0.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: monitoring.enabled
+    tags:
+      - monitoring
+      
+  - name: loki
+    version: "5.41.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.enabled
+    tags:
+      - logging
+      
+  - name: tempo
+    version: "1.7.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.enabled
+    tags:
+      - tracing
+      
+  # ML Platform
+  - name: seldon-core
+    version: "1.17.0"
+    repository: "https://storage.googleapis.com/seldon-charts"
+    condition: ml.enabled
+    tags:
+      - ml
+      - ai
+      
+  # Storage
+  - name: minio
+    version: "5.0.14"
+    repository: "https://charts.min.io"
+    condition: objectStorage.enabled
+    tags:
+      - storage
+
+annotations:
+  "artifacthub.io/category": media-streaming
+  "artifacthub.io/license": MIT
+  "artifacthub.io/prerelease": "false"
+  "artifacthub.io/signKey": |
+    fingerprint: 1234567890ABCDEF1234567890ABCDEF12345678
+    url: https://media-platform.io/pgp-key.asc

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server 2025 - Cyberpunk Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@300;400;700;900&family=Roboto:wght@300;400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --neon-cyan: #00ffff;
+            --neon-magenta: #ff00ff;
+            --neon-pink: #ff0080;
+            --neon-blue: #00aaff;
+            --neon-green: #00ff88;
+            --neon-yellow: #ffaa00;
+            --bg-dark: #0a0a0f;
+            --bg-surface: rgba(20, 20, 30, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Animated Background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(45deg, 
+                var(--bg-dark) 0%, 
+                rgba(0, 255, 255, 0.1) 25%, 
+                var(--bg-dark) 50%, 
+                rgba(255, 0, 255, 0.1) 75%, 
+                var(--bg-dark) 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 10s ease infinite;
+        }
+        
+        .background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, var(--neon-cyan) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, var(--neon-magenta) 0%, transparent 50%);
+            opacity: 0.1;
+            animation: pulse 8s ease-in-out infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.2; }
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 2rem 0;
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--neon-cyan);
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.15);
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px var(--neon-cyan);
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--neon-green);
+            border-radius: 50px;
+            color: var(--neon-green);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Service Categories */
+        .category {
+            margin-bottom: 3rem;
+        }
+        
+        .category-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .category-title::before {
+            content: '';
+            width: 4px;
+            height: 30px;
+            background: linear-gradient(var(--neon-cyan), var(--neon-magenta));
+            border-radius: 2px;
+        }
+        
+        /* Service Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        /* Service Cards */
+        .service-card {
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px) saturate(180%) brightness(120%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 32px rgba(0, 255, 255, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--neon-cyan);
+            box-shadow: 
+                0 16px 64px rgba(0, 255, 255, 0.3),
+                0 0 80px rgba(255, 0, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .service-card:hover::before {
+            left: 100%;
+        }
+        
+        .service-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            filter: drop-shadow(0 0 10px var(--neon-cyan));
+            transition: filter 0.3s ease;
+        }
+        
+        .service-card:hover .service-icon {
+            filter: drop-shadow(0 0 20px var(--neon-cyan)) drop-shadow(0 0 40px var(--neon-magenta));
+        }
+        
+        .service-info h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .service-url {
+            font-size: 0.9rem;
+            color: var(--neon-cyan);
+            font-family: 'Roboto Mono', monospace;
+        }
+        
+        .service-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+        
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+        
+        /* Stats Section */
+        .stats-section {
+            margin: 3rem 0;
+            padding: 2rem;
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--neon-magenta);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(255, 0, 255, 0.15);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px var(--neon-cyan);
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.5rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Glitch Effect */
+        .glitch {
+            position: relative;
+        }
+        
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .glitch::before {
+            animation: glitch-1 2s infinite;
+            color: var(--neon-cyan);
+            z-index: -1;
+        }
+        
+        .glitch::after {
+            animation: glitch-2 2s infinite;
+            color: var(--neon-magenta);
+            z-index: -2;
+        }
+        
+        @keyframes glitch-1 {
+            0%, 14%, 15%, 49%, 50%, 99%, 100% { transform: translate(0); }
+            15%, 49% { transform: translate(-2px, 2px); }
+        }
+        
+        @keyframes glitch-2 {
+            0%, 20%, 21%, 62%, 63%, 99%, 100% { transform: translate(0); }
+            21%, 62% { transform: translate(2px, -2px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    
+    <header class="header">
+        <h1 class="glitch" data-text="ULTIMATE MEDIA SERVER 2025">ULTIMATE MEDIA SERVER 2025</h1>
+        <p>Cyberpunk Media Control Center</p>
+        <div class="status-indicator">
+            ✅ FULLY OPERATIONAL
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Statistics Section -->
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label">Services Running</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Media Servers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">*ARR Services</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Operational</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Media Servers -->
+        <div class="category">
+            <h2 class="category-title">🎬 Media Servers</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:8096')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyfin.svg" alt="Jellyfin" class="service-icon">
+                        <div class="service-info">
+                            <h3>Jellyfin</h3>
+                            <div class="service-url">localhost:8096</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Primary media server with extensive format support and free streaming</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:32400')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/plex.svg" alt="Plex" class="service-icon">
+                        <div class="service-info">
+                            <h3>Plex</h3>
+                            <div class="service-url">localhost:32400</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Popular media server with great client support and premium features</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:8922')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/emby.svg" alt="Emby" class="service-icon">
+                        <div class="service-info">
+                            <h3>Emby</h3>
+                            <div class="service-url">localhost:8922</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Feature-rich media server alternative with advanced capabilities</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Media Management -->
+        <div class="category">
+            <h2 class="category-title">📊 Media Management</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:8989')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sonarr.svg" alt="Sonarr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Sonarr</h3>
+                            <div class="service-url">localhost:8989</div>
+                        </div>
+                    </div>
+                    <div class="service-description">TV Show collection manager with automated downloading and organization</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:7878')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/radarr.svg" alt="Radarr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Radarr</h3>
+                            <div class="service-url">localhost:7878</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Movie collection manager with quality profiles and automation</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:8686')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/lidarr.svg" alt="Lidarr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Lidarr</h3>
+                            <div class="service-url">localhost:8686</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Music collection manager for organizing and downloading albums</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:6767')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/bazarr.svg" alt="Bazarr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Bazarr</h3>
+                            <div class="service-url">localhost:6767</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Subtitle management for movies and TV shows with multi-language support</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:9696')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prowlarr.svg" alt="Prowlarr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Prowlarr</h3>
+                            <div class="service-url">localhost:9696</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Indexer manager for coordinating all *arr services and search providers</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Download Clients -->
+        <div class="category">
+            <h2 class="category-title">⬇️ Download Clients</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:8090')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/qbittorrent.svg" alt="qBittorrent" class="service-icon">
+                        <div class="service-info">
+                            <h3>qBittorrent</h3>
+                            <div class="service-url">localhost:8090</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Feature-rich torrent client with web interface and advanced filtering</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:9091')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/transmission.svg" alt="Transmission" class="service-icon">
+                        <div class="service-info">
+                            <h3>Transmission</h3>
+                            <div class="service-url">localhost:9091</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Lightweight torrent client with simple and efficient design</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:8085')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sabnzbd.svg" alt="SABnzbd" class="service-icon">
+                        <div class="service-info">
+                            <h3>SABnzbd</h3>
+                            <div class="service-url">localhost:8085</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Binary newsgroup downloader with automated post-processing</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Request Management -->
+        <div class="category">
+            <h2 class="category-title">🎯 Request Management</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:5055')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyseerr.svg" alt="Jellyseerr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Jellyseerr</h3>
+                            <div class="service-url">localhost:5055</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Request management for Jellyfin with user permissions and notifications</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:5056')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/overseerr.svg" alt="Overseerr" class="service-icon">
+                        <div class="service-info">
+                            <h3>Overseerr</h3>
+                            <div class="service-url">localhost:5056</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Request management for Plex with beautiful interface and workflow</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:3579')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/ombi.svg" alt="Ombi" class="service-icon">
+                        <div class="service-info">
+                            <h3>Ombi</h3>
+                            <div class="service-url">localhost:3579</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Universal media request and user management system</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monitoring & Management -->
+        <div class="category">
+            <h2 class="category-title">📈 Monitoring & Management</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:9000')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/portainer.svg" alt="Portainer" class="service-icon">
+                        <div class="service-info">
+                            <h3>Portainer</h3>
+                            <div class="service-url">localhost:9000</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Docker container management with web interface and monitoring</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:3003')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/grafana.svg" alt="Grafana" class="service-icon">
+                        <div class="service-info">
+                            <h3>Grafana</h3>
+                            <div class="service-url">localhost:3003</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Metrics visualization and dashboards for system monitoring</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:9090')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prometheus.svg" alt="Prometheus" class="service-icon">
+                        <div class="service-info">
+                            <h3>Prometheus</h3>
+                            <div class="service-url">localhost:9090</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Metrics collection and alerting for comprehensive monitoring</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:19999')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/netdata.svg" alt="Netdata" class="service-icon">
+                        <div class="service-info">
+                            <h3>Netdata</h3>
+                            <div class="service-url">localhost:19999</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Real-time performance monitoring with beautiful visualizations</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alternative Dashboards -->
+        <div class="category">
+            <h2 class="category-title">🎨 Alternative Dashboards</h2>
+            <div class="services-grid">
+                <div class="service-card" onclick="openService('http://localhost:3001')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/homepage.svg" alt="Homepage" class="service-icon">
+                        <div class="service-info">
+                            <h3>Homepage</h3>
+                            <div class="service-url">localhost:3001</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Alternative dashboard solution with service monitoring</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+                
+                <div class="service-card" onclick="openService('http://localhost:4000')">
+                    <div class="service-header">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/dashy.svg" alt="Dashy" class="service-icon">
+                        <div class="service-info">
+                            <h3>Dashy</h3>
+                            <div class="service-url">localhost:4000</div>
+                        </div>
+                    </div>
+                    <div class="service-description">Modern configurable dashboard with themes and widgets</div>
+                    <div class="service-status">
+                        <div class="status-dot"></div>
+                        <span>Online & Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openService(url) {
+            window.open(url, '_blank');
+        }
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate service cards on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Initialize cards as hidden
+            document.querySelectorAll('.service-card').forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

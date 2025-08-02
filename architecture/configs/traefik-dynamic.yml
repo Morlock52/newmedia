@@ -1,0 +1,214 @@
+# Traefik Dynamic Configuration
+http:
+  middlewares:
+    # Security Headers
+    security-headers:
+      headers:
+        customFrameOptionsValue: "SAMEORIGIN"
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=()"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          server: ""
+          X-Powered-By: ""
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        contentSecurityPolicy: |
+          default-src 'self';
+          script-src 'self' 'unsafe-inline' 'unsafe-eval';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data: https:;
+          font-src 'self' data:;
+          connect-src 'self' wss: https:;
+          frame-ancestors 'self';
+          base-uri 'self';
+          form-action 'self'
+    
+    # Rate Limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 2
+            excludedIPs:
+              - 10.10.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+    
+    # Authelia Forward Auth
+    authelia:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?rd=https://auth.media.example.com"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Remote-User"
+          - "Remote-Groups"
+          - "Remote-Name"
+          - "Remote-Email"
+    
+    # Authelia Basic Auth (for API endpoints)
+    authelia-basic:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?auth=basic"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Authorization"
+          - "Proxy-Authorization"
+    
+    # CORS Headers
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "POST"
+          - "DELETE"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        accessControlAllowOriginList:
+          - "https://media.example.com"
+          - "https://*.media.example.com"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+    
+    # Compression
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+    
+    # Retry
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+        multiplier: 2
+        maxInterval: 1s
+    
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.5 || ResponseCodeRatio(500, 600, 0, 600) > 0.5"
+        checkPeriod: 10s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+    
+    # Strip Prefix for Services
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    
+    # Add Prefix for Legacy Services
+    add-legacy-prefix:
+      addPrefix:
+        prefix: "/legacy"
+    
+    # IP Whitelist for Admin Services
+    admin-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "10.10.2.0/24"
+          - "192.168.1.0/24"
+        ipStrategy:
+          depth: 2
+
+  # Service-specific configurations
+  routers:
+    # API Gateway
+    api-gateway:
+      rule: "PathPrefix(`/api/`)"
+      service: kong
+      middlewares:
+        - security-headers
+        - rate-limit
+        - compress
+        - authelia-basic
+      tls:
+        certResolver: letsencrypt
+    
+    # Media Services Router
+    media-services:
+      rule: "Host(`media.example.com`) || HostRegexp(`{subdomain:[a-z]+}.media.example.com`)"
+      service: media-lb
+      middlewares:
+        - security-headers
+        - authelia
+        - compress
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    # Load Balancer for Media Services
+    media-lb:
+      loadBalancer:
+        servers:
+          - url: "http://jellyfin:8096"
+          - url: "http://navidrome:4533"
+          - url: "http://audiobookshelf:80"
+        sticky:
+          cookie:
+            name: media_server
+            secure: true
+            httpOnly: true
+            sameSite: strict
+        healthCheck:
+          scheme: http
+          path: /health
+          interval: 30s
+          timeout: 5s
+          hostname: media.example.com
+          headers:
+            X-Health-Check: "true"
+    
+    # Kong API Gateway
+    kong:
+      loadBalancer:
+        servers:
+          - url: "http://kong:8000"
+        healthCheck:
+          scheme: http
+          path: /status
+          interval: 10s
+          timeout: 3s
+
+# TCP Services
+tcp:
+  routers:
+    postgres:
+      entryPoints:
+        - postgres
+      rule: "HostSNI(`*`)"
+      service: postgres
+      tls:
+        passthrough: true
+  
+  services:
+    postgres:
+      loadBalancer:
+        servers:
+          - address: "postgres:5432"
+
+# UDP Services
+udp:
+  routers:
+    wireguard:
+      entryPoints:
+        - wireguard
+      service: wireguard
+  
+  services:
+    wireguard:
+      loadBalancer:
+        servers:
+          - address: "wireguard:51820"

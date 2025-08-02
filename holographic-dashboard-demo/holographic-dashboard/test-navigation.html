@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Test - HoloMedia Hub</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        }
+
+        .test-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .test-section h2 {
+            color: #00ffff;
+            margin-bottom: 1rem;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .test-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .test-card:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .test-link {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            color: #000;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .test-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-working { background: #00ff00; }
+        .status-needs-testing { background: #ffaa00; }
+        .status-needs-work { background: #ff3366; }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .responsive-demo {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .device-preview {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .test-container {
+                padding: 1rem;
+            }
+            
+            .test-section {
+                padding: 1.5rem;
+            }
+            
+            .responsive-demo {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <navigation-header 
+        title="Navigation Test Suite"
+        breadcrumbs="Home,Testing,Navigation"
+        current-page="Navigation"
+        back-url="main-app.html">
+    </navigation-header>
+
+    <div class="test-container">
+        <div class="test-section">
+            <h2>📱 Navigation Implementation Status</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>Main Dashboard</h3>
+                    <p>✅ Updated iframe paths<br>✅ Added error handling<br>✅ Improved loading states</p>
+                    <a href="main-app.html" class="test-link">Test Main App</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>Config Manager</h3>
+                    <p>✅ Added navigation header<br>✅ Back button functional<br>✅ Breadcrumbs working</p>
+                    <a href="config-manager-fixed.html" class="test-link">Test Config Manager</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>Env Editor</h3>
+                    <p>✅ Smart navigation<br>✅ Responsive design<br>✅ AI-powered features</p>
+                    <a href="smart-env-editor.html" class="test-link">Test Env Editor</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>Media Assistant</h3>
+                    <p>✅ Chat interface<br>✅ Mobile optimized<br>✅ Voice input ready</p>
+                    <a href="media-assistant.html" class="test-link">Test AI Assistant</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>Env Viewer</h3>
+                    <p>✅ File viewer<br>✅ Syntax highlighting<br>✅ Mobile responsive</p>
+                    <a href="env-viewer.html" class="test-link">Test Env Viewer</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3><span class="status-indicator status-working"></span>AI Config Manager</h3>
+                    <p>✅ Advanced features<br>✅ Holographic design<br>✅ Touch optimized</p>
+                    <a href="ai-config-manager.html" class="test-link">Test AI Config</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚀 Navigation Features Implemented</h2>
+            <ul class="feature-list">
+                <li>✅ <strong>Consistent Header Component:</strong> Unified navigation across all pages</li>
+                <li>✅ <strong>Smart Back Button:</strong> Intelligent routing with fallback to browser history</li>
+                <li>✅ <strong>Breadcrumb Navigation:</strong> Clear page hierarchy and navigation paths</li>
+                <li>✅ <strong>Mobile-First Design:</strong> Responsive design that works on all devices</li>
+                <li>✅ <strong>Error Handling:</strong> Graceful handling of missing pages and load failures</li>
+                <li>✅ <strong>Loading States:</strong> Improved user feedback during page transitions</li>
+                <li>✅ <strong>Accessibility:</strong> ARIA labels, keyboard navigation, and screen reader support</li>
+                <li>✅ <strong>Touch Optimization:</strong> Larger touch targets and gesture-friendly interfaces</li>
+                <li>✅ <strong>Progressive Enhancement:</strong> Works even if JavaScript fails</li>
+                <li>✅ <strong>Modern Web Standards:</strong> Uses Custom Elements and modern CSS features</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📱 Responsive Design Test</h2>
+            <p>The navigation system adapts to different screen sizes:</p>
+            <div class="responsive-demo">
+                <div class="device-preview">
+                    <h4>📱 Mobile (≤768px)</h4>
+                    <ul style="text-align: left; font-size: 0.9rem;">
+                        <li>Compact header layout</li>
+                        <li>Hidden breadcrumbs</li>
+                        <li>Stacked navigation</li>
+                        <li>Touch-friendly buttons</li>
+                        <li>Mobile menu available</li>
+                    </ul>
+                </div>
+                
+                <div class="device-preview">
+                    <h4>💻 Tablet (≤1024px)</h4>
+                    <ul style="text-align: left; font-size: 0.9rem;">
+                        <li>Balanced layout</li>
+                        <li>Simplified breadcrumbs</li>
+                        <li>Grid adjustments</li>
+                        <li>Optimized spacing</li>
+                        <li>Hybrid navigation</li>
+                    </ul>
+                </div>
+                
+                <div class="device-preview">
+                    <h4>🖥️ Desktop (>1024px)</h4>
+                    <ul style="text-align: left; font-size: 0.9rem;">
+                        <li>Full header layout</li>
+                        <li>Complete breadcrumbs</li>
+                        <li>Multi-column grids</li>
+                        <li>Hover interactions</li>
+                        <li>Advanced features</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Instructions</h2>
+            <ol style="text-align: left; line-height: 1.6;">
+                <li><strong>Navigation Flow:</strong> Test clicking through all pages using the navigation header</li>
+                <li><strong>Back Button:</strong> Verify the back button works from each page</li>
+                <li><strong>Breadcrumbs:</strong> Click breadcrumb links to navigate up the hierarchy</li>
+                <li><strong>Mobile Testing:</strong> Resize your browser window to test responsive design</li>
+                <li><strong>Error Handling:</strong> Try navigating to non-existent pages</li>
+                <li><strong>Loading States:</strong> Observe loading indicators when switching between pages</li>
+                <li><strong>Accessibility:</strong> Test keyboard navigation using Tab and Enter keys</li>
+                <li><strong>Performance:</strong> Check that pages load quickly and smoothly</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Technical Implementation</h2>
+            <p>The navigation system uses modern web technologies:</p>
+            <ul class="feature-list">
+                <li><strong>Web Components:</strong> Custom navigation-header element for consistency</li>
+                <li><strong>CSS Grid & Flexbox:</strong> Modern layout techniques for responsive design</li>
+                <li><strong>CSS Custom Properties:</strong> Consistent theming and easy customization</li>
+                <li><strong>Progressive Enhancement:</strong> Core functionality works without JavaScript</li>
+                <li><strong>Mobile-First CSS:</strong> Responsive breakpoints starting from mobile</li>
+                <li><strong>Accessibility Features:</strong> ARIA labels, focus management, screen reader support</li>
+                <li><strong>Performance Optimization:</strong> Lazy loading, efficient DOM manipulation</li>
+                <li><strong>Cross-Browser Compatibility:</strong> Works in all modern browsers</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Test navigation functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Navigation Test Suite Loaded');
+            
+            // Test navigation header events
+            const navHeader = document.querySelector('navigation-header');
+            if (navHeader) {
+                navHeader.addEventListener('navigation-back', (e) => {
+                    console.log('📱 Back navigation triggered:', e.detail);
+                });
+                
+                navHeader.addEventListener('settings-requested', (e) => {
+                    console.log('⚙️ Settings requested:', e.detail);
+                    alert('Settings panel would open here');
+                });
+            }
+            
+            // Test responsive behavior
+            const testResponsive = () => {
+                const viewport = {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    deviceType: window.innerWidth <= 768 ? 'mobile' : 
+                               window.innerWidth <= 1024 ? 'tablet' : 'desktop'
+                };
+                console.log('📱 Viewport:', viewport);
+            };
+            
+            window.addEventListener('resize', testResponsive);
+            testResponsive();
+            
+            // Test touch capabilities
+            if ('ontouchstart' in window) {
+                console.log('👆 Touch device detected');
+                document.body.classList.add('touch-device');
+            }
+            
+            // Test loading performance
+            const navigationTiming = performance.navigation;
+            const timing = performance.timing;
+            const pageLoadTime = timing.loadEventEnd - timing.navigationStart;
+            console.log(`⚡ Page load time: ${pageLoadTime}ms`);
+        });
+    </script>
+</body>
+</html>

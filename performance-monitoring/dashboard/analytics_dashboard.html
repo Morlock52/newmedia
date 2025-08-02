@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Analytics Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --background-dark: #0f172a;
+            --background-medium: #1e293b;
+            --background-light: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--background-dark) 0%, var(--background-medium) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--background-medium);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .refresh-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .refresh-button:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .metric-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary-color);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card-change {
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .change-positive {
+            color: var(--success-color);
+        }
+
+        .change-negative {
+            color: var(--error-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .large-chart {
+            grid-column: span 2;
+            height: 400px;
+        }
+
+        .system-overview {
+            grid-column: span 1;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 1rem;
+        }
+
+        .overview-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .overview-metric {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .overview-metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .overview-metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .benchmark-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .benchmark-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 0.375rem;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .benchmark-name {
+            font-weight: 500;
+        }
+
+        .benchmark-score {
+            font-weight: 600;
+            color: var(--success-color);
+        }
+
+        .benchmark-unit {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: 0.25rem;
+        }
+
+        .alert-panel {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border: 1px solid var(--error-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+
+        .alert-icon {
+            width: 16px;
+            height: 16px;
+            background: var(--warning-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .alert-message {
+            flex-grow: 1;
+            font-size: 0.875rem;
+        }
+
+        .alert-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            color: var(--error-color);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .large-chart {
+                grid-column: span 1;
+            }
+            
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .header-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        /* Performance optimizations */
+        .metric-card {
+            will-change: transform;
+        }
+
+        .chart-container canvas {
+            will-change: transform;
+        }
+
+        /* Dark scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--background-medium);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🚀 Performance Analytics Dashboard</h1>
+        <div class="header-controls">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="connection-status">Connected</span>
+            </div>
+            <button class="refresh-button" onclick="refreshDashboard()">
+                🔄 Refresh
+            </button>
+        </div>
+    </header>
+
+    <div id="alerts-container"></div>
+
+    <div class="dashboard-grid">
+        <!-- System Overview -->
+        <div class="metric-card system-overview">
+            <div class="card-header">
+                <h3 class="card-title">System Overview</h3>
+            </div>
+            <div class="overview-metrics">
+                <div class="overview-metric">
+                    <div class="overview-metric-value" id="cpu-usage">--</div>
+                    <div class="overview-metric-label">CPU Usage</div>
+                </div>
+                <div class="overview-metric">
+                    <div class="overview-metric-value" id="memory-usage">--</div>
+                    <div class="overview-metric-label">Memory Usage</div>
+                </div>
+                <div class="overview-metric">
+                    <div class="overview-metric-value" id="disk-usage">--</div>
+                    <div class="overview-metric-label">Disk Usage</div>
+                </div>
+                <div class="overview-metric">
+                    <div class="overview-metric-value" id="network-io">--</div>
+                    <div class="overview-metric-label">Network I/O</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Score -->
+        <div class="metric-card">
+            <div class="card-header">
+                <h3 class="card-title">Performance Score</h3>
+                <div class="card-change" id="score-change">
+                    <span>↗</span> +5.2%
+                </div>
+            </div>
+            <div class="card-value" id="performance-score">85</div>
+            <div class="chart-container">
+                <canvas id="performance-trend-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- CPU Metrics -->
+        <div class="metric-card">
+            <div class="card-header">
+                <h3 class="card-title">CPU Performance</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="cpu-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Memory Metrics -->
+        <div class="metric-card">
+            <div class="card-header">
+                <h3 class="card-title">Memory Usage</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="memory-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Network Performance -->
+        <div class="metric-card large-chart">
+            <div class="card-header">
+                <h3 class="card-title">Network Performance</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="network-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Benchmark Results -->
+        <div class="metric-card">
+            <div class="card-header">
+                <h3 class="card-title">Latest Benchmarks</h3>
+            </div>
+            <div class="benchmark-results" id="benchmark-results">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Application Metrics -->
+        <div class="metric-card">
+            <div class="card-header">
+                <h3 class="card-title">Application Status</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="app-status-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Disk I/O -->
+        <div class="metric-card large-chart">
+            <div class="card-header">
+                <h3 class="card-title">Disk I/O Performance</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="disk-io-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PerformanceDashboard {
+            constructor() {
+                this.charts = {};
+                this.websocket = null;
+                this.dataBuffer = new Map();
+                this.updateInterval = 5000; // 5 seconds
+                this.lastUpdateTime = Date.now();
+                
+                this.initializeCharts();
+                this.startDataCollection();
+                this.setupWebSocket();
+            }
+
+            initializeCharts() {
+                // Chart.js default configuration
+                Chart.defaults.color = '#cbd5e1';
+                Chart.defaults.borderColor = '#475569';
+                Chart.defaults.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+
+                // Performance Trend Chart
+                this.charts.performanceTrend = new Chart(document.getElementById('performance-trend-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Performance Score',
+                            data: [],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        animation: {
+                            duration: 750,
+                            easing: 'easeInOutQuart'
+                        }
+                    }
+                });
+
+                // CPU Chart
+                this.charts.cpu = new Chart(document.getElementById('cpu-chart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used', 'Available'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#ef4444', 'rgba(71, 85, 105, 0.3)'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                // Memory Chart
+                this.charts.memory = new Chart(document.getElementById('memory-chart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used', 'Available'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#f59e0b', 'rgba(71, 85, 105, 0.3)'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                // Network Chart
+                this.charts.network = new Chart(document.getElementById('network-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Upload (Mbps)',
+                                data: [],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 2,
+                                fill: false
+                            },
+                            {
+                                label: 'Download (Mbps)',
+                                data: [],
+                                borderColor: '#2563eb',
+                                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end'
+                            }
+                        }
+                    }
+                });
+
+                // Application Status Chart
+                this.charts.appStatus = new Chart(document.getElementById('app-status-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jellyfin', 'Sonarr', 'Radarr', 'Prowlarr', 'qBittorrent'],
+                        datasets: [{
+                            label: 'Response Time (ms)',
+                            data: [0, 0, 0, 0, 0],
+                            backgroundColor: [
+                                '#10b981',
+                                '#2563eb', 
+                                '#f59e0b',
+                                '#8b5cf6',
+                                '#06b6d4'
+                            ],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                // Disk I/O Chart
+                this.charts.diskIO = new Chart(document.getElementById('disk-io-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Read (MB/s)',
+                                data: [],
+                                borderColor: '#06b6d4',
+                                backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                                borderWidth: 2,
+                                fill: true
+                            },
+                            {
+                                label: 'Write (MB/s)',
+                                data: [],
+                                borderColor: '#8b5cf6',
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                borderWidth: 2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(71, 85, 105, 0.3)' }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end'
+                            }
+                        }
+                    }
+                });
+            }
+
+            setupWebSocket() {
+                try {
+                    this.websocket = new WebSocket('ws://localhost:8765');
+                    
+                    this.websocket.onopen = () => {
+                        console.log('WebSocket connected');
+                        document.getElementById('connection-status').textContent = 'Connected';
+                    };
+
+                    this.websocket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.processRealtimeData(data);
+                    };
+
+                    this.websocket.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        document.getElementById('connection-status').textContent = 'Disconnected';
+                        // Reconnect after 5 seconds
+                        setTimeout(() => this.setupWebSocket(), 5000);
+                    };
+
+                    this.websocket.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        document.getElementById('connection-status').textContent = 'Error';
+                    };
+                } catch (error) {
+                    console.warn('WebSocket not available, using polling');
+                    document.getElementById('connection-status').textContent = 'Polling Mode';
+                }
+            }
+
+            async startDataCollection() {
+                try {
+                    await this.fetchInitialData();
+                    setInterval(() => this.fetchUpdatedData(), this.updateInterval);
+                } catch (error) {
+                    console.error('Failed to start data collection:', error);
+                    this.showError('Failed to load performance data');
+                }
+            }
+
+            async fetchInitialData() {
+                try {
+                    // Simulate API calls - replace with actual API endpoints
+                    const [systemMetrics, benchmarkResults, applicationStatus] = await Promise.all([
+                        this.mockApiCall('/api/system/metrics'),
+                        this.mockApiCall('/api/benchmarks/latest'),
+                        this.mockApiCall('/api/applications/status')
+                    ]);
+
+                    this.updateSystemOverview(systemMetrics);
+                    this.updateBenchmarkResults(benchmarkResults);
+                    this.updateApplicationStatus(applicationStatus);
+                    
+                } catch (error) {
+                    console.error('Error fetching initial data:', error);
+                }
+            }
+
+            async fetchUpdatedData() {
+                try {
+                    const metrics = await this.mockApiCall('/api/system/metrics');
+                    this.updateMetrics(metrics);
+                } catch (error) {
+                    console.error('Error fetching updated data:', error);
+                }
+            }
+
+            // Mock API call - replace with actual API implementation
+            async mockApiCall(endpoint) {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        switch (endpoint) {
+                            case '/api/system/metrics':
+                                resolve(this.generateMockSystemMetrics());
+                                break;
+                            case '/api/benchmarks/latest':
+                                resolve(this.generateMockBenchmarkResults());
+                                break;
+                            case '/api/applications/status':
+                                resolve(this.generateMockApplicationStatus());
+                                break;
+                            default:
+                                resolve({});
+                        }
+                    }, Math.random() * 500 + 100); // Simulate network delay
+                });
+            }
+
+            generateMockSystemMetrics() {
+                const now = Date.now();
+                return {
+                    timestamp: now,
+                    cpu_usage: Math.random() * 100,
+                    memory_usage: Math.random() * 100,
+                    disk_usage: Math.random() * 100,
+                    network_io: {
+                        upload_mbps: Math.random() * 100,
+                        download_mbps: Math.random() * 1000
+                    },
+                    performance_score: 70 + Math.random() * 30
+                };
+            }
+
+            generateMockBenchmarkResults() {
+                return [
+                    { name: 'CPU Single Core', score: 45000 + Math.random() * 10000, unit: 'ops/sec', status: 'success' },
+                    { name: 'CPU Multi Core', score: 180000 + Math.random() * 40000, unit: 'ops/sec', status: 'success' },
+                    { name: 'Memory Bandwidth', score: 12 + Math.random() * 3, unit: 'GB/s', status: 'success' },
+                    { name: 'Disk Sequential Write', score: 450 + Math.random() * 100, unit: 'MB/s', status: 'success' },
+                    { name: 'Network Latency', score: 15 + Math.random() * 10, unit: 'ms', status: 'success' }
+                ];
+            }
+
+            generateMockApplicationStatus() {
+                return {
+                    jellyfin: { status: 'up', response_time: 120 + Math.random() * 50 },
+                    sonarr: { status: 'up', response_time: 200 + Math.random() * 100 },
+                    radarr: { status: 'up', response_time: 180 + Math.random() * 80 },
+                    prowlarr: { status: 'up', response_time: 150 + Math.random() * 60 },
+                    qbittorrent: { status: 'up', response_time: 100 + Math.random() * 40 }
+                };
+            }
+
+            updateSystemOverview(metrics) {
+                document.getElementById('cpu-usage').textContent = `${metrics.cpu_usage.toFixed(1)}%`;
+                document.getElementById('memory-usage').textContent = `${metrics.memory_usage.toFixed(1)}%`;
+                document.getElementById('disk-usage').textContent = `${metrics.disk_usage.toFixed(1)}%`;
+                document.getElementById('network-io').textContent = `${(metrics.network_io.upload_mbps + metrics.network_io.download_mbps).toFixed(1)} Mbps`;
+                document.getElementById('performance-score').textContent = Math.round(metrics.performance_score);
+
+                // Update doughnut charts
+                this.charts.cpu.data.datasets[0].data = [metrics.cpu_usage, 100 - metrics.cpu_usage];
+                this.charts.cpu.update('none');
+
+                this.charts.memory.data.datasets[0].data = [metrics.memory_usage, 100 - metrics.memory_usage];
+                this.charts.memory.update('none');
+            }
+
+            updateBenchmarkResults(results) {
+                const container = document.getElementById('benchmark-results');
+                container.innerHTML = '';
+
+                results.forEach(result => {
+                    const item = document.createElement('div');
+                    item.className = 'benchmark-item';
+                    
+                    const statusIcon = result.status === 'success' ? '✓' : '✗';
+                    const statusColor = result.status === 'success' ? '#10b981' : '#ef4444';
+                    
+                    item.innerHTML = `
+                        <div>
+                            <span style="color: ${statusColor}; margin-right: 0.5rem;">${statusIcon}</span>
+                            <span class="benchmark-name">${result.name}</span>
+                        </div>
+                        <div>
+                            <span class="benchmark-score">${this.formatNumber(result.score)}</span>
+                            <span class="benchmark-unit">${result.unit}</span>
+                        </div>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+            }
+
+            updateApplicationStatus(status) {
+                const services = ['jellyfin', 'sonarr', 'radarr', 'prowlarr', 'qbittorrent'];
+                const responseTimes = services.map(service => status[service]?.response_time || 0);
+                
+                this.charts.appStatus.data.datasets[0].data = responseTimes;
+                this.charts.appStatus.update('none');
+            }
+
+            updateMetrics(metrics) {
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+
+                // Update performance trend
+                this.addDataPoint(this.charts.performanceTrend, timeLabel, metrics.performance_score);
+                
+                // Update network chart
+                this.addDataPoint(this.charts.network, timeLabel, metrics.network_io.upload_mbps, 0);
+                this.addDataPoint(this.charts.network, timeLabel, metrics.network_io.download_mbps, 1);
+                
+                // Update disk I/O with mock data
+                const diskRead = Math.random() * 100;
+                const diskWrite = Math.random() * 50;
+                this.addDataPoint(this.charts.diskIO, timeLabel, diskRead, 0);
+                this.addDataPoint(this.charts.diskIO, timeLabel, diskWrite, 1);
+
+                // Update system overview
+                this.updateSystemOverview(metrics);
+            }
+
+            addDataPoint(chart, label, value, datasetIndex = 0) {
+                const maxPoints = 20;
+                
+                // Add new data point
+                if (chart.data.labels.length >= maxPoints) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+                
+                chart.data.labels.push(label);
+                
+                if (chart.data.datasets[datasetIndex]) {
+                    chart.data.datasets[datasetIndex].data.push(value);
+                }
+                
+                chart.update('none');
+            }
+
+            processRealtimeData(data) {
+                // Process real-time WebSocket data
+                if (data.type === 'metrics') {
+                    this.updateMetrics(data.payload);
+                } else if (data.type === 'alert') {
+                    this.showAlert(data.payload);
+                }
+            }
+
+            showAlert(alert) {
+                const alertsContainer = document.getElementById('alerts-container');
+                
+                if (!alertsContainer.querySelector('.alert-panel')) {
+                    const panel = document.createElement('div');
+                    panel.className = 'alert-panel';
+                    panel.innerHTML = '<h3 style="margin-bottom: 1rem;">🚨 Active Alerts</h3>';
+                    alertsContainer.appendChild(panel);
+                }
+                
+                const panel = alertsContainer.querySelector('.alert-panel');
+                const alertItem = document.createElement('div');
+                alertItem.className = 'alert-item';
+                alertItem.innerHTML = `
+                    <div class="alert-icon"></div>
+                    <div class="alert-message">${alert.message}</div>
+                    <div class="alert-time">${new Date().toLocaleTimeString()}</div>
+                `;
+                
+                panel.appendChild(alertItem);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    alertItem.remove();
+                    if (panel.children.length <= 1) {
+                        panel.remove();
+                    }
+                }, 10000);
+            }
+
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                document.body.insertBefore(errorDiv, document.querySelector('.dashboard-grid'));
+                
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+
+            formatNumber(num) {
+                if (num >= 1000000) {
+                    return (num / 1000000).toFixed(1) + 'M';
+                } else if (num >= 1000) {
+                    return (num / 1000).toFixed(1) + 'K';
+                } else {
+                    return num.toFixed(1);
+                }
+            }
+        }
+
+        // Global functions
+        function refreshDashboard() {
+            location.reload();
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new PerformanceDashboard();
+        });
+
+        // Performance optimizations
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Reduce update frequency when tab is not visible
+                if (window.dashboard) {
+                    window.dashboard.updateInterval = 30000; // 30 seconds
+                }
+            } else {
+                // Resume normal update frequency
+                if (window.dashboard) {
+                    window.dashboard.updateInterval = 5000; // 5 seconds
+                }
+            }
+        });
+    </script>
+</body>
+</html>

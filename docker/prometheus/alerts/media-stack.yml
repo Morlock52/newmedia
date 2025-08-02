@@ -1,0 +1,248 @@
+# Prometheus Alert Rules - Media Stack Production
+# ===============================================
+# Comprehensive alerting for media server infrastructure
+
+groups:
+  - name: infrastructure
+    rules:
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes."
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for more than 5 minutes."
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% for more than 5 minutes."
+
+      # Disk space warning
+      - alert: DiskSpaceWarning
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 20% free space."
+
+      # Disk space critical
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 10% free space."
+
+  - name: docker
+    rules:
+      # Container restarts
+      - alert: ContainerHighRestart
+        expr: increase(docker_container_restarts_total[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "Container {{ $labels.name }} has restarted more than 3 times in the last hour."
+
+      # Container memory usage
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} memory usage is above 90%."
+
+  - name: media-services
+    rules:
+      # Jellyfin health check
+      - alert: JellyfinDown
+        expr: up{job="jellyfin"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Jellyfin is down"
+          description: "Jellyfin media server has been down for more than 2 minutes."
+
+      # Sonarr health check
+      - alert: SonarrDown
+        expr: up{job="sonarr"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sonarr is down"
+          description: "Sonarr TV show manager has been down for more than 2 minutes."
+
+      # Radarr health check
+      - alert: RadarrDown
+        expr: up{job="radarr"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Radarr is down"
+          description: "Radarr movie manager has been down for more than 2 minutes."
+
+      # Prowlarr health check
+      - alert: ProwlarrDown
+        expr: up{job="prowlarr"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prowlarr is down"
+          description: "Prowlarr indexer manager has been down for more than 2 minutes."
+
+      # Download client health
+      - alert: QBittorrentDown
+        expr: up{job="qbittorrent"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "qBittorrent is down"
+          description: "qBittorrent download client has been down for more than 2 minutes."
+
+  - name: database
+    rules:
+      # PostgreSQL health
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute."
+
+      # PostgreSQL connections
+      - alert: PostgreSQLHighConnections
+        expr: sum(pg_stat_activity_count) by (instance) > 150
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL high connection count"
+          description: "PostgreSQL has more than 150 active connections."
+
+      # Redis health
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache server has been down for more than 1 minute."
+
+      # Redis memory usage
+      - alert: RedisHighMemory
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is above 90%."
+
+  - name: network
+    rules:
+      # VPN connection status
+      - alert: VPNDown
+        expr: up{job="gluetun"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VPN connection is down"
+          description: "VPN service has been down for more than 2 minutes. Downloads may be exposed."
+
+      # SSL certificate expiry
+      - alert: SSLCertificateExpiry
+        expr: ssl_certificate_expiry_seconds < 7 * 24 * 3600
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in less than 7 days."
+
+      # High network traffic
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) > 100 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network traffic on {{ $labels.instance }}"
+          description: "Network receive traffic is above 100MB/s for more than 10 minutes."
+
+  - name: security
+    rules:
+      # Authentication failures
+      - alert: HighAuthFailures
+        expr: increase(authelia_authentication_attempts_total{success="false"}[5m]) > 10
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failures"
+          description: "More than 10 authentication failures in the last 5 minutes."
+
+      # Suspicious login patterns
+      - alert: SuspiciousLogins
+        expr: increase(authelia_authentication_attempts_total[1h]) > 50
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Suspicious login pattern detected"
+          description: "More than 50 authentication attempts in the last hour."
+
+  - name: backups
+    rules:
+      # Backup failures
+      - alert: BackupFailure
+        expr: time() - backup_last_success_timestamp > 24 * 3600
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup failure detected"
+          description: "Backup has not completed successfully in the last 24 hours."
+
+      # Backup age
+      - alert: BackupAge
+        expr: time() - backup_last_success_timestamp > 36 * 3600
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup is getting old"
+          description: "Last successful backup was more than 36 hours ago."

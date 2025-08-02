@@ -1,0 +1,11 @@
+tunnel: 4d685f6d-2c81-45d7-a9c7-ab96c1b4b12f
+credentials-file: /etc/cloudflared/cert.pem
+
+ingress:
+  # Route home subdomain and all its services to local Traefik
+  - hostname: home.morloksmaze.com
+    service: http://traefik:80
+  - hostname: "*.home.morloksmaze.com"
+    service: http://traefik:80
+  # Catch-all rule (required)
+  - service: http_status:404

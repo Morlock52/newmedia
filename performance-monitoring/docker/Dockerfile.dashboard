@@ -1,0 +1,56 @@
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    nginx \
+    supervisor
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S dashboard -u 1001
+
+# Copy package files
+COPY dashboard/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy dashboard files
+COPY dashboard/ ./dashboard/
+COPY docker/nginx/dashboard.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisor/dashboard.conf /etc/supervisor/conf.d/dashboard.conf
+
+# Create necessary directories
+RUN mkdir -p /var/log/supervisor /app/logs && \
+    chown -R dashboard:nodejs /app
+
+# Build frontend assets
+RUN npm run build
+
+# Copy startup script
+COPY docker/scripts/start-dashboard.sh /app/start-dashboard.sh
+RUN chmod +x /app/start-dashboard.sh
+
+# Switch to app user for the Node.js process
+USER dashboard
+
+# Expose port
+EXPOSE 8090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8090/health || exit 1
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=8090
+ENV API_URL=http://performance-monitor:8766
+ENV WS_URL=ws://performance-monitor:8765
+
+# Start services
+CMD ["/app/start-dashboard.sh"]

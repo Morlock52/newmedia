@@ -1,0 +1,480 @@
+{
+  "name": "Cyberpunk Media Hub",
+  "background": {
+    "image": "",
+    "blur": 0,
+    "brightness": 100,
+    "saturate": 100
+  },
+  "theme": {
+    "colors": {
+      "primary": "#00ffff",
+      "secondary": "#ff00ff",
+      "background": "#0a0a0f",
+      "surface": "rgba(20, 20, 30, 0.6)",
+      "error": "#ff0080",
+      "warning": "#ffaa00",
+      "success": "#00ff88",
+      "info": "#00aaff"
+    },
+    "radius": "16px"
+  },
+  "categories": [
+    {
+      "id": "media-servers",
+      "name": "🎬 Media Servers",
+      "position": 0
+    },
+    {
+      "id": "media-management",
+      "name": "📊 Media Management",
+      "position": 1
+    },
+    {
+      "id": "downloads",
+      "name": "⬇️ Downloads",
+      "position": 2
+    },
+    {
+      "id": "requests",
+      "name": "🎯 Requests",
+      "position": 3
+    },
+    {
+      "id": "libraries",
+      "name": "📚 Libraries",
+      "position": 4
+    },
+    {
+      "id": "monitoring",
+      "name": "📈 Monitoring",
+      "position": 5
+    },
+    {
+      "id": "management",
+      "name": "⚙️ Management",
+      "position": 6
+    },
+    {
+      "id": "utilities",
+      "name": "🛠️ Utilities",
+      "position": 7
+    }
+  ],
+  "services": [
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/jellyfin.svg",
+      "url": "http://localhost:8096",
+      "category": "media-servers",
+      "description": "Free Media Server",
+      "integration": {
+        "type": "jellyfin",
+        "properties": {
+          "apiKey": "",
+          "enableNowPlaying": true
+        }
+      }
+    },
+    {
+      "id": "plex",
+      "name": "Plex",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/plex.svg",
+      "url": "http://localhost:32400/web",
+      "category": "media-servers",
+      "description": "Premium Media Server",
+      "integration": {
+        "type": "plex",
+        "properties": {
+          "token": "",
+          "enableNowPlaying": true
+        }
+      }
+    },
+    {
+      "id": "emby",
+      "name": "Emby",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/emby.svg",
+      "url": "http://localhost:8922",
+      "category": "media-servers",
+      "description": "Alternative Media Server"
+    },
+    {
+      "id": "sonarr",
+      "name": "Sonarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/sonarr.svg",
+      "url": "http://localhost:8989",
+      "category": "media-management",
+      "description": "TV Show Management",
+      "integration": {
+        "type": "sonarr",
+        "properties": {
+          "apiKey": "",
+          "enableQueue": true,
+          "enableCalendar": true
+        }
+      }
+    },
+    {
+      "id": "radarr",
+      "name": "Radarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/radarr.svg",
+      "url": "http://localhost:7878",
+      "category": "media-management",
+      "description": "Movie Management",
+      "integration": {
+        "type": "radarr",
+        "properties": {
+          "apiKey": "",
+          "enableQueue": true,
+          "enableCalendar": true
+        }
+      }
+    },
+    {
+      "id": "lidarr",
+      "name": "Lidarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/lidarr.svg",
+      "url": "http://localhost:8686",
+      "category": "media-management",
+      "description": "Music Management"
+    },
+    {
+      "id": "readarr",
+      "name": "Readarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/readarr.svg",
+      "url": "http://localhost:8787",
+      "category": "media-management",
+      "description": "Book Management"
+    },
+    {
+      "id": "bazarr",
+      "name": "Bazarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/bazarr.svg",
+      "url": "http://localhost:6767",
+      "category": "media-management",
+      "description": "Subtitle Management"
+    },
+    {
+      "id": "prowlarr",
+      "name": "Prowlarr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/prowlarr.svg",
+      "url": "http://localhost:9696",
+      "category": "media-management",
+      "description": "Indexer Management"
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/qbittorrent.svg",
+      "url": "http://localhost:8090",
+      "category": "downloads",
+      "description": "Torrent Client",
+      "integration": {
+        "type": "qbittorrent",
+        "properties": {
+          "username": "admin",
+          "password": "",
+          "enableStats": true
+        }
+      }
+    },
+    {
+      "id": "transmission",
+      "name": "Transmission",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/transmission.svg",
+      "url": "http://localhost:9091",
+      "category": "downloads",
+      "description": "Alternative Torrent Client",
+      "integration": {
+        "type": "transmission",
+        "properties": {
+          "username": "",
+          "password": "",
+          "enableStats": true
+        }
+      }
+    },
+    {
+      "id": "sabnzbd",
+      "name": "SABnzbd",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/sabnzbd.svg",
+      "url": "http://localhost:8085",
+      "category": "downloads",
+      "description": "Usenet Downloader",
+      "integration": {
+        "type": "sabnzbd",
+        "properties": {
+          "apiKey": "",
+          "enableStats": true
+        }
+      }
+    },
+    {
+      "id": "nzbget",
+      "name": "NZBGet",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/nzbget.svg",
+      "url": "http://localhost:6789",
+      "category": "downloads",
+      "description": "Alternative Usenet Client"
+    },
+    {
+      "id": "jellyseerr",
+      "name": "Jellyseerr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/jellyseerr.svg",
+      "url": "http://localhost:5055",
+      "category": "requests",
+      "description": "Media Requests for Jellyfin"
+    },
+    {
+      "id": "overseerr",
+      "name": "Overseerr",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/overseerr.svg",
+      "url": "http://localhost:5056",
+      "category": "requests",
+      "description": "Media Requests for Plex"
+    },
+    {
+      "id": "ombi",
+      "name": "Ombi",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/ombi.svg",
+      "url": "http://localhost:3579",
+      "category": "requests",
+      "description": "Universal Media Requests"
+    },
+    {
+      "id": "calibre-web",
+      "name": "Calibre-Web",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/calibre-web.svg",
+      "url": "http://localhost:8083",
+      "category": "libraries",
+      "description": "E-Book Library"
+    },
+    {
+      "id": "audiobookshelf",
+      "name": "Audiobookshelf",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/audiobookshelf.svg",
+      "url": "http://localhost:13378",
+      "category": "libraries",
+      "description": "Audiobook & Podcast Server"
+    },
+    {
+      "id": "navidrome",
+      "name": "Navidrome",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/navidrome.svg",
+      "url": "http://localhost:4533",
+      "category": "libraries",
+      "description": "Music Server"
+    },
+    {
+      "id": "photoprism",
+      "name": "PhotoPrism",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/photoprism.svg",
+      "url": "http://localhost:2342",
+      "category": "libraries",
+      "description": "Photo Management"
+    },
+    {
+      "id": "immich",
+      "name": "Immich",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/immich.svg",
+      "url": "http://localhost:2283",
+      "category": "libraries",
+      "description": "Google Photos Alternative"
+    },
+    {
+      "id": "paperless-ngx",
+      "name": "Paperless-ngx",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/paperless-ngx.svg",
+      "url": "http://localhost:8010",
+      "category": "libraries",
+      "description": "Document Management"
+    },
+    {
+      "id": "komga",
+      "name": "Komga",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/komga.svg",
+      "url": "http://localhost:8090",
+      "category": "libraries",
+      "description": "Comics/Manga Server"
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/grafana.svg",
+      "url": "http://localhost:3003",
+      "category": "monitoring",
+      "description": "Metrics Visualization"
+    },
+    {
+      "id": "prometheus",
+      "name": "Prometheus",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/prometheus.svg",
+      "url": "http://localhost:9090",
+      "category": "monitoring",
+      "description": "Metrics Collection"
+    },
+    {
+      "id": "uptime-kuma",
+      "name": "Uptime Kuma",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/uptime-kuma.svg",
+      "url": "http://localhost:3001",
+      "category": "monitoring",
+      "description": "Service Monitoring"
+    },
+    {
+      "id": "scrutiny",
+      "name": "Scrutiny",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/scrutiny.svg",
+      "url": "http://localhost:8082",
+      "category": "monitoring",
+      "description": "HDD Health Monitoring"
+    },
+    {
+      "id": "glances",
+      "name": "Glances",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/glances.svg",
+      "url": "http://localhost:61208",
+      "category": "monitoring",
+      "description": "System Monitoring"
+    },
+    {
+      "id": "netdata",
+      "name": "Netdata",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/netdata.svg",
+      "url": "http://localhost:19999",
+      "category": "monitoring",
+      "description": "Real-time Performance"
+    },
+    {
+      "id": "portainer",
+      "name": "Portainer",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/portainer.svg",
+      "url": "http://localhost:9000",
+      "category": "management",
+      "description": "Docker Management"
+    },
+    {
+      "id": "nginx-proxy-manager",
+      "name": "Nginx Proxy Manager",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/nginx-proxy-manager.svg",
+      "url": "http://localhost:81",
+      "category": "management",
+      "description": "Reverse Proxy Management"
+    },
+    {
+      "id": "watchtower",
+      "name": "Watchtower",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/watchtower.svg",
+      "url": "#",
+      "category": "management",
+      "description": "Auto Update Containers"
+    },
+    {
+      "id": "nextcloud",
+      "name": "Nextcloud",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/nextcloud.svg",
+      "url": "http://localhost:8084",
+      "category": "utilities",
+      "description": "Personal Cloud Storage"
+    },
+    {
+      "id": "vaultwarden",
+      "name": "Vaultwarden",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/bitwarden.svg",
+      "url": "http://localhost:8085",
+      "category": "utilities",
+      "description": "Password Manager"
+    },
+    {
+      "id": "pihole",
+      "name": "Pi-hole",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/pi-hole.svg",
+      "url": "http://localhost:8053/admin",
+      "category": "utilities",
+      "description": "Network Ad Blocker"
+    },
+    {
+      "id": "syncthing",
+      "name": "Syncthing",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/syncthing.svg",
+      "url": "http://localhost:8384",
+      "category": "utilities",
+      "description": "File Synchronization"
+    },
+    {
+      "id": "filebrowser",
+      "name": "FileBrowser",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/filebrowser.svg",
+      "url": "http://localhost:8086",
+      "category": "utilities",
+      "description": "Web File Manager"
+    },
+    {
+      "id": "code-server",
+      "name": "Code Server",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/code-server.svg",
+      "url": "http://localhost:8443",
+      "category": "utilities",
+      "description": "VS Code in Browser"
+    },
+    {
+      "id": "gitea",
+      "name": "Gitea",
+      "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/gitea.svg",
+      "url": "http://localhost:3002",
+      "category": "utilities",
+      "description": "Git Server"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "system-info",
+      "type": "stats",
+      "properties": {
+        "title": "System Status",
+        "showCpu": true,
+        "showRam": true,
+        "showDisk": true,
+        "showUptime": true
+      }
+    },
+    {
+      "id": "docker-status",
+      "type": "docker",
+      "properties": {
+        "title": "Container Status",
+        "showRunning": true,
+        "showStopped": true,
+        "showTotal": true
+      }
+    },
+    {
+      "id": "media-stats",
+      "type": "media",
+      "properties": {
+        "title": "Media Library",
+        "services": ["jellyfin", "plex", "emby"]
+      }
+    },
+    {
+      "id": "download-stats",
+      "type": "downloads",
+      "properties": {
+        "title": "Download Status",
+        "services": ["qbittorrent", "sabnzbd", "transmission"]
+      }
+    }
+  ],
+  "settings": {
+    "customCss": true,
+    "dockerIntegration": true,
+    "pingInterval": 30,
+    "statusCheckInterval": 60,
+    "searchBar": true,
+    "hideCategories": false,
+    "hideWidgets": false,
+    "gridColumns": 8
+  }
+}

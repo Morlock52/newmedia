@@ -1,0 +1,108 @@
+---
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+# Server Configuration
+server:
+  host: 0.0.0.0
+  port: 9091
+  path: ""
+  enable_pprof: false
+  enable_expvars: false
+  disable_healthcheck: false
+  headers:
+    csp_template: ""
+  tls:
+    key: ""
+    certificate: ""
+
+# Log Configuration  
+log:
+  level: info
+  format: text
+  file_path: ""
+  keep_stdout: true
+
+# Identity Validation
+identity_validation:
+  reset_password:
+    jwt_secret: file:///config/jwt_secret
+
+# Theme Configuration
+theme: light
+
+
+# Default redirection URL
+default_redirection_url: https://auth.morloksmaze.com
+default_2fa_method: ""
+
+# TOTP Configuration
+totp:
+  issuer: authelia.com
+  period: 30
+  skew: 1
+
+# Authentication Backend Configuration
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 1
+      key_length: 32
+      salt_length: 16
+      memory: 1024
+      parallelism: 8
+
+# Access Control Configuration
+access_control:
+  default_policy: deny
+  rules:
+    # Rules applied to everyone
+    - domain: auth.morloksmaze.com
+      policy: bypass
+    - domain: jellyfin.morloksmaze.com
+      policy: one_factor
+    - domain: sonarr.morloksmaze.com
+      policy: one_factor
+    - domain: radarr.morloksmaze.com
+      policy: one_factor
+    - domain: prowlarr.morloksmaze.com
+      policy: one_factor
+    - domain: overseerr.morloksmaze.com
+      policy: one_factor
+    - domain: traefik.morloksmaze.com
+      policy: one_factor
+
+# Session Configuration
+session:
+  name: authelia_session
+  expiration: 3600
+  inactivity: 300
+  domain: morloksmaze.com
+  same_site: lax
+  redis:
+    host: redis
+    port: 6379
+    password: ${REDIS_PASSWORD}
+    database_index: 0
+    maximum_active_connections: 8
+    minimum_idle_connections: 0
+
+# Regulation Configuration
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+# Storage Configuration
+storage:
+  local:
+    path: /config/db.sqlite3
+
+# Notification Configuration  
+notifier:
+  filesystem:
+    filename: /config/notification.txt
+

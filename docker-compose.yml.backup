@@ -1,0 +1,318 @@
+version: "3.9"
+
+networks:
+  media_network:
+    driver: bridge
+  download_network:
+    driver: bridge
+  
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+  prometheus_data:
+
+services:
+  # =========================
+  # Media Servers
+  # =========================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/jellyfin:/config
+      - ${MEDIA_PATH:-./media-data}:/media:ro
+      - /tmp/jellyfin-transcode:/transcode
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU for hardware transcoding
+    ports:
+      - 8096:8096
+      - 8920:8920  # HTTPS port
+      - 7359:7359/udp  # Client discovery
+      - 1900:1900/udp  # DLNA
+    networks:
+      - media_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Arr Suite
+  # =========================
+  
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - 9696:9696
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sonarr:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - 8989:8989
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/radarr:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - 7878:7878
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/lidarr:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    ports:
+      - 8686:8686
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/bazarr:/config
+      - ${MEDIA_PATH:-./media-data}:/media
+    ports:
+      - 6767:6767
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # =========================
+  # Download Clients
+  # =========================
+  
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+    network_mode: "service:vpn"  # Route through VPN
+    depends_on:
+      - vpn
+    restart: unless-stopped
+
+  vpn:
+    image: qmcgaw/gluetun:latest
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-mullvad}
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${VPN_ADDRESSES}
+      - FIREWALL_OUTBOUND_SUBNETS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    ports:
+      - 8080:8080  # qBittorrent WebUI
+    networks:
+      - download_network
+      - media_network
+    restart: unless-stopped
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sabnzbd:/config
+      - ${DOWNLOADS_PATH:-./media-data/downloads}:/downloads
+      - ${USENET_PATH:-./media-data/usenet}:/usenet
+    ports:
+      - 8081:8080
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # =========================
+  # Request Management
+  # =========================
+  
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/overseerr:/config
+    ports:
+      - 5055:5055
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # =========================
+  # Monitoring
+  # =========================
+  
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/tautulli:/config
+    ports:
+      - 8181:8181
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - media_network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    ports:
+      - 3000:3000
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # =========================
+  # Management
+  # =========================
+  
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./config/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 3001:3000
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/portainer:/data
+    ports:
+      - 9000:9000
+      - 9443:9443
+    networks:
+      - media_network
+    restart: unless-stopped
+
+  # =========================
+  # Reverse Proxy
+  # =========================
+  
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+    environment:
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
+      - CF_API_KEY=${CLOUDFLARE_API_KEY}
+    ports:
+      - 80:80
+      - 443:443
+      - 8082:8080  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik:/letsencrypt
+    networks:
+      - media_network
+    restart: unless-stopped

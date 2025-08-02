@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid #f0f0f0;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        .service-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 15px;
+            background: #667eea;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        .service-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .service-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .status {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .working { color: #28a745; }
+        .offline { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Media Server Dashboard</h1>
+        
+        <div class="services-grid">
+            <a href="https://jellyfin.morloksmaze.com" class="service-card">
+                <div class="service-icon">🎬</div>
+                <div class="service-name">Jellyfin</div>
+                <div class="service-description">Media Server - Movies, TV Shows, Music</div>
+            </a>
+            
+            <a href="https://overseerr.morloksmaze.com" class="service-card">
+                <div class="service-icon">📝</div>
+                <div class="service-name">Overseerr</div>
+                <div class="service-description">Request Management - Movies & TV</div>
+            </a>
+            
+            <a href="https://sonarr.morloksmaze.com" class="service-card">
+                <div class="service-icon">📺</div>
+                <div class="service-name">Sonarr</div>
+                <div class="service-description">TV Series Management</div>
+            </a>
+            
+            <a href="https://radarr.morloksmaze.com" class="service-card">
+                <div class="service-icon">🎞️</div>
+                <div class="service-name">Radarr</div>
+                <div class="service-description">Movie Management</div>
+            </a>
+            
+            <a href="https://lidarr.morloksmaze.com" class="service-card">
+                <div class="service-icon">🎵</div>
+                <div class="service-name">Lidarr</div>
+                <div class="service-description">Music Management</div>
+            </a>
+            
+            <a href="https://prowlarr.morloksmaze.com" class="service-card">
+                <div class="service-icon">🔍</div>
+                <div class="service-name">Prowlarr</div>
+                <div class="service-description">Indexer Management</div>
+            </a>
+            
+            <a href="https://homarr.morloksmaze.com" class="service-card">
+                <div class="service-icon">🏠</div>
+                <div class="service-name">Homarr Dashboard</div>
+                <div class="service-description">Comprehensive Dashboard</div>
+            </a>
+            
+            <a href="https://auth.morloksmaze.com" class="service-card">
+                <div class="service-icon">🔐</div>
+                <div class="service-name">Authelia Admin</div>
+                <div class="service-description">Authentication Management</div>
+            </a>
+            
+            <a href="http://localhost:8181/dashboard/" class="service-card">
+                <div class="service-icon">⚙️</div>
+                <div class="service-name">Traefik</div>
+                <div class="service-description">Reverse Proxy Dashboard</div>
+            </a>
+        </div>
+        
+        <div class="status">
+            <h3>🔧 Service Status (Live Test Results)</h3>
+            <p><span class="working">✅ Sonarr:</span> Responding (401 - Authentication required)</p>
+            <p><span class="working">✅ Radarr:</span> Responding (401 - Authentication required)</p>
+            <p><span class="working">✅ Prowlarr:</span> Responding (401 - Authentication required)</p>
+            <p><span class="working">✅ Lidarr:</span> Responding (401 - Authentication required)</p>
+            <p><span class="working">✅ Overseerr:</span> Responding (307 - Needs setup)</p>
+            <p><span class="offline">❌ Jellyfin:</span> Needs configuration (404)</p>
+            
+            <h4>🔧 Infrastructure Status</h4>
+            <p><span class="working">✅ SSL Certificate:</span> Valid until Aug 30, 2025</p>
+            <p><span class="working">✅ Cloudflare Tunnel:</span> Connected and routing traffic</p>
+            <p><span class="working">✅ Traefik Proxy:</span> Load balancing all services</p>
+            <p><span class="working">✅ Static IP Network:</span> 172.25.0.0/24 preventing future breakage</p>
+            
+            <h4>🔑 Authentication Status</h4>
+            <p>✅ All services now protected by Authelia SSO (except Jellyfin)</p>
+            <p>🔐 Login once at auth.morloksmaze.com to access all services</p>
+            <p>🏠 Use Homarr dashboard for the best experience</p>
+        </div>
+    </div>
+</body>
+</html>

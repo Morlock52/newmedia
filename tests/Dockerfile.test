@@ -1,0 +1,50 @@
+# Test runner container with all necessary tools
+FROM node:20-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    bash \
+    git \
+    python3 \
+    py3-pip \
+    docker-cli \
+    jq \
+    postgresql-client \
+    redis \
+    openssl \
+    ca-certificates
+
+# Install testing frameworks
+WORKDIR /tests
+
+# Node.js test dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci || npm install
+
+# Python test dependencies
+COPY requirements.txt* ./
+RUN pip3 install pytest pytest-asyncio pytest-docker requests httpx aiohttp || true
+
+# Install additional tools
+RUN npm install -g \
+    newman \
+    @apideck/portman \
+    jest \
+    mocha \
+    chai \
+    supertest
+
+# Copy test files
+COPY . .
+
+# Set up test environment
+ENV NODE_ENV=test
+ENV PYTHONPATH=/tests
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD node -e "console.log('Test runner healthy')" || exit 1
+
+# Default command
+CMD ["npm", "test"]

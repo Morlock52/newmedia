@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoloMedia Hub - Component Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a14;
+            color: #fff;
+            padding: 2rem;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: #b0b0c0;
+            margin-bottom: 2rem;
+        }
+
+        .components-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .component-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .component-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            border-radius: 15px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .component-card:hover::before {
+            opacity: 0.5;
+        }
+
+        .component-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .component-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .component-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .component-description {
+            color: #b0b0c0;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .component-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .component-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #00ffff;
+            font-size: 0.875rem;
+        }
+
+        .component-features li::before {
+            content: '✓';
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .component-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00ffff, #0088ff);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #00ffff;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            margin-bottom: 1rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tech-badge {
+            padding: 0.25rem 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            font-size: 0.75rem;
+            color: #ffff00;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00ffff;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #b0b0c0;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HoloMedia Hub</h1>
+        <p class="subtitle">AI-Powered Media Server Management System</p>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">15+</div>
+                <div class="stat-label">Components</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">30+</div>
+                <div class="stat-label">Services</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">AI</div>
+                <div class="stat-label">Powered</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">PWA</div>
+                <div class="stat-label">Ready</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="components-grid">
+        <!-- Main Dashboard -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">🎯</div>
+                <h3 class="component-title">Main Dashboard</h3>
+            </div>
+            <p class="component-description">
+                Unified control center with real-time statistics, activity feed, and quick access to all features.
+            </p>
+            <ul class="component-features">
+                <li>Live service monitoring</li>
+                <li>Activity timeline</li>
+                <li>Quick actions menu</li>
+                <li>Global search</li>
+            </ul>
+            <div class="component-actions">
+                <a href="media-control-complete.html" class="btn btn-primary">Open Dashboard</a>
+                <a href="main-app.html" class="btn btn-secondary">New UI</a>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">React</span>
+                <span class="tech-badge">WebSocket</span>
+                <span class="tech-badge">PWA</span>
+            </div>
+        </div>
+
+        <!-- Splash Screen -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">✨</div>
+                <h3 class="component-title">Splash Screen</h3>
+            </div>
+            <p class="component-description">
+                Stunning WebGL-powered loading screen with particle effects and holographic animations.
+            </p>
+            <ul class="component-features">
+                <li>WebGL shader effects</li>
+                <li>Particle system</li>
+                <li>Loading progress</li>
+                <li>Skip intro option</li>
+            </ul>
+            <div class="component-actions">
+                <a href="splash-screen.html" class="btn btn-primary">View Splash</a>
+                <a href="app-shell.html" class="btn btn-secondary">App Shell</a>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">WebGL</span>
+                <span class="tech-badge">GSAP</span>
+                <span class="tech-badge">CSS3</span>
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">🤖</div>
+                <h3 class="component-title">AI Media Assistant</h3>
+            </div>
+            <p class="component-description">
+                OpenAI-powered chatbot specialized in media server management and troubleshooting.
+            </p>
+            <ul class="component-features">
+                <li>GPT-4 integration</li>
+                <li>Voice input support</li>
+                <li>Media-focused responses</li>
+                <li>Chat history export</li>
+            </ul>
+            <div class="component-actions">
+                <a href="media-assistant.html" class="btn btn-primary">Open Assistant</a>
+                <button class="btn btn-secondary" onclick="alert('Start API server first!')">API Status</button>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">OpenAI</span>
+                <span class="tech-badge">Express</span>
+                <span class="tech-badge">WebSpeech</span>
+            </div>
+        </div>
+
+        <!-- Configuration Manager -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">⚙️</div>
+                <h3 class="component-title">Configuration Manager</h3>
+            </div>
+            <p class="component-description">
+                Visual service management with live status, Docker controls, and environment configuration.
+            </p>
+            <ul class="component-features">
+                <li>30+ services supported</li>
+                <li>Start/stop controls</li>
+                <li>Live resource monitoring</li>
+                <li>Log viewer</li>
+            </ul>
+            <div class="component-actions">
+                <a href="config-manager-fixed.html" class="btn btn-primary">Open Config</a>
+                <a href="env-viewer.html" class="btn btn-secondary">View .env</a>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">Docker</span>
+                <span class="tech-badge">Node.js</span>
+                <span class="tech-badge">REST API</span>
+            </div>
+        </div>
+
+        <!-- Smart .env Editor -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">🔧</div>
+                <h3 class="component-title">Smart .env Editor</h3>
+            </div>
+            <p class="component-description">
+                AI-enhanced environment file editor with validation, suggestions, and secure key generation.
+            </p>
+            <ul class="component-features">
+                <li>Syntax highlighting</li>
+                <li>AI suggestions</li>
+                <li>Port checker</li>
+                <li>Secure key generator</li>
+            </ul>
+            <div class="component-actions">
+                <a href="smart-env-editor.html" class="btn btn-primary">Open Editor</a>
+                <a href="ai-config-manager.html" class="btn btn-secondary">AI Config</a>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">CodeMirror</span>
+                <span class="tech-badge">AI</span>
+                <span class="tech-badge">Crypto</span>
+            </div>
+        </div>
+
+        <!-- Workflow Builder -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">🔄</div>
+                <h3 class="component-title">Agentic Workflows</h3>
+            </div>
+            <p class="component-description">
+                Visual workflow builder with AI agents for automated media processing and optimization.
+            </p>
+            <ul class="component-features">
+                <li>Drag-drop interface</li>
+                <li>Content analyzer agent</li>
+                <li>Quality optimizer</li>
+                <li>Metadata enricher</li>
+            </ul>
+            <div class="component-actions">
+                <a href="../agents/workflow-ui.html" class="btn btn-primary">Open Builder</a>
+                <button class="btn btn-secondary" onclick="alert('Workflow engine ready!')">Engine Status</button>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">State Machine</span>
+                <span class="tech-badge">Workers</span>
+                <span class="tech-badge">FFmpeg</span>
+            </div>
+        </div>
+
+        <!-- Documentation -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">📚</div>
+                <h3 class="component-title">Documentation</h3>
+            </div>
+            <p class="component-description">
+                Comprehensive Docusaurus-powered documentation with tutorials, API reference, and guides.
+            </p>
+            <ul class="component-features">
+                <li>Getting started guide</li>
+                <li>Service overviews</li>
+                <li>API documentation</li>
+                <li>Video tutorials</li>
+            </ul>
+            <div class="component-actions">
+                <a href="../docs/index.md" class="btn btn-primary">View Docs</a>
+                <button class="btn btn-secondary" onclick="alert('Run: npm run docs:start')">Build Docs</button>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">Docusaurus</span>
+                <span class="tech-badge">Markdown</span>
+                <span class="tech-badge">Search</span>
+            </div>
+        </div>
+
+        <!-- Installation Wizard -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">🚀</div>
+                <h3 class="component-title">Installation System</h3>
+            </div>
+            <p class="component-description">
+                Automated installation with OS detection, dependency management, and interactive setup wizard.
+            </p>
+            <ul class="component-features">
+                <li>OS detection</li>
+                <li>Interactive wizard</li>
+                <li>SSL setup</li>
+                <li>Health checks</li>
+            </ul>
+            <div class="component-actions">
+                <button class="btn btn-primary" onclick="alert('Run: ./install.sh')">Install Script</button>
+                <button class="btn btn-secondary" onclick="alert('Run: ./setup-wizard.sh')">Setup Wizard</button>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">Bash</span>
+                <span class="tech-badge">Docker</span>
+                <span class="tech-badge">Systemd</span>
+            </div>
+        </div>
+
+        <!-- Health Monitor -->
+        <div class="component-card">
+            <div class="status-badge">✓ Ready</div>
+            <div class="component-header">
+                <div class="component-icon">💚</div>
+                <h3 class="component-title">Health Monitor</h3>
+            </div>
+            <p class="component-description">
+                Real-time system health monitoring with resource usage, service status, and recommendations.
+            </p>
+            <ul class="component-features">
+                <li>Resource monitoring</li>
+                <li>Service health checks</li>
+                <li>Performance metrics</li>
+                <li>Alert system</li>
+            </ul>
+            <div class="component-actions">
+                <button class="btn btn-primary" onclick="alert('Run: ./scripts/health-check.sh')">Check Health</button>
+                <a href="index-fixed.html" class="btn btn-secondary">Dashboard</a>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">Prometheus</span>
+                <span class="tech-badge">Grafana</span>
+                <span class="tech-badge">Bash</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <h2 style="margin-bottom: 1rem;">🚀 Quick Start Commands</h2>
+        <div style="background: rgba(0, 0, 0, 0.5); padding: 1.5rem; border-radius: 10px; font-family: monospace; text-align: left; max-width: 600px; margin: 0 auto;">
+            <p style="color: #00ff88; margin-bottom: 0.5rem;"># Install HoloMedia Hub</p>
+            <p style="color: #fff; margin-bottom: 1rem;">sudo ./install.sh</p>
+            
+            <p style="color: #00ff88; margin-bottom: 0.5rem;"># Run setup wizard</p>
+            <p style="color: #fff; margin-bottom: 1rem;">./setup-wizard.sh</p>
+            
+            <p style="color: #00ff88; margin-bottom: 0.5rem;"># Start AI assistant server</p>
+            <p style="color: #fff; margin-bottom: 1rem;">cd api && OPENAI_API_KEY=your-key node chatbot-server.js</p>
+            
+            <p style="color: #00ff88; margin-bottom: 0.5rem;"># Access the application</p>
+            <p style="color: #fff;">http://localhost:9999</p>
+        </div>
+    </div>
+</body>
+</html>

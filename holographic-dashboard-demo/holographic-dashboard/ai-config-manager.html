@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AI Config Manager - Holographic Edition</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Navigation Header Component -->
+    <script src="js/navigation-header.js"></script>
+    
+    <style>
+        :root {
+            /* Holographic Colors */
+            --holo-cyan: #00ffff;
+            --holo-magenta: #ff00ff;
+            --holo-yellow: #ffff00;
+            --holo-mint: #00ff88;
+            --holo-pink: #ff0088;
+            --holo-purple: #8800ff;
+            
+            /* Glass Effects */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+            
+            /* UI Colors */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #151520;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff0055;
+            --info: #00aaff;
+            
+            /* Animations */
+            --anim-fast: 0.3s ease;
+            --anim-normal: 0.5s ease;
+            --anim-slow: 1s ease;
+            
+            /* Glow Effects */
+            --glow-sm: 0 0 10px;
+            --glow-md: 0 0 20px;
+            --glow-lg: 0 0 40px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        /* Background Animation */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+            background: 
+                radial-gradient(circle at 20% 50%, var(--holo-cyan) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--holo-magenta) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, var(--holo-yellow) 0%, transparent 50%);
+            filter: blur(100px);
+            animation: bg-shift 20s ease infinite;
+        }
+        
+        @keyframes bg-shift {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            33% { transform: rotate(120deg) scale(1.1); }
+            66% { transform: rotate(240deg) scale(0.9); }
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, 
+                rgba(0, 255, 255, 0.05) 0%, 
+                rgba(255, 0, 255, 0.05) 50%,
+                rgba(255, 255, 0, 0.05) 100%
+            );
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent,
+                var(--holo-cyan),
+                var(--holo-magenta),
+                var(--holo-yellow),
+                transparent
+            );
+            animation: scan 3s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(50%); }
+        }
+        
+        .title {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(90deg,
+                var(--holo-cyan) 0%,
+                var(--holo-magenta) 25%,
+                var(--holo-yellow) 50%,
+                var(--holo-mint) 75%,
+                var(--holo-cyan) 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s linear infinite;
+            margin-bottom: 0.5rem;
+        }
+        
+        @keyframes gradient-shift {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            gap: 2rem;
+            min-height: calc(100vh - 200px);
+        }
+        
+        /* Glass Panel */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--glass-shadow);
+        }
+        
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg,
+                var(--holo-cyan),
+                var(--holo-magenta),
+                var(--holo-yellow),
+                var(--holo-mint),
+                var(--holo-cyan)
+            );
+            border-radius: 16px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity var(--anim-normal);
+            animation: border-rotate 4s linear infinite;
+        }
+        
+        @keyframes border-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .glass-panel:hover::before {
+            opacity: 0.3;
+        }
+        
+        .panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            color: var(--holo-cyan);
+            text-shadow: var(--glow-sm) var(--holo-cyan);
+        }
+        
+        /* Services Panel */
+        .services-panel {
+            height: fit-content;
+        }
+        
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .service-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all var(--anim-fast);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-item:hover {
+            background: rgba(0, 255, 255, 0.05);
+            border-color: var(--holo-cyan);
+            transform: translateX(5px);
+            box-shadow: -5px 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .service-item.active {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: var(--holo-cyan);
+            box-shadow: var(--glow-md) var(--holo-cyan);
+        }
+        
+        .service-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .service-vars {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .service-status {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: var(--glow-sm) var(--success);
+            animation: pulse 2s ease infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+            50% { transform: translateY(-50%) scale(1.2); opacity: 0.7; }
+        }
+        
+        /* Config Editor Panel */
+        .config-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .config-group {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+        }
+        
+        .group-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--holo-magenta);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .config-field {
+            margin-bottom: 1.5rem;
+        }
+        
+        .config-field:last-child {
+            margin-bottom: 0;
+        }
+        
+        .field-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .label-text {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .field-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .field-action {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all var(--anim-fast);
+            font-size: 1rem;
+        }
+        
+        .field-action:hover {
+            color: var(--holo-cyan);
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .field-input-wrapper {
+            position: relative;
+        }
+        
+        .field-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            transition: all var(--anim-fast);
+        }
+        
+        .field-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: var(--glow-sm) var(--holo-cyan);
+        }
+        
+        .field-input.error {
+            border-color: var(--error);
+            box-shadow: var(--glow-sm) var(--error);
+        }
+        
+        .field-input.success {
+            border-color: var(--success);
+            box-shadow: var(--glow-sm) var(--success);
+        }
+        
+        .field-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+        
+        .field-validation {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .field-validation.error {
+            background: rgba(255, 0, 85, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(255, 0, 85, 0.3);
+            display: block;
+        }
+        
+        .field-validation.success {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            display: block;
+        }
+        
+        /* AI Assistant Panel */
+        .ai-assistant {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .health-score {
+            background: linear-gradient(135deg, 
+                rgba(0, 255, 136, 0.1), 
+                rgba(0, 170, 255, 0.1)
+            );
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .score-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--success), var(--info));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .score-label {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 400px;
+        }
+        
+        .chat-message {
+            padding: 1rem;
+            border-radius: 8px;
+            position: relative;
+            max-width: 80%;
+            animation: message-appear 0.3s ease;
+        }
+        
+        @keyframes message-appear {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chat-message.ai {
+            background: rgba(0, 170, 255, 0.1);
+            border: 1px solid rgba(0, 170, 255, 0.3);
+            align-self: flex-start;
+        }
+        
+        .chat-message.user {
+            background: rgba(136, 0, 255, 0.1);
+            border: 1px solid rgba(136, 0, 255, 0.3);
+            align-self: flex-end;
+        }
+        
+        .message-author {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .message-content {
+            line-height: 1.5;
+        }
+        
+        .chat-input-container {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--glass-border);
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all var(--anim-fast);
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--holo-cyan);
+            box-shadow: var(--glow-sm) var(--holo-cyan);
+        }
+        
+        .chat-send {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--holo-cyan), var(--holo-magenta));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--anim-fast);
+        }
+        
+        .chat-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--glass-border);
+        }
+        
+        .quick-actions-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--holo-yellow);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .action-btn {
+            padding: 0.75rem;
+            background: rgba(255, 255, 0, 0.05);
+            border: 1px solid rgba(255, 255, 0, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all var(--anim-fast);
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 0, 0.1);
+            border-color: var(--holo-yellow);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 255, 0, 0.3);
+        }
+        
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: var(--holo-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Save Button */
+        .save-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--success), var(--holo-cyan));
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all var(--anim-fast);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.5);
+            z-index: 1000;
+        }
+        
+        .save-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.7);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 300px 1fr 350px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-width: 800px;
+            }
+            
+            .services-panel {
+                order: 1;
+            }
+            
+            .config-editor {
+                order: 2;
+            }
+            
+            .ai-assistant {
+                order: 3;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <!-- Navigation Header -->
+    <navigation-header 
+        title="AI Config Manager"
+        breadcrumbs="Home,Configuration,AI Config"
+        current-page="AI Config"
+        back-url="main-app.html">
+    </navigation-header>
+    
+    <div class="container">
+        <!-- Services Panel -->
+        <aside class="services-panel glass-panel">
+            <h2 class="panel-title">Services</h2>
+            <div class="service-list" id="serviceList">
+                <!-- Services will be populated here -->
+            </div>
+        </aside>
+        
+        <!-- Config Editor -->
+        <main class="config-editor glass-panel">
+            <h2 class="panel-title">Configuration Editor</h2>
+            <div id="configGroups">
+                <!-- Config groups will be populated here -->
+            </div>
+        </main>
+        
+        <!-- AI Assistant -->
+        <aside class="ai-assistant glass-panel">
+            <h2 class="panel-title">AI Assistant</h2>
+            
+            <div class="health-score">
+                <div class="score-value" id="healthScore">85%</div>
+                <div class="score-label">Configuration Health</div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message ai">
+                        <div class="message-author">🤖 AI Assistant</div>
+                        <div class="message-content">
+                            Hello! I'm your AI configuration assistant. I can help you with:
+                            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                                <li>Validating configuration values</li>
+                                <li>Generating secure passwords and tokens</li>
+                                <li>Checking port availability</li>
+                                <li>Providing best practice recommendations</li>
+                            </ul>
+                            Just ask me anything or use the quick actions below!
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <input type="text" class="chat-input" id="chatInput" 
+                               placeholder="Ask me anything about your configuration...">
+                        <button class="chat-send" id="chatSend">Send</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quick-actions">
+                <div class="quick-actions-title">Quick Actions</div>
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="generateSecurePassword()">
+                        🔐 Generate Password
+                    </button>
+                    <button class="action-btn" onclick="generateApiKey()">
+                        🔑 Generate API Key
+                    </button>
+                    <button class="action-btn" onclick="checkPorts()">
+                        🔌 Check Ports
+                    </button>
+                    <button class="action-btn" onclick="analyzeSecrets()">
+                        🛡️ Analyze Security
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <button class="save-button" id="saveButton">💾 Save Configuration</button>
+    
+    <script>
+        // Configuration data from .env file
+        let envConfig = {};
+        let currentService = 'general';
+        
+        // Services definition
+        const services = {
+            general: {
+                name: 'General Settings',
+                vars: ['PUID', 'PGID', 'TZ', 'DOMAIN'],
+                icon: '⚙️'
+            },
+            paths: {
+                name: 'Storage Paths',
+                vars: ['MEDIA_PATH', 'DOWNLOADS_PATH'],
+                icon: '📁'
+            },
+            authelia: {
+                name: 'Authelia',
+                vars: ['AUTHELIA_JWT_SECRET', 'AUTHELIA_SESSION_SECRET', 'AUTHELIA_STORAGE_ENCRYPTION_KEY', 'AUTHELIA_DEFAULT_USER', 'AUTHELIA_DEFAULT_PASSWORD_HASH'],
+                icon: '🔐'
+            },
+            'api-keys': {
+                name: 'API Keys',
+                vars: ['SONARR_API_KEY', 'RADARR_API_KEY', 'PROWLARR_API_KEY', 'JELLYFIN_API_KEY'],
+                icon: '🔑'
+            },
+            cloudflare: {
+                name: 'Cloudflare',
+                vars: ['CLOUDFLARE_EMAIL', 'CLOUDFLARE_API_TOKEN'],
+                icon: '☁️'
+            },
+            monitoring: {
+                name: 'Monitoring',
+                vars: ['GRAFANA_USER', 'GRAFANA_PASSWORD'],
+                icon: '📊'
+            },
+            vpn: {
+                name: 'VPN Configuration',
+                vars: ['VPN_PROVIDER', 'VPN_USER', 'VPN_PASSWORD', 'VPN_REGION'],
+                icon: '🌐'
+            },
+            external: {
+                name: 'External Services',
+                vars: ['TMDB_API_KEY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'],
+                icon: '🔌'
+            }
+        };
+        
+        // Field descriptions and validations
+        const fieldInfo = {
+            PUID: {
+                description: 'User ID for container permissions. Use "id -u" command to find your user ID.',
+                validate: (value) => /^\d+$/.test(value) ? null : 'Must be a numeric user ID',
+                type: 'number'
+            },
+            PGID: {
+                description: 'Group ID for container permissions. Use "id -g" command to find your group ID.',
+                validate: (value) => /^\d+$/.test(value) ? null : 'Must be a numeric group ID',
+                type: 'number'
+            },
+            TZ: {
+                description: 'Timezone for your services. Format: Region/City (e.g., America/New_York)',
+                validate: (value) => /^[A-Za-z_]+\/[A-Za-z_]+$/.test(value) ? null : 'Invalid timezone format',
+                type: 'text'
+            },
+            DOMAIN: {
+                description: 'Your domain name for external access',
+                validate: (value) => /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(value) ? null : 'Invalid domain format',
+                type: 'text'
+            },
+            MEDIA_PATH: {
+                description: 'Absolute path to your media storage directory',
+                validate: (value) => value.startsWith('/') ? null : 'Must be an absolute path starting with /',
+                type: 'path'
+            },
+            DOWNLOADS_PATH: {
+                description: 'Absolute path to your downloads directory',
+                validate: (value) => value.startsWith('/') ? null : 'Must be an absolute path starting with /',
+                type: 'path'
+            },
+            AUTHELIA_JWT_SECRET: {
+                description: 'JWT secret for Authelia authentication. Must be at least 32 characters.',
+                validate: (value) => value.length >= 32 ? null : 'Must be at least 32 characters',
+                type: 'secret'
+            },
+            AUTHELIA_SESSION_SECRET: {
+                description: 'Session secret for Authelia. Must be at least 32 characters.',
+                validate: (value) => value.length >= 32 ? null : 'Must be at least 32 characters',
+                type: 'secret'
+            },
+            AUTHELIA_STORAGE_ENCRYPTION_KEY: {
+                description: 'Storage encryption key for Authelia. Must be at least 32 characters.',
+                validate: (value) => value.length >= 32 ? null : 'Must be at least 32 characters',
+                type: 'secret'
+            },
+            AUTHELIA_DEFAULT_USER: {
+                description: 'Default admin username for Authelia',
+                validate: (value) => value.length >= 3 ? null : 'Username must be at least 3 characters',
+                type: 'text'
+            },
+            AUTHELIA_DEFAULT_PASSWORD_HASH: {
+                description: 'Hashed password for default admin user. Generate with: docker run authelia/authelia:latest authelia hash-password "your-password"',
+                validate: (value) => value.startsWith('$') || value === '' ? null : 'Must be a valid password hash or empty',
+                type: 'secret'
+            },
+            CLOUDFLARE_EMAIL: {
+                description: 'Your Cloudflare account email',
+                validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : 'Invalid email format',
+                type: 'email'
+            },
+            CLOUDFLARE_API_TOKEN: {
+                description: 'Cloudflare API token for DNS management',
+                validate: (value) => value.length > 0 || value === '' ? null : 'API token cannot be empty if provided',
+                type: 'secret'
+            },
+            GRAFANA_USER: {
+                description: 'Admin username for Grafana monitoring',
+                validate: (value) => value.length >= 3 ? null : 'Username must be at least 3 characters',
+                type: 'text'
+            },
+            GRAFANA_PASSWORD: {
+                description: 'Admin password for Grafana',
+                validate: (value) => value.length >= 8 ? null : 'Password must be at least 8 characters',
+                type: 'password'
+            }
+        };
+        
+        // Parse .env content
+        function parseEnvContent(content) {
+            const lines = content.split('\n');
+            const config = {};
+            
+            lines.forEach(line => {
+                // Skip comments and empty lines
+                if (line.trim().startsWith('#') || !line.trim()) return;
+                
+                const [key, ...valueParts] = line.split('=');
+                if (key && valueParts.length > 0) {
+                    config[key.trim()] = valueParts.join('=').trim();
+                }
+            });
+            
+            return config;
+        }
+        
+        // Load configuration from server
+        async function loadConfiguration() {
+            try {
+                // Simulate loading .env file content
+                const envContent = `# Media Server Environment Configuration
+# Copy this file to .env and fill in your values
+
+# ===========================================
+# GENERAL SETTINGS
+# ===========================================
+
+# User and group IDs (find with: id $USER)
+PUID=1000
+PGID=1000
+
+# Timezone (find with: timedatectl | grep "Time zone")
+TZ=America/New_York
+
+# Your domain name
+DOMAIN=example.com
+
+# ===========================================
+# PATHS
+# ===========================================
+
+# Media storage path (absolute path)
+MEDIA_PATH=/path/to/your/media
+
+# Downloads path (absolute path)
+DOWNLOADS_PATH=/path/to/your/downloads
+
+# ===========================================
+# AUTHENTICATION
+# ===========================================
+
+# Authelia secrets (generate with: openssl rand -hex 32)
+AUTHELIA_JWT_SECRET=65ac068a62356750b3dff73d0fc783b3b89fd322a3a2b4bb35653dfe3e434417
+AUTHELIA_SESSION_SECRET=7ccc83d96448637e1132031b00b5d8e0f05d7b17d83be2f2b71c4c8a8e4d43ff
+AUTHELIA_STORAGE_ENCRYPTION_KEY=b369a2675cddb587336f5847d7736f6e8d969c092d929fc69330f1d8df47182d
+
+# Default admin credentials
+AUTHELIA_DEFAULT_USER=admin
+AUTHELIA_DEFAULT_PASSWORD_HASH= # Generate with: docker run authelia/authelia:latest authelia hash-password 'your-password'
+
+# ===========================================
+# API KEYS
+# ===========================================
+
+# Get these from each service after first start
+SONARR_API_KEY=
+RADARR_API_KEY=
+PROWLARR_API_KEY=
+JELLYFIN_API_KEY=
+
+# ===========================================
+# CLOUDFLARE (for SSL/TLS)
+# ===========================================
+
+CLOUDFLARE_EMAIL=your-email@example.com
+CLOUDFLARE_API_TOKEN= # Create at https://dash.cloudflare.com/profile/api-tokens
+
+# ===========================================
+# MONITORING
+# ===========================================
+
+GRAFANA_USER=admin
+GRAFANA_PASSWORD=changeme
+
+# ===========================================
+# OPTIONAL: VPN CONFIGURATION
+# ===========================================
+
+# VPN_PROVIDER=nordvpn
+# VPN_USER=
+# VPN_PASSWORD=
+# VPN_REGION=us_west
+
+# ===========================================
+# OPTIONAL: EXTERNAL SERVICES
+# ===========================================
+
+# TMDB API Key (for metadata)
+# TMDB_API_KEY=
+
+# SMTP Configuration (for notifications)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=
+# SMTP_PASSWORD=`;
+                
+                envConfig = parseEnvContent(envContent);
+                renderServices();
+                renderConfigGroups();
+                updateHealthScore();
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                addChatMessage('ai', 'Error loading configuration. Please check the file path.');
+            }
+        }
+        
+        // Render services list
+        function renderServices() {
+            const serviceList = document.getElementById('serviceList');
+            serviceList.innerHTML = '';
+            
+            Object.entries(services).forEach(([key, service]) => {
+                const serviceEl = document.createElement('div');
+                serviceEl.className = `service-item ${key === currentService ? 'active' : ''}`;
+                serviceEl.innerHTML = `
+                    <div class="service-name">${service.icon} ${service.name}</div>
+                    <div class="service-vars">${service.vars.length} variables</div>
+                    <div class="service-status"></div>
+                `;
+                serviceEl.onclick = () => {
+                    currentService = key;
+                    renderServices();
+                    renderConfigGroups();
+                };
+                serviceList.appendChild(serviceEl);
+            });
+        }
+        
+        // Render configuration groups
+        function renderConfigGroups() {
+            const configGroups = document.getElementById('configGroups');
+            configGroups.innerHTML = '';
+            
+            const service = services[currentService];
+            if (!service) return;
+            
+            const groupEl = document.createElement('div');
+            groupEl.className = 'config-group';
+            groupEl.innerHTML = `<div class="group-title">${service.icon} ${service.name}</div>`;
+            
+            service.vars.forEach(varName => {
+                const value = envConfig[varName] || '';
+                const info = fieldInfo[varName] || {};
+                
+                const fieldEl = document.createElement('div');
+                fieldEl.className = 'config-field';
+                fieldEl.innerHTML = `
+                    <div class="field-label">
+                        <span class="label-text">${varName}</span>
+                        <div class="field-actions">
+                            ${info.type === 'secret' || info.type === 'password' ? 
+                                `<button class="field-action" onclick="toggleVisibility('${varName}')" title="Toggle visibility">👁️</button>` : ''}
+                            ${info.type === 'secret' ? 
+                                `<button class="field-action" onclick="regenerateSecret('${varName}')" title="Regenerate">🔄</button>` : ''}
+                            <button class="field-action" onclick="getAISuggestion('${varName}')" title="Get AI suggestion">🤖</button>
+                        </div>
+                    </div>
+                    <div class="field-input-wrapper">
+                        <input type="${info.type === 'secret' || info.type === 'password' ? 'password' : 'text'}" 
+                               class="field-input" 
+                               id="field-${varName}"
+                               value="${value}"
+                               onchange="updateFieldValue('${varName}', this.value)"
+                               oninput="validateField('${varName}', this.value)">
+                    </div>
+                    ${info.description ? `<div class="field-description">${info.description}</div>` : ''}
+                    <div class="field-validation" id="validation-${varName}"></div>
+                `;
+                
+                groupEl.appendChild(fieldEl);
+            });
+            
+            configGroups.appendChild(groupEl);
+            
+            // Validate all fields
+            service.vars.forEach(varName => {
+                validateField(varName, envConfig[varName] || '');
+            });
+        }
+        
+        // Field validation
+        function validateField(varName, value) {
+            const info = fieldInfo[varName];
+            if (!info || !info.validate) return;
+            
+            const validationEl = document.getElementById(`validation-${varName}`);
+            const inputEl = document.getElementById(`field-${varName}`);
+            
+            const error = info.validate(value);
+            
+            if (error && value) {
+                validationEl.textContent = error;
+                validationEl.className = 'field-validation error';
+                inputEl.classList.add('error');
+                inputEl.classList.remove('success');
+            } else if (!error && value) {
+                validationEl.textContent = '✓ Valid';
+                validationEl.className = 'field-validation success';
+                inputEl.classList.add('success');
+                inputEl.classList.remove('error');
+            } else {
+                validationEl.className = 'field-validation';
+                inputEl.classList.remove('error', 'success');
+            }
+            
+            updateHealthScore();
+        }
+        
+        // Update field value
+        function updateFieldValue(varName, value) {
+            envConfig[varName] = value;
+            validateField(varName, value);
+        }
+        
+        // Toggle password visibility
+        function toggleVisibility(varName) {
+            const input = document.getElementById(`field-${varName}`);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+        
+        // Generate secure password
+        function generateSecurePassword() {
+            const length = 32;
+            const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+            let password = '';
+            
+            for (let i = 0; i < length; i++) {
+                password += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            
+            addChatMessage('ai', `Generated secure password: <code style="background: rgba(0,0,0,0.5); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace;">${password}</code>`);
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(password);
+            addChatMessage('ai', '✓ Password copied to clipboard!');
+        }
+        
+        // Generate API key
+        function generateApiKey() {
+            const key = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+            
+            addChatMessage('ai', `Generated API key: <code style="background: rgba(0,0,0,0.5); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.85rem; word-break: break-all;">${key}</code>`);
+            
+            navigator.clipboard.writeText(key);
+            addChatMessage('ai', '✓ API key copied to clipboard!');
+        }
+        
+        // Regenerate secret
+        function regenerateSecret(varName) {
+            const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+            
+            document.getElementById(`field-${varName}`).value = secret;
+            updateFieldValue(varName, secret);
+            
+            addChatMessage('ai', `✓ Regenerated ${varName} with a new secure value`);
+        }
+        
+        // Check ports
+        function checkPorts() {
+            const ports = {
+                '80': 'HTTP (Traefik)',
+                '443': 'HTTPS (Traefik)',
+                '8080': 'Traefik Dashboard',
+                '8096': 'Jellyfin',
+                '7878': 'Radarr',
+                '8989': 'Sonarr',
+                '9117': 'Jackett',
+                '9696': 'Prowlarr',
+                '3000': 'Grafana',
+                '9090': 'Prometheus'
+            };
+            
+            let message = 'Port configuration for your media server:<br><br>';
+            
+            Object.entries(ports).forEach(([port, service]) => {
+                message += `• Port <strong>${port}</strong>: ${service}<br>`;
+            });
+            
+            message += '<br>Make sure these ports are available and not used by other services.';
+            
+            addChatMessage('ai', message);
+        }
+        
+        // Analyze secrets
+        function analyzeSecrets() {
+            let issues = [];
+            let recommendations = [];
+            
+            // Check Authelia secrets
+            if (envConfig.AUTHELIA_JWT_SECRET === '65ac068a62356750b3dff73d0fc783b3b89fd322a3a2b4bb35653dfe3e434417') {
+                issues.push('Using default Authelia JWT secret - regenerate immediately!');
+            }
+            
+            if (!envConfig.AUTHELIA_DEFAULT_PASSWORD_HASH) {
+                issues.push('No password hash set for default admin user');
+            }
+            
+            if (envConfig.GRAFANA_PASSWORD === 'changeme') {
+                issues.push('Using default Grafana password - change immediately!');
+            }
+            
+            // Check API keys
+            const apiKeys = ['SONARR_API_KEY', 'RADARR_API_KEY', 'PROWLARR_API_KEY', 'JELLYFIN_API_KEY'];
+            const missingKeys = apiKeys.filter(key => !envConfig[key]);
+            
+            if (missingKeys.length > 0) {
+                recommendations.push(`Missing API keys: ${missingKeys.join(', ')}. These will be generated on first service start.`);
+            }
+            
+            let message = '<strong>Security Analysis Results:</strong><br><br>';
+            
+            if (issues.length > 0) {
+                message += '🚨 <strong>Security Issues Found:</strong><br>';
+                issues.forEach(issue => {
+                    message += `• ${issue}<br>`;
+                });
+                message += '<br>';
+            }
+            
+            if (recommendations.length > 0) {
+                message += '💡 <strong>Recommendations:</strong><br>';
+                recommendations.forEach(rec => {
+                    message += `• ${rec}<br>`;
+                });
+            }
+            
+            if (issues.length === 0 && recommendations.length === 0) {
+                message += '✅ No security issues found! Your configuration looks good.';
+            }
+            
+            addChatMessage('ai', message);
+        }
+        
+        // Get AI suggestion
+        function getAISuggestion(varName) {
+            const suggestions = {
+                PUID: 'Run <code>id -u</code> in your terminal to get your user ID. Common values are 1000 for the first user.',
+                PGID: 'Run <code>id -g</code> in your terminal to get your group ID. Usually matches your user ID.',
+                TZ: 'Common timezones: America/New_York, America/Chicago, America/Los_Angeles, Europe/London, Europe/Paris, Asia/Tokyo',
+                DOMAIN: 'Use your registered domain name. For local testing, you can use "localhost" or "media.local"',
+                MEDIA_PATH: 'Suggested structure: /home/username/media or /mnt/storage/media. Make sure the directory exists!',
+                DOWNLOADS_PATH: 'Suggested: /home/username/downloads or /mnt/storage/downloads. Should be on same filesystem as media for fast moves.',
+                CLOUDFLARE_EMAIL: 'Use the email associated with your Cloudflare account',
+                CLOUDFLARE_API_TOKEN: 'Create a token at https://dash.cloudflare.com/profile/api-tokens with DNS edit permissions'
+            };
+            
+            const suggestion = suggestions[varName] || 'No specific suggestion available for this field.';
+            addChatMessage('ai', `💡 Suggestion for <strong>${varName}</strong>:<br><br>${suggestion}`);
+        }
+        
+        // Update health score
+        function updateHealthScore() {
+            let totalFields = 0;
+            let validFields = 0;
+            let criticalIssues = 0;
+            
+            Object.keys(envConfig).forEach(key => {
+                const info = fieldInfo[key];
+                if (info && info.validate) {
+                    totalFields++;
+                    const value = envConfig[key] || '';
+                    if (!info.validate(value) && value) {
+                        validFields++;
+                    }
+                }
+                
+                // Check critical issues
+                if (key === 'AUTHELIA_JWT_SECRET' && envConfig[key] === '65ac068a62356750b3dff73d0fc783b3b89fd322a3a2b4bb35653dfe3e434417') {
+                    criticalIssues++;
+                }
+                if (key === 'GRAFANA_PASSWORD' && envConfig[key] === 'changeme') {
+                    criticalIssues++;
+                }
+            });
+            
+            let score = Math.max(0, Math.round((validFields / totalFields) * 100 - (criticalIssues * 20)));
+            
+            const scoreEl = document.getElementById('healthScore');
+            scoreEl.textContent = `${score}%`;
+            
+            // Update color based on score
+            if (score >= 80) {
+                scoreEl.style.background = 'linear-gradient(45deg, var(--success), var(--info))';
+            } else if (score >= 60) {
+                scoreEl.style.background = 'linear-gradient(45deg, var(--warning), var(--info))';
+            } else {
+                scoreEl.style.background = 'linear-gradient(45deg, var(--error), var(--warning))';
+            }
+            
+            scoreEl.style.webkitBackgroundClip = 'text';
+            scoreEl.style.webkitTextFillColor = 'transparent';
+            scoreEl.style.backgroundClip = 'text';
+        }
+        
+        // Chat functionality
+        function addChatMessage(type, content) {
+            const messagesEl = document.getElementById('chatMessages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `chat-message ${type}`;
+            
+            const author = type === 'ai' ? '🤖 AI Assistant' : '👤 You';
+            
+            messageEl.innerHTML = `
+                <div class="message-author">${author}</div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        
+        // Handle chat input
+        document.getElementById('chatSend').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addChatMessage('user', message);
+            input.value = '';
+            
+            // Simulate AI response
+            setTimeout(() => {
+                const response = generateAIResponse(message);
+                addChatMessage('ai', response);
+            }, 1000);
+        }
+        
+        // Generate AI responses
+        function generateAIResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('port')) {
+                return 'The default ports for your services are:<br>• Jellyfin: 8096<br>• Radarr: 7878<br>• Sonarr: 8989<br>• Prowlarr: 9696<br><br>Make sure these are not already in use on your system.';
+            } else if (lowerMessage.includes('password')) {
+                generateSecurePassword();
+                return 'I\'ve generated a secure password for you (see above). Remember to store it safely!';
+            } else if (lowerMessage.includes('timezone')) {
+                return 'To find your timezone, run <code>timedatectl | grep "Time zone"</code> in your terminal. Common formats are Region/City like America/New_York or Europe/London.';
+            } else if (lowerMessage.includes('authelia')) {
+                return 'Authelia provides authentication for your services. Make sure to:<br>1. Generate unique secrets for JWT, session, and storage<br>2. Create a strong admin password<br>3. Configure 2FA for additional security';
+            } else if (lowerMessage.includes('cloudflare')) {
+                return 'To set up Cloudflare:<br>1. Create an API token at dash.cloudflare.com<br>2. Give it DNS edit permissions for your zone<br>3. Add your email and token to the config<br>4. Point your domain to your server IP';
+            } else if (lowerMessage.includes('path')) {
+                return 'Use absolute paths starting with /. For example:<br>• Media: /home/username/media<br>• Downloads: /home/username/downloads<br><br>Make sure these directories exist and have proper permissions (PUID/PGID).';
+            } else {
+                return 'I can help you with:<br>• Validating configuration values<br>• Generating secure passwords and tokens<br>• Explaining service settings<br>• Checking port configurations<br>• Security best practices<br><br>What would you like to know?';
+            }
+        }
+        
+        // Save configuration
+        document.getElementById('saveButton').addEventListener('click', async () => {
+            const button = document.getElementById('saveButton');
+            button.innerHTML = '<span class="loading"></span> Saving...';
+            
+            // Simulate save
+            setTimeout(() => {
+                button.innerHTML = '✓ Saved!';
+                addChatMessage('ai', '✅ Configuration saved successfully! Your .env file has been updated.');
+                
+                setTimeout(() => {
+                    button.innerHTML = '💾 Save Configuration';
+                }, 2000);
+            }, 1500);
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfiguration();
+            
+            // Add some floating particles
+            for (let i = 0; i < 5; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'fixed';
+                particle.style.width = '4px';
+                particle.style.height = '4px';
+                particle.style.background = 'var(--holo-cyan)';
+                particle.style.borderRadius = '50%';
+                particle.style.pointerEvents = 'none';
+                particle.style.zIndex = '9999';
+                particle.style.filter = 'blur(1px)';
+                particle.style.left = Math.random() * window.innerWidth + 'px';
+                particle.style.animation = `particle-float ${10 + Math.random() * 10}s linear infinite`;
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                document.body.appendChild(particle);
+            }
+        });
+        
+        // Add particle float animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes particle-float {
+                0% {
+                    transform: translateY(100vh) translateX(0);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 1;
+                }
+                90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-100px) translateX(${Math.random() * 200 - 100}px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

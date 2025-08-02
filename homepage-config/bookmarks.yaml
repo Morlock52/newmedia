@@ -1,0 +1,27 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/bookmarks
+
+- Developer:
+    - GitHub:
+        - abbr: GH
+          href: https://github.com/
+    - MDN:
+        - abbr: MDN
+          href: https://developer.mozilla.org/
+
+- Entertainment:
+    - YouTube:
+        - abbr: YT
+          href: https://youtube.com/
+    - Netflix:
+        - abbr: NF
+          href: https://netflix.com/
+
+- Social:
+    - Reddit:
+        - abbr: RE
+          href: https://reddit.com/
+    - Twitter:
+        - abbr: TW
+          href: https://twitter.com/

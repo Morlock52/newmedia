@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-08-02T12:57:03.803485",
+  "services": {
+    "prowlarr": {
+      "accessible": true,
+      "version": "1.37.0.5076",
+      "error": null
+    },
+    "sonarr": {
+      "accessible": true,
+      "version": "4.0.15.2941",
+      "error": null
+    },
+    "radarr": {
+      "accessible": true,
+      "version": "5.26.2.10099",
+      "error": null
+    },
+    "lidarr": {
+      "accessible": true,
+      "version": "2.12.4.4658",
+      "error": null
+    }
+  },
+  "integration_status": {
+    "prowlarr_applications": 3,
+    "prowlarr_indexers": 2,
+    "sonarr_download_clients": 0,
+    "radarr_download_clients": 0,
+    "lidarr_download_clients": 0,
+    "sonarr_root_folders": 1,
+    "radarr_root_folders": 1,
+    "lidarr_root_folders": 1,
+    "sonarr_indexers": 1,
+    "radarr_indexers": 2,
+    "lidarr_indexers": 0
+  },
+  "recommendations": [
+    "Configure download client for Sonarr",
+    "Configure download client for Radarr",
+    "Configure download client for Lidarr",
+    "Trigger indexer sync for Lidarr"
+  ],
+  "health_score": 78.57142857142857
+}

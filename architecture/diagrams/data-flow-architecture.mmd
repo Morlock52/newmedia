@@ -1,0 +1,164 @@
+graph TB
+    subgraph "Data Sources"
+        UserInput[User Input]
+        MediaFiles[Media Files]
+        Metadata[External Metadata APIs]
+        Torrents[Torrent/Usenet]
+        Scrapers[Web Scrapers]
+        IoT[IoT Sensors]
+    end
+
+    subgraph "Ingestion Layer"
+        APIGateway[API Gateway]
+        FileUpload[File Upload Service]
+        StreamIngestion[Stream Ingestion]
+        BatchIngestion[Batch Ingestion]
+        WebhookReceiver[Webhook Receiver]
+    end
+
+    subgraph "Event Streaming Platform"
+        KafkaCluster[Kafka Cluster]
+        SchemaRegistry[Schema Registry]
+        KafkaConnect[Kafka Connect]
+        KSQL[KSQL Processing]
+        StreamProcessing[Stream Processing]
+    end
+
+    subgraph "Processing Layer"
+        MediaProcessor[Media Processing]
+        Transcoding[Transcoding Service]
+        MLPipeline[ML Pipeline]
+        DataTransform[Data Transformation]
+        Enrichment[Data Enrichment]
+    end
+
+    subgraph "Storage Layer"
+        subgraph "Hot Storage"
+            RedisCache[Redis Cache]
+            InMemoryDB[In-Memory DB]
+            SSDCache[SSD Cache]
+        end
+        
+        subgraph "Warm Storage"
+            PostgresMain[PostgreSQL Primary]
+            PostgresReplica[PostgreSQL Replicas]
+            ElasticSearch[Elasticsearch Cluster]
+            TimeSeries[TimescaleDB]
+        end
+        
+        subgraph "Cold Storage"
+            ObjectStorage[MinIO Object Storage]
+            NASStorage[NAS Arrays]
+            ArchiveStorage[Archive Storage]
+            BackupStorage[Backup Storage]
+        end
+    end
+
+    subgraph "Service Layer"
+        MediaServices[Media Services]
+        MetadataServices[Metadata Services]
+        UserServices[User Services]
+        AnalyticsServices[Analytics Services]
+        RecommendationEngine[Recommendation Engine]
+    end
+
+    subgraph "Caching Layer"
+        CDNCache[CDN Cache]
+        ApplicationCache[Application Cache]
+        DatabaseCache[Database Cache]
+        MediaCache[Media Cache]
+    end
+
+    subgraph "Delivery Layer"
+        APIEndpoints[API Endpoints]
+        WebInterface[Web Interface]
+        MobileAPI[Mobile API]
+        StreamingEndpoints[Streaming Endpoints]
+        WebSocketServer[WebSocket Server]
+    end
+
+    subgraph "Analytics & Monitoring"
+        Prometheus[Prometheus Metrics]
+        Grafana[Grafana Dashboards]
+        LogAggregation[Log Aggregation]
+        RealtimeAnalytics[Real-time Analytics]
+        MLAnalytics[ML Analytics]
+    end
+
+    %% Data Flow Connections
+    UserInput --> APIGateway
+    MediaFiles --> FileUpload
+    Metadata --> WebhookReceiver
+    Torrents --> BatchIngestion
+    Scrapers --> StreamIngestion
+    IoT --> StreamIngestion
+
+    APIGateway --> KafkaCluster
+    FileUpload --> KafkaCluster
+    StreamIngestion --> KafkaCluster
+    BatchIngestion --> KafkaCluster
+    WebhookReceiver --> KafkaCluster
+
+    KafkaCluster --> SchemaRegistry
+    KafkaCluster --> KSQL
+    KafkaCluster --> StreamProcessing
+    KafkaCluster --> KafkaConnect
+
+    StreamProcessing --> MediaProcessor
+    StreamProcessing --> MLPipeline
+    KSQL --> DataTransform
+    KafkaConnect --> Enrichment
+
+    MediaProcessor --> Transcoding
+    MLPipeline --> Enrichment
+    DataTransform --> PostgresMain
+    Enrichment --> ElasticSearch
+
+    %% Storage Flow
+    MediaProcessor --> ObjectStorage
+    Transcoding --> SSDCache
+    Enrichment --> RedisCache
+    
+    PostgresMain --> PostgresReplica
+    ElasticSearch --> MediaCache
+    TimeSeries --> RealtimeAnalytics
+    
+    ObjectStorage --> NASStorage
+    NASStorage --> ArchiveStorage
+    All --> BackupStorage
+
+    %% Service Access
+    RedisCache --> MediaServices
+    PostgresMain --> MetadataServices
+    ElasticSearch --> UserServices
+    TimeSeries --> AnalyticsServices
+    MLPipeline --> RecommendationEngine
+
+    %% Caching Strategy
+    MediaServices --> ApplicationCache
+    MetadataServices --> DatabaseCache
+    UserServices --> CDNCache
+    StreamingEndpoints --> MediaCache
+
+    %% Delivery
+    MediaServices --> APIEndpoints
+    MetadataServices --> WebInterface
+    UserServices --> MobileAPI
+    RecommendationEngine --> WebSocketServer
+    MediaCache --> StreamingEndpoints
+
+    %% Monitoring
+    All --> Prometheus
+    Prometheus --> Grafana
+    KafkaCluster --> LogAggregation
+    StreamProcessing --> RealtimeAnalytics
+    MLPipeline --> MLAnalytics
+
+    %% Feedback Loop
+    RealtimeAnalytics --> KafkaCluster
+    MLAnalytics --> MLPipeline
+
+    style KafkaCluster fill:#f9f,stroke:#333,stroke-width:4px
+    style PostgresMain fill:#9ff,stroke:#333,stroke-width:4px
+    style ObjectStorage fill:#ff9,stroke:#333,stroke-width:4px
+    style MediaServices fill:#9f9,stroke:#333,stroke-width:4px

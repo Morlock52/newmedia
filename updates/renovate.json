@@ -1,0 +1,199 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":dependencyDashboard",
+    ":semanticCommitTypeAll(chore)",
+    ":timezone(UTC)",
+    "docker:enableMajor",
+    "docker:pinDigests"
+  ],
+  "platform": "github",
+  "repositories": ["user/repo"],
+  "dryRun": false,
+  "binarySource": "install",
+  "dockerCompose": {
+    "enabled": true,
+    "fileMatch": ["(^|/)docker-compose[^/]*\\.ya?ml$"]
+  },
+  "docker": {
+    "enabled": true,
+    "major": {
+      "enabled": true
+    },
+    "minor": {
+      "enabled": true
+    },
+    "pinDigests": true,
+    "automergeDigest": true,
+    "digestUpdateBranchPrefix": "renovate/docker-digests/"
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge minor and patch updates for stable services",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": [
+        "nginx",
+        "redis",
+        "mariadb",
+        "postgres",
+        "mongo",
+        "alpine",
+        "node",
+        "python"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": ["minor", "patch", "digest"]
+    },
+    {
+      "description": "Group media server updates",
+      "matchPackagePatterns": [
+        "jellyfin",
+        "plex",
+        "emby",
+        "sonarr",
+        "radarr",
+        "lidarr",
+        "readarr",
+        "prowlarr",
+        "bazarr",
+        "overseerr",
+        "ombi"
+      ],
+      "groupName": "media-servers",
+      "groupSlug": "media-servers",
+      "automerge": false
+    },
+    {
+      "description": "Group download client updates",
+      "matchPackagePatterns": [
+        "qbittorrent",
+        "transmission",
+        "deluge",
+        "nzbget",
+        "sabnzbd",
+        "jackett",
+        "flaresolverr"
+      ],
+      "groupName": "download-clients",
+      "groupSlug": "download-clients",
+      "automerge": false
+    },
+    {
+      "description": "Critical services - require manual review",
+      "matchPackagePatterns": [
+        "traefik",
+        "authelia",
+        "crowdsec",
+        "fail2ban",
+        "wireguard",
+        "vault"
+      ],
+      "automerge": false,
+      "assignees": ["@renovate-bot"],
+      "reviewers": ["team:devops"],
+      "labels": ["security", "critical"]
+    },
+    {
+      "description": "Database updates - careful review needed",
+      "matchPackagePatterns": [
+        "postgres",
+        "mysql",
+        "mariadb",
+        "redis",
+        "mongo",
+        "influxdb"
+      ],
+      "automerge": false,
+      "labels": ["database", "breaking-change-risk"],
+      "assignees": ["@renovate-bot"],
+      "prBodyNotes": [
+        "**WARNING**: Database update - ensure backup before merging!",
+        "Run `./updates/update-strategy.sh --backup <service>` before updating"
+      ]
+    },
+    {
+      "description": "Pin digests for production stability",
+      "matchPackagePatterns": ["*"],
+      "pinDigests": true
+    },
+    {
+      "description": "Disable updates for deprecated images",
+      "matchPackagePatterns": [
+        "linuxserver/jackett",
+        "linuxserver/heimdall"
+      ],
+      "enabled": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "assignees": ["@renovate-bot"],
+    "reviewers": ["team:security"]
+  },
+  "prConcurrentLimit": 10,
+  "prCreation": "not-pending",
+  "prBodyTemplate": "{{{header}}}{{{table}}}{{{notes}}}{{{changelogs}}}{{{configDescription}}}{{{controls}}}{{{footer}}}",
+  "prBodyNotes": [
+    "## Update Checklist",
+    "- [ ] Review changelog for breaking changes",
+    "- [ ] Backup affected services: `./updates/update-strategy.sh --backup <service>`",
+    "- [ ] Test in staging environment if available",
+    "- [ ] Schedule maintenance window if needed",
+    "",
+    "## Post-merge steps",
+    "1. Run update: `./updates/update-strategy.sh --update-service <service>`",
+    "2. Monitor service health",
+    "3. Check logs for any issues",
+    "4. Rollback if needed (automatic with update script)"
+  ],
+  "labels": ["dependencies", "docker"],
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": "to {{#if isPinDigest}}{{{newDigestShort}}}{{else}}{{#if isMajor}}{{prettyNewMajor}}{{else}}{{prettyNewVersion}}{{/if}}{{/if}}",
+  "commitMessageSuffix": "",
+  "timezone": "UTC",
+  "schedule": ["after 10pm every weekday", "before 5am every weekday", "every weekend"],
+  "automergeSchedule": ["after 10pm every weekday", "before 5am every weekday", "every weekend"],
+  "updateNotScheduled": false,
+  "prHourlyLimit": 2,
+  "semanticCommits": "enabled",
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dashboard 🤖",
+  "dependencyDashboardLabels": ["renovate", "dependencies"],
+  "dependencyDashboardFooter": "View repository update status and pending PRs. For manual updates, use: `./updates/update-strategy.sh`",
+  "suppressNotifications": ["prIgnoreNotification"],
+  "rebaseWhen": "behind-base-branch",
+  "stabilityDays": 3,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**"
+  ],
+  "postUpdateOptions": ["dockerCompose"],
+  "dockerComposeCommand": "docker-compose",
+  "hostRules": [
+    {
+      "matchHost": "docker.io",
+      "concurrentRequestLimit": 10,
+      "maxRetryAfter": 60
+    },
+    {
+      "matchHost": "ghcr.io",
+      "concurrentRequestLimit": 10,
+      "maxRetryAfter": 60
+    }
+  ],
+  "regexManagers": [
+    {
+      "description": "Update docker images in shell scripts",
+      "fileMatch": ["\\.sh$"],
+      "matchStrings": [
+        "# renovate: datasource=docker depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s.*?_VERSION=(?<currentValue>.*)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

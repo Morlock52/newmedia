@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice AI Media Control System</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Voice AI Media Control</h1>
+            <p class="subtitle">Control media with natural voice commands</p>
+        </header>
+
+        <div class="status-panel">
+            <div class="status-indicator" id="statusIndicator">
+                <div class="pulse"></div>
+                <span id="statusText">Ready</span>
+            </div>
+            <div class="audio-visualizer" id="audioVisualizer">
+                <canvas id="visualizerCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn primary" id="startBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+                </svg>
+                Start Listening
+            </button>
+            <button class="control-btn secondary" id="stopBtn" disabled>
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M9,9H15V15H9" />
+                </svg>
+                Stop
+            </button>
+        </div>
+
+        <div class="media-player" id="mediaPlayer">
+            <h3>Sample Media Player</h3>
+            <video id="videoPlayer" width="100%" controls>
+                <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="media-info">
+                <p id="mediaStatus">Ready for voice commands</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-panel">
+            <h3>Voice Commands</h3>
+            <div class="command-list">
+                <div class="command-item">
+                    <span class="command">▶ "Play" / "Play video"</span>
+                    <span class="description">Start playback</span>
+                </div>
+                <div class="command-item">
+                    <span class="command">⏸ "Pause" / "Stop"</span>
+                    <span class="description">Pause playback</span>
+                </div>
+                <div class="command-item">
+                    <span class="command">🔊 "Volume up/down"</span>
+                    <span class="description">Adjust volume</span>
+                </div>
+                <div class="command-item">
+                    <span class="command">⏩ "Skip forward/back"</span>
+                    <span class="description">Jump 10 seconds</span>
+                </div>
+                <div class="command-item">
+                    <span class="command">🔇 "Mute" / "Unmute"</span>
+                    <span class="description">Toggle audio</span>
+                </div>
+                <div class="command-item">
+                    <span class="command">📱 "Fullscreen"</span>
+                    <span class="description">Enter fullscreen</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-panel">
+            <h3>Command History</h3>
+            <div class="history-list" id="historyList"></div>
+        </div>
+
+        <div class="settings-panel">
+            <h3>Voice Settings</h3>
+            <div class="setting-item">
+                <label for="voiceSelect">Voice:</label>
+                <select id="voiceSelect"></select>
+            </div>
+            <div class="setting-item">
+                <label for="pitchSlider">Pitch:</label>
+                <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1">
+                <span id="pitchValue">1.0</span>
+            </div>
+            <div class="setting-item">
+                <label for="rateSlider">Speed:</label>
+                <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="1">
+                <span id="rateValue">1.0</span>
+            </div>
+            <div class="setting-item">
+                <label for="confidenceSlider">Confidence Threshold:</label>
+                <input type="range" id="confidenceSlider" min="0.5" max="1" step="0.05" value="0.7">
+                <span id="confidenceValue">0.70</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/speech-recognition.js"></script>
+    <script src="js/speech-synthesis.js"></script>
+    <script src="js/nlu-engine.js"></script>
+    <script src="js/media-controller.js"></script>
+    <script src="js/audio-visualizer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

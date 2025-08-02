@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  # Reverse Proxy
+  traefik:
+    image: traefik:v3.1.4
+    container_name: traefik-auth
+    command:
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.traefik.address=:8080
+      - --log.level=DEBUG
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-api.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik-api.service=api@internal"
+
+  # Authentication Service
+  authelia:
+    image: authelia/authelia:4.38
+    container_name: authelia-auth
+    volumes:
+      - ../config/authelia:/config
+    ports:
+      - "9091:9091"
+    networks:
+      - traefik_network
+    environment:
+      - AUTHELIA_JWT_SECRET=your_jwt_secret_here_change_this_in_production
+      - AUTHELIA_SESSION_SECRET=your_session_secret_here_change_this_in_production
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY=your_encryption_key_here_change_this_in_production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.localhost`)"
+      - "traefik.http.routers.authelia.entrypoints=web"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=http://auth.localhost"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    restart: unless-stopped
+
+  # Test service with auth
+  whoami:
+    image: traefik/whoami
+    container_name: whoami-test
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.whoami.middlewares=authelia"
+
+networks:
+  traefik_network:
+    driver: bridge
+

@@ -1,0 +1,91 @@
+{
+  "name": "holographic-media-dashboard",
+  "version": "1.0.0",
+  "description": "A futuristic 3D holographic media server dashboard with WebGL effects, real-time visualization, and immersive UI",
+  "main": "demo-server.js",
+  "homepage": "https://github.com/morlock52/holographic-media-dashboard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/morlock52/holographic-media-dashboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/morlock52/holographic-media-dashboard/issues"
+  },
+  "scripts": {
+    "start": "node demo-server.js",
+    "dev": "node demo-server.js --watch",
+    "env-manager": "node env-manager-server.js",
+    "env-dev": "nodemon env-manager-server.js",
+    "build": "npm run minify-js && npm run minify-css",
+    "minify-js": "terser js/*.js --compress --mangle --output dist/app.min.js",
+    "minify-css": "csso css/*.css --output dist/styles.min.css",
+    "test": "echo \"No tests specified yet\" && exit 0",
+    "lint": "eslint js/ --ext .js",
+    "serve": "python3 -m http.server 8000",
+    "docs": "jsdoc js/ -d docs/api/",
+    "validate-html": "html-validate *.html",
+    "preview": "npm run build && npm run serve"
+  },
+  "keywords": [
+    "holographic",
+    "dashboard",
+    "threejs",
+    "webgl",
+    "3d-visualization",
+    "media-server",
+    "real-time",
+    "websocket",
+    "particles",
+    "audio-visualizer",
+    "glass-morphism",
+    "futuristic-ui",
+    "interactive-3d",
+    "media-management"
+  ],
+  "author": {
+    "name": "Morlock52",
+    "email": "noreply@morlock52.dev",
+    "url": "https://github.com/morlock52"
+  },
+  "contributors": [
+    {
+      "name": "Community Contributors",
+      "url": "https://github.com/morlock52/holographic-media-dashboard/graphs/contributors"
+    }
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.178.0",
+    "ws": "^8.16.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "chokidar": "^3.5.3"
+  },
+  "devDependencies": {
+    "terser": "^5.19.0",
+    "csso-cli": "^4.0.0",
+    "eslint": "^8.45.0",
+    "html-validate": "^8.0.0",
+    "jsdoc": "^4.0.0",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "files": [
+    "css/",
+    "js/",
+    "assets/",
+    "*.html",
+    "demo-server.js",
+    "README.md",
+    "LICENSE"
+  ]
+}

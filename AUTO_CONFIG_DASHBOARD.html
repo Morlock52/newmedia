@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server - Auto Configuration</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1e1e2e 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #00ff87, #60efff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        
+        .auto-config-status {
+            background: rgba(0, 255, 135, 0.1);
+            border: 2px solid #00ff87;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .status-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00ff87, #60efff);
+        }
+        
+        .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .integration-flow {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        
+        .flow-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .flow-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+        }
+        
+        .arrow {
+            font-size: 2rem;
+            color: #60efff;
+            animation: pulse 2s infinite;
+        }
+        
+        .command-box {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            overflow-x: auto;
+        }
+        
+        .command-box code {
+            color: #00ff87;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #00ff87, #60efff);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px;
+            transition: transform 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            background: rgba(96, 239, 255, 0.1);
+            border: 1px solid rgba(96, 239, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .feature h3 {
+            color: #60efff;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .checkmark {
+            color: #00ff87;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Auto-Configuration Center</h1>
+            <p>One-click setup for your entire media server stack</p>
+        </div>
+
+        <div class="auto-config-status">
+            <h2>🚀 Ready to Auto-Configure!</h2>
+            <p>The system will automatically:</p>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="icon">🔍</div>
+                    <h3>Configure Prowlarr</h3>
+                    <p>15+ free indexers</p>
+                </div>
+                <div class="status-item">
+                    <div class="icon">📺</div>
+                    <h3>Connect ARR Suite</h3>
+                    <p>Sonarr, Radarr, Lidarr</p>
+                </div>
+                <div class="status-item">
+                    <div class="icon">⬇️</div>
+                    <h3>Setup Downloads</h3>
+                    <p>qBittorrent, Transmission</p>
+                </div>
+                <div class="status-item">
+                    <div class="icon">🎬</div>
+                    <h3>Configure Media</h3>
+                    <p>Jellyfin, Plex libraries</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="integration-flow">
+            <h2>🔗 Integration Flow</h2>
+            <div class="flow-container">
+                <div class="flow-item">
+                    <div class="icon">🔍</div>
+                    <p>Prowlarr</p>
+                    <small>Indexers</small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="flow-item">
+                    <div class="icon">📺</div>
+                    <p>ARR Apps</p>
+                    <small>Content Search</small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="flow-item">
+                    <div class="icon">⬇️</div>
+                    <p>Downloads</p>
+                    <small>Get Content</small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="flow-item">
+                    <div class="icon">🎬</div>
+                    <p>Media Server</p>
+                    <small>Stream</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="command-box">
+            <h3>🖥️ Run Auto-Configuration</h3>
+            <code>
+                # Option 1: Full auto-configuration (recommended)<br>
+                chmod +x run-auto-config.sh<br>
+                ./run-auto-config.sh<br><br>
+                
+                # Option 2: Quick essential setup<br>
+                ./scripts/quick-setup.sh<br><br>
+                
+                # Option 3: Check status<br>
+                ./scripts/check-configuration-status.sh
+            </code>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature">
+                <h3>✅ What Gets Configured</h3>
+                <ul>
+                    <li>15+ Public torrent indexers</li>
+                    <li>Usenet indexer setup</li>
+                    <li>Optimal quality profiles</li>
+                    <li>Download client routing</li>
+                    <li>Media library paths</li>
+                    <li>Request service integration</li>
+                    <li>Monitoring dashboards</li>
+                    <li>Authentication setup</li>
+                </ul>
+            </div>
+            
+            <div class="feature">
+                <h3>🛡️ Safety Features</h3>
+                <ul>
+                    <li>Backs up existing configs</li>
+                    <li>Idempotent execution</li>
+                    <li>Error handling & rollback</li>
+                    <li>Detailed logging</li>
+                    <li>Dry-run mode available</li>
+                    <li>Service health checks</li>
+                    <li>API key validation</li>
+                    <li>Progress tracking</li>
+                </ul>
+            </div>
+            
+            <div class="feature">
+                <h3>📊 Post-Configuration</h3>
+                <ul>
+                    <li>Status dashboard created</li>
+                    <li>API keys documented</li>
+                    <li>Integration verified</li>
+                    <li>Test downloads ready</li>
+                    <li>Monitoring active</li>
+                    <li>Backup scripts created</li>
+                    <li>Update scripts ready</li>
+                    <li>Health checks scheduled</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="http://localhost:7575" class="btn">🏠 Open Homarr</a>
+            <a href="http://localhost:9696" class="btn">🔍 Open Prowlarr</a>
+            <a href="http://localhost:8096" class="btn">🎬 Open Jellyfin</a>
+            <a href="http://localhost:3000" class="btn">📊 Open Grafana</a>
+        </div>
+
+        <div class="auto-config-status" style="background: rgba(96, 239, 255, 0.1); border-color: #60efff;">
+            <h2>🎯 Quick Start Guide</h2>
+            <ol style="text-align: left; max-width: 600px; margin: 20px auto;">
+                <li>Run <code>./run-auto-config.sh</code> in terminal</li>
+                <li>Wait ~2-3 minutes for auto-configuration</li>
+                <li>Access Prowlarr to see configured indexers</li>
+                <li>Check Sonarr/Radarr for connected services</li>
+                <li>Add media to Jellyfin/Plex libraries</li>
+                <li>Start searching for content!</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

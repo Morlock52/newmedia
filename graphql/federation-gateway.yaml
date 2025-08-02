@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graphql-gateway-config
+  namespace: media-platform
+data:
+  supergraph.yaml: |
+    federation_version: 2
+    subgraphs:
+      users:
+        routing_url: http://user-service:4001/graphql
+        schema:
+          subgraph_url: http://user-service:4001/graphql
+      media:
+        routing_url: http://media-service:4002/graphql
+        schema:
+          subgraph_url: http://media-service:4002/graphql
+      streaming:
+        routing_url: http://streaming-service:4003/graphql
+        schema:
+          subgraph_url: http://streaming-service:4003/graphql
+      analytics:
+        routing_url: http://analytics-service:4004/graphql
+        schema:
+          subgraph_url: http://analytics-service:4004/graphql
+      recommendations:
+        routing_url: http://ml-service:4005/graphql
+        schema:
+          subgraph_url: http://ml-service:4005/graphql
+  
+  gateway-config.yaml: |
+    supergraph:
+      listen: 0.0.0.0:4000
+      introspection: true
+      
+    cors:
+      origins:
+        - https://media.example.com
+        - http://localhost:3000
+      credentials: true
+      
+    authentication:
+      type: jwt
+      jwks_url: http://auth-service:8080/.well-known/jwks.json
+      
+    telemetry:
+      tracing:
+        propagation:
+          - b3
+          - tracecontext
+        exporter:
+          type: otlp
+          endpoint: http://otel-collector:4317
+          
+    ratelimit:
+      redis_url: redis://redis-cluster:6379
+      rules:
+        - match: 
+            operation_name: "GetMediaCatalog"
+          limit:
+            rate: 100
+            burst: 200
+            key: user_id
+            
+    caching:
+      redis_url: redis://redis-cluster:6379
+      rules:
+        - match:
+            operation_name: "GetMediaMetadata"
+          ttl: 3600
+        - match:
+            operation_name: "GetRecommendations"
+          ttl: 300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphql-gateway
+  namespace: media-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: graphql-gateway
+  template:
+    metadata:
+      labels:
+        app: graphql-gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: graphql-gateway
+      containers:
+      - name: gateway
+        image: media-platform/graphql-gateway:2.0.0
+        ports:
+        - containerPort: 4000
+          name: graphql
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: LOG_LEVEL
+          value: info
+        - name: APOLLO_KEY
+          valueFrom:
+            secretKeyRef:
+              name: apollo-studio
+              key: key
+        - name: APOLLO_GRAPH_REF
+          value: media-platform@prod
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /.well-known/apollo/server-health
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /.well-known/apollo/server-health
+            port: 4000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: graphql-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphql-gateway
+  namespace: media-platform
+  labels:
+    app: graphql-gateway
+spec:
+  ports:
+  - port: 80
+    targetPort: 4000
+    name: graphql
+  - port: 9090
+    targetPort: 9090
+    name: metrics
+  selector:
+    app: graphql-gateway
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: graphql-gateway-hpa
+  namespace: media-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: graphql-gateway
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: graphql_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "500"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: graphql-gateway-pdb
+  namespace: media-platform
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: graphql-gateway

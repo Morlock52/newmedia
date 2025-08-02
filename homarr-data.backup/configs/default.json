@@ -1,0 +1,559 @@
+{
+  "schemaVersion": 1,
+  "configProperties": {
+    "name": "Ultimate Media Server 2025"
+  },
+  "categories": [
+    {
+      "id": "media-servers",
+      "name": "🎬 Media Servers",
+      "position": 0
+    },
+    {
+      "id": "media-management",
+      "name": "📊 Media Management", 
+      "position": 1
+    },
+    {
+      "id": "downloads",
+      "name": "⬇️ Downloads",
+      "position": 2
+    },
+    {
+      "id": "requests",
+      "name": "🎯 Requests",
+      "position": 3
+    },
+    {
+      "id": "monitoring",
+      "name": "📈 Monitoring",
+      "position": 4
+    },
+    {
+      "id": "dashboards",
+      "name": "🎨 Dashboards",
+      "position": 5
+    }
+  ],
+  "apps": [
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "url": "http://localhost:8096",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyfin.svg",
+      "category": "media-servers",
+      "description": "Primary media server with extensive format support",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8096"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "plex", 
+      "name": "Plex",
+      "url": "http://localhost:32400",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/plex.svg",
+      "category": "media-servers",
+      "description": "Popular media server with great client support",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:32400"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "emby",
+      "name": "Emby", 
+      "url": "http://localhost:8922",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/emby.svg",
+      "category": "media-servers",
+      "description": "Feature-rich media server alternative",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8922"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "sonarr",
+      "name": "Sonarr",
+      "url": "http://localhost:8989",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sonarr.svg",
+      "category": "media-management",
+      "description": "TV Show collection manager",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8989"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "radarr",
+      "name": "Radarr",
+      "url": "http://localhost:7878", 
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/radarr.svg",
+      "category": "media-management",
+      "description": "Movie collection manager",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:7878"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "lidarr",
+      "name": "Lidarr",
+      "url": "http://localhost:8686",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/lidarr.svg",
+      "category": "media-management",
+      "description": "Music collection manager",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8686"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bazarr",
+      "name": "Bazarr",
+      "url": "http://localhost:6767",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/bazarr.svg", 
+      "category": "media-management",
+      "description": "Subtitle management for movies and TV shows",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:6767"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 3,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "prowlarr",
+      "name": "Prowlarr",
+      "url": "http://localhost:9696",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prowlarr.svg",
+      "category": "media-management", 
+      "description": "Indexer manager for *arr services",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9696"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 4,
+            "y": 1,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "url": "http://localhost:8090",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/qbittorrent.svg",
+      "category": "downloads",
+      "description": "Feature-rich torrent client",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8090"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 2,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "transmission", 
+      "name": "Transmission",
+      "url": "http://localhost:9091",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/transmission.svg",
+      "category": "downloads",
+      "description": "Lightweight torrent client",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9091"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 2,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "sabnzbd",
+      "name": "SABnzbd",
+      "url": "http://localhost:8085",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sabnzbd.svg",
+      "category": "downloads",
+      "description": "Binary newsgroup downloader", 
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:8085"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 2,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "jellyseerr",
+      "name": "Jellyseerr",
+      "url": "http://localhost:5055",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/jellyseerr.svg",
+      "category": "requests",
+      "description": "Request management for Jellyfin",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:5055"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 3,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "overseerr",
+      "name": "Overseerr",
+      "url": "http://localhost:5056",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/overseerr.svg",
+      "category": "requests",
+      "description": "Request management for Plex",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:5056"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 3,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "ombi",
+      "name": "Ombi",
+      "url": "http://localhost:3579", 
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/ombi.svg",
+      "category": "requests",
+      "description": "Media request and user management system",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:3579"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 3,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "portainer",
+      "name": "Portainer",
+      "url": "http://localhost:9000",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/portainer.svg",
+      "category": "monitoring",
+      "description": "Docker container management",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9000"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 4,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "url": "http://localhost:3003",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/grafana.svg",
+      "category": "monitoring",
+      "description": "Metrics visualization and dashboards",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:3003"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 4,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "prometheus",
+      "name": "Prometheus",
+      "url": "http://localhost:9090",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/prometheus.svg",
+      "category": "monitoring",
+      "description": "Metrics collection and alerting",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:9090"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 2,
+            "y": 4,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "netdata",
+      "name": "Netdata",
+      "url": "http://localhost:19999",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/netdata.svg",
+      "category": "monitoring",
+      "description": "Real-time performance monitoring",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:19999"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 3,
+            "y": 4,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "homepage", 
+      "name": "Homepage",
+      "url": "http://localhost:3001",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/homepage.svg",
+      "category": "dashboards",
+      "description": "Alternative dashboard solution",
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:3001"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 5,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "dashy",
+      "name": "Dashy",
+      "url": "http://localhost:4000",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/dashy.svg",
+      "category": "dashboards",
+      "description": "Modern configurable dashboard", 
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://localhost:4000"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 1,
+            "y": 5,
+            "w": 1,
+            "h": 1
+          }
+        }
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "id": "system-widget",
+      "type": "smartHome-entityState",
+      "properties": {
+        "entityId": "system.stats",
+        "displayName": "System Status"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "gridstack": {
+            "x": 0,
+            "y": 6,
+            "w": 2,
+            "h": 1
+          }
+        }
+      }
+    }
+  ],
+  "settings": {
+    "common": {
+      "searchEngine": {
+        "enabled": true,
+        "provider": "duckduckgo"
+      },
+      "quickSearch": true
+    },
+    "customization": {
+      "colors": {
+        "primary": "#00ffff",
+        "secondary": "#ff00ff",
+        "shade": {
+          "50": "#0a0a0f",
+          "100": "#141420",
+          "200": "#1e1e30",
+          "300": "#282840",
+          "400": "#323250",
+          "500": "#3c3c60",
+          "600": "#464670",
+          "700": "#505080", 
+          "800": "#5a5a90",
+          "900": "#6464a0"
+        }
+      },
+      "layout": {
+        "enabledLeftSidebar": false,
+        "enabledRightSidebar": false,
+        "enabledPing": true,
+        "enabledSearchbar": true
+      },
+      "pageTitle": "Ultimate Media Server 2025",
+      "logoImageUrl": "",
+      "faviconUrl": "",
+      "backgroundImageUrl": "",
+      "customCss": ""
+    }
+  }
+}

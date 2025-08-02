@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holographic Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .header {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3),
+                        inset 0 0 20px rgba(0, 255, 255, 0.1);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.1); }
+            50% { box-shadow: 0 8px 48px rgba(255, 0, 255, 0.4), inset 0 0 30px rgba(255, 0, 255, 0.2); }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)); }
+            50% { filter: drop-shadow(0 0 20px rgba(255, 0, 255, 0.8)); }
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1200px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .card {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.3);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+            animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-description {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.5rem;
+        }
+
+        .back-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .content-list {
+            list-style: none;
+            padding: 1rem;
+        }
+
+        .content-item {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .content-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem;
+            text-align: center;
+            color: #ff6b6b;
+        }
+        
+        /* Button styling */
+        button.card {
+            background: rgba(10, 10, 10, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: white;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button.card:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.4);
+        }
+        
+        button.card:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1 id="page-title">Media Dashboard</h1>
+        </div>
+        
+        <div class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page active">
+                <div class="grid">
+                    <div class="card" onclick="navigateTo('movies')">
+                        <span class="card-icon">🎬</span>
+                        <h3 class="card-title">Movies</h3>
+                        <p class="card-description">Browse and watch your movie collection</p>
+                    </div>
+                    
+                    <div class="card" onclick="navigateTo('series')">
+                        <span class="card-icon">📺</span>
+                        <h3 class="card-title">Series</h3>
+                        <p class="card-description">Continue watching your favorite shows</p>
+                    </div>
+                    
+                    <div class="card" onclick="navigateTo('music')">
+                        <span class="card-icon">🎵</span>
+                        <h3 class="card-title">Music</h3>
+                        <p class="card-description">Listen to your music library</p>
+                    </div>
+                    
+                    <div class="card" onclick="navigateTo('livetv')">
+                        <span class="card-icon">📡</span>
+                        <h3 class="card-title">Live TV</h3>
+                        <p class="card-description">Watch live television channels</p>
+                    </div>
+                    
+                    <div class="card" onclick="navigateTo('analytics')">
+                        <span class="card-icon">📊</span>
+                        <h3 class="card-title">Analytics</h3>
+                        <p class="card-description">View your watching statistics</p>
+                    </div>
+                    
+                    <div class="card" onclick="navigateTo('stackmonitor')">
+                        <span class="card-icon">🖥️</span>
+                        <h3 class="card-title">Stack Monitor</h3>
+                        <p class="card-description">Monitor your media stack performance</p>
+                    </div>
+                    
+                    <div class="card" onclick="window.open('config.html', '_blank')">
+                        <span class="card-icon">⚙️</span>
+                        <h3 class="card-title">Configuration</h3>
+                        <p class="card-description">Manage system settings and preferences</p>
+                    </div>
+                    
+                    <div class="card" onclick="window.open('timeline.html', '_blank')">
+                        <span class="card-icon">⏱️</span>
+                        <h3 class="card-title">Timeline</h3>
+                        <p class="card-description">View installation timeline and project progress</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Movies Page -->
+            <div id="movies" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">156</div>
+                        <div class="stat-label">Total Movies</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">23</div>
+                        <div class="stat-label">Unwatched</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">4K</div>
+                        <div class="stat-label">Highest Quality</div>
+                    </div>
+                </div>
+                <ul class="content-list">
+                    <li class="content-item" onclick="handleContentClick('movie', 'Inception (2010)')">🎬 Inception (2010) - 4K HDR</li>
+                    <li class="content-item" onclick="handleContentClick('movie', 'The Matrix (1999)')">🎬 The Matrix (1999) - 4K</li>
+                    <li class="content-item" onclick="handleContentClick('movie', 'Interstellar (2014)')">🎬 Interstellar (2014) - 4K HDR</li>
+                    <li class="content-item" onclick="handleContentClick('movie', 'Blade Runner 2049 (2017)')">🎬 Blade Runner 2049 (2017) - 4K HDR</li>
+                    <li class="content-item" onclick="handleContentClick('movie', 'Dune (2021)')">🎬 Dune (2021) - 4K HDR</li>
+                </ul>
+            </div>
+            
+            <!-- Series Page -->
+            <div id="series" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">42</div>
+                        <div class="stat-label">Total Series</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Currently Watching</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">326</div>
+                        <div class="stat-label">Episodes to Watch</div>
+                    </div>
+                </div>
+                <ul class="content-list">
+                    <li class="content-item" onclick="handleContentClick('series', 'Stranger Things - S4 E7')">📺 Stranger Things - S4 E7 Next</li>
+                    <li class="content-item" onclick="handleContentClick('series', 'The Mandalorian - S3 E2')">📺 The Mandalorian - S3 E2 Next</li>
+                    <li class="content-item" onclick="handleContentClick('series', 'Wednesday - S1 E5')">📺 Wednesday - S1 E5 Next</li>
+                    <li class="content-item" onclick="handleContentClick('series', 'The Last of Us - S1 E9')">📺 The Last of Us - S1 E9 Next</li>
+                    <li class="content-item" onclick="handleContentClick('series', 'House of the Dragon')">📺 House of the Dragon - S1 Complete</li>
+                </ul>
+            </div>
+            
+            <!-- Music Page -->
+            <div id="music" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">3,456</div>
+                        <div class="stat-label">Total Songs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">234</div>
+                        <div class="stat-label">Artists</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">67</div>
+                        <div class="stat-label">Playlists</div>
+                    </div>
+                </div>
+                <ul class="content-list">
+                    <li class="content-item" onclick="handleContentClick('playlist', 'Synthwave Nights')">🎵 Synthwave Nights - 45 tracks</li>
+                    <li class="content-item" onclick="handleContentClick('playlist', 'Coding Focus')">🎵 Coding Focus - 120 tracks</li>
+                    <li class="content-item" onclick="handleContentClick('playlist', 'Cyberpunk 2077 OST')">🎵 Cyberpunk 2077 OST - 58 tracks</li>
+                    <li class="content-item" onclick="handleContentClick('playlist', 'Lo-Fi Hip Hop')">🎵 Lo-Fi Hip Hop - 200 tracks</li>
+                    <li class="content-item" onclick="handleContentClick('playlist', 'Epic Orchestral')">🎵 Epic Orchestral - 89 tracks</li>
+                </ul>
+            </div>
+            
+            <!-- Live TV Page -->
+            <div id="livetv" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">125</div>
+                        <div class="stat-label">Channels</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">HD</div>
+                        <div class="stat-label">Quality</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">Live</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                </div>
+                <ul class="content-list">
+                    <li class="content-item" onclick="handleContentClick('channel', 'CNN')">📡 CNN - Breaking News</li>
+                    <li class="content-item" onclick="handleContentClick('channel', 'ESPN')">📡 ESPN - Live Sports</li>
+                    <li class="content-item" onclick="handleContentClick('channel', 'Discovery')">📡 Discovery - Planet Earth</li>
+                    <li class="content-item" onclick="handleContentClick('channel', 'HBO')">📡 HBO - Movie Night</li>
+                    <li class="content-item" onclick="handleContentClick('channel', 'Cartoon Network')">📡 Cartoon Network - Adventure Time</li>
+                </ul>
+            </div>
+            
+            <!-- Analytics Page -->
+            <div id="analytics" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">342h</div>
+                        <div class="stat-label">Total Watch Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">89</div>
+                        <div class="stat-label">Movies Watched</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">456</div>
+                        <div class="stat-label">Episodes Watched</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1,234</div>
+                        <div class="stat-label">Songs Played</div>
+                    </div>
+                </div>
+                <div style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1rem; color: #00ffff;">Recent Activity</h3>
+                    <ul class="content-list">
+                        <li class="content-item" onclick="handleContentClick('stat', 'Today')">📊 Today: 3h 45m watched</li>
+                        <li class="content-item" onclick="handleContentClick('stat', 'This Week')">📊 This Week: 24h 12m watched</li>
+                        <li class="content-item" onclick="handleContentClick('stat', 'Favorite Genre')">📊 Favorite Genre: Sci-Fi (45%)</li>
+                        <li class="content-item" onclick="handleContentClick('stat', 'Most Watched')">📊 Most Watched: Stranger Things</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Stack Monitor Page -->
+            <div id="stackmonitor" class="page">
+                <div class="back-button" onclick="navigateTo('dashboard')">←</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: #00ff00;">100%</div>
+                        <div class="stat-label">Server Uptime</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">2.4GB</div>
+                        <div class="stat-label">RAM Usage</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">45%</div>
+                        <div class="stat-label">CPU Load</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1.2TB</div>
+                        <div class="stat-label">Storage Used</div>
+                    </div>
+                </div>
+                <div style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1rem; color: #00ffff;">Service Status</h3>
+                    <ul class="content-list">
+                        <li class="content-item" onclick="handleContentClick('service', 'Plex Media Server')">🟢 Plex Media Server - Running</li>
+                        <li class="content-item" onclick="handleContentClick('service', 'Sonarr')">🟢 Sonarr - Running</li>
+                        <li class="content-item" onclick="handleContentClick('service', 'Radarr')">🟢 Radarr - Running</li>
+                        <li class="content-item" onclick="handleContentClick('service', 'Transmission')">🟢 Transmission - Running</li>
+                        <li class="content-item" onclick="handleContentClick('service', 'VPN Service')">🟢 VPN Service - Connected</li>
+                    </ul>
+                </div>
+                <div style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1rem; color: #00ffff;">Quick Actions</h3>
+                    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <button class="card" style="padding: 1rem; font-size: 1rem;" onclick="handleAction('restart-services')">
+                            🔄 Restart Services
+                        </button>
+                        <button class="card" style="padding: 1rem; font-size: 1rem;" onclick="handleAction('clear-cache')">
+                            🧹 Clear Cache
+                        </button>
+                        <button class="card" style="padding: 1rem; font-size: 1rem;" onclick="handleAction('backup-config')">
+                            💾 Backup Config
+                        </button>
+                        <button class="card" style="padding: 1rem; font-size: 1rem;" onclick="handleAction('update-libraries')">
+                            📚 Update Libraries
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Three.js scene
+        let scene, camera, renderer, particles, particleSystem;
+        let mouseX = 0, mouseY = 0;
+        
+        function initThreeJS() {
+            try {
+                // Create scene
+                scene = new THREE.Scene();
+                scene.fog = new THREE.FogExp2(0x000000, 0.0008);
+                
+                // Create camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 50;
+                
+                // Create renderer
+                renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                document.getElementById('canvas-container').appendChild(renderer.domElement);
+                
+                // Create particles
+                const particleCount = 2000;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    positions[i] = (Math.random() - 0.5) * 100;
+                    positions[i + 1] = (Math.random() - 0.5) * 100;
+                    positions[i + 2] = (Math.random() - 0.5) * 100;
+                    
+                    // Cyan to magenta gradient
+                    const t = Math.random();
+                    colors[i] = t; // R
+                    colors[i + 1] = 1 - t; // G
+                    colors[i + 2] = 1; // B
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 2,
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                particleSystem = new THREE.Points(geometry, material);
+                scene.add(particleSystem);
+                
+                // Add lights
+                const light1 = new THREE.PointLight(0x00ffff, 1, 100);
+                light1.position.set(20, 20, 20);
+                scene.add(light1);
+                
+                const light2 = new THREE.PointLight(0xff00ff, 1, 100);
+                light2.position.set(-20, -20, 20);
+                scene.add(light2);
+                
+                // Mouse move handler
+                document.addEventListener('mousemove', onMouseMove);
+                
+                // Start animation
+                animate();
+                
+            } catch (error) {
+                console.error('Three.js initialization error:', error);
+                // Continue without 3D effects
+            }
+        }
+        
+        function onMouseMove(event) {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (particleSystem) {
+                particleSystem.rotation.x += 0.0005;
+                particleSystem.rotation.y += 0.0005;
+                
+                // Mouse interaction
+                particleSystem.rotation.x += mouseY * 0.001;
+                particleSystem.rotation.y += mouseX * 0.001;
+            }
+            
+            if (camera) {
+                camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
+                camera.position.y += (mouseY * 5 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+            }
+            
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+        
+        // Navigation
+        function navigateTo(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.classList.add('active');
+                
+                // Update title
+                const titles = {
+                    'dashboard': 'Media Dashboard',
+                    'movies': 'Movies',
+                    'series': 'TV Series',
+                    'music': 'Music Library',
+                    'livetv': 'Live TV',
+                    'analytics': 'Analytics',
+                    'stackmonitor': 'Stack Monitor'
+                };
+                
+                document.getElementById('page-title').textContent = titles[pageId] || 'Media Dashboard';
+                
+                // Show a subtle notification
+                showNotification(`Navigated to ${titles[pageId] || pageId}`);
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Remove any existing notification
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                background: rgba(10, 10, 10, 0.9);
+                backdrop-filter: blur(20px);
+                border: 1px solid ${type === 'info' ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 0, 255, 0.5)'};
+                border-radius: 10px;
+                padding: 1rem 2rem;
+                color: white;
+                font-size: 0.9rem;
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+                box-shadow: 0 0 20px ${type === 'info' ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 0, 255, 0.3)'};
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Add CSS animations for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Handle content clicks
+        function handleContentClick(type, name) {
+            const messages = {
+                'movie': `Playing ${name}...`,
+                'series': `Starting ${name}...`,
+                'playlist': `Playing playlist: ${name}`,
+                'channel': `Tuning to ${name}...`,
+                'stat': `Viewing details for ${name}...`,
+                'service': `Opening ${name} dashboard...`
+            };
+            
+            showNotification(messages[type] || `Selected: ${name}`, 'info');
+            
+            // Simulate action based on type
+            switch(type) {
+                case 'movie':
+                case 'series':
+                    setTimeout(() => showNotification('Loading video player...'), 500);
+                    break;
+                case 'playlist':
+                    setTimeout(() => showNotification('Loading music player...'), 500);
+                    break;
+                case 'channel':
+                    setTimeout(() => showNotification('Connecting to live stream...'), 500);
+                    break;
+                case 'stat':
+                    setTimeout(() => showNotification('Generating detailed report...'), 500);
+                    break;
+                case 'service':
+                    setTimeout(() => showNotification(`${name} control panel loaded`), 500);
+                    break;
+            }
+        }
+        
+        // Handle action buttons
+        function handleAction(action) {
+            const actions = {
+                'restart-services': {
+                    message: 'Restarting all services...',
+                    followUp: 'All services restarted successfully!'
+                },
+                'clear-cache': {
+                    message: 'Clearing cache...',
+                    followUp: 'Cache cleared! 2.3GB freed.'
+                },
+                'backup-config': {
+                    message: 'Creating backup...',
+                    followUp: 'Configuration backed up to /backups/config-2024.tar.gz'
+                },
+                'update-libraries': {
+                    message: 'Scanning media libraries...',
+                    followUp: 'Libraries updated! Found 12 new items.'
+                }
+            };
+            
+            const actionInfo = actions[action];
+            if (actionInfo) {
+                showNotification(actionInfo.message, 'info');
+                setTimeout(() => showNotification(actionInfo.followUp, 'success'), 2000);
+            }
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                navigateTo('dashboard');
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            console.log('Initializing holographic dashboard...');
+            initThreeJS();
+        });
+        
+        // Error handling
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e);
+        });
+    </script>
+</body>
+</html>

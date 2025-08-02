@@ -1,0 +1,247 @@
+groups:
+  - name: infrastructure-alerts
+    interval: 30s
+    rules:
+      # Host Infrastructure Alerts
+      - alert: HostHighCPUUsage
+        expr: |
+          100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host CPU usage is critically high"
+          description: "Host {{ $labels.instance }} CPU usage has been above 85% for 5 minutes (current: {{ $value | humanize }}%)"
+
+      - alert: HostCriticalCPUUsage
+        expr: |
+          100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host CPU usage is extremely high"
+          description: "Host {{ $labels.instance }} CPU usage has been above 95% for 2 minutes (current: {{ $value | humanize }}%)"
+
+      - alert: HostHighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host memory usage is critically high"
+          description: "Host {{ $labels.instance }} memory usage has been above 90% for 5 minutes (current: {{ $value | humanize }}%)"
+
+      - alert: HostCriticalMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host memory usage is extremely high"
+          description: "Host {{ $labels.instance }} memory usage has been above 95% for 2 minutes (current: {{ $value | humanize }}%)"
+
+      # Disk Space Alerts
+      - alert: HostLowDiskSpace
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) < 20
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host disk space is getting low"
+          description: "Host {{ $labels.instance }} root filesystem has less than 20% free space (current: {{ $value | humanize }}%)"
+
+      - alert: HostCriticalDiskSpace
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) < 10
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host disk space is critically low"
+          description: "Host {{ $labels.instance }} root filesystem has less than 10% free space (current: {{ $value | humanize }}%)"
+
+      - alert: MediaStorageLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint=~"/media.*|.*media.*"} / node_filesystem_size_bytes{mountpoint=~"/media.*|.*media.*"} * 100) < 15
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Media storage space is getting low"
+          description: "Media storage {{ $labels.mountpoint }} has less than 15% free space (current: {{ $value | humanize }}%)"
+
+      - alert: DownloadsStorageLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint=~"/downloads.*|.*downloads.*"} / node_filesystem_size_bytes{mountpoint=~"/downloads.*|.*downloads.*"} * 100) < 25
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Downloads storage space is getting low"
+          description: "Downloads storage {{ $labels.mountpoint }} has less than 25% free space (current: {{ $value | humanize }}%)"
+
+      # Disk I/O Alerts
+      - alert: HostHighDiskIO
+        expr: |
+          rate(node_disk_io_time_seconds_total[5m]) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host disk I/O utilization is high"
+          description: "Host {{ $labels.instance }} disk {{ $labels.device }} I/O utilization has been above 90% for 5 minutes"
+
+      # Network Alerts
+      - alert: HostHighNetworkTraffic
+        expr: |
+          (rate(node_network_receive_bytes_total{device!="lo"}[5m]) + rate(node_network_transmit_bytes_total{device!="lo"}[5m])) / 1024 / 1024 > 500
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host network traffic is very high"
+          description: "Host {{ $labels.instance }} interface {{ $labels.device }} is handling more than 500MB/s for 5 minutes"
+
+      - alert: HostNetworkInterfaceDown
+        expr: |
+          node_network_up{device!="lo"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host network interface is down"
+          description: "Host {{ $labels.instance }} network interface {{ $labels.device }} has been down for 2 minutes"
+
+      # System Load Alerts
+      - alert: HostHighSystemLoad
+        expr: |
+          node_load15 > (count by (instance) (node_cpu_seconds_total{mode="idle"}) * 2)
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host system load is high"
+          description: "Host {{ $labels.instance }} 15-minute load average is high: {{ $value | humanize }}"
+
+      # Docker Daemon Alerts
+      - alert: DockerDaemonDown
+        expr: |
+          up{job="docker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Docker daemon is down"
+          description: "Docker daemon on {{ $labels.instance }} has been down for 2 minutes"
+
+      # Temperature Alerts (if available)
+      - alert: HostHighTemperature
+        expr: |
+          node_hwmon_temp_celsius > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host temperature is high"
+          description: "Host {{ $labels.instance }} sensor {{ $labels.sensor }} temperature is {{ $value }}°C"
+
+      - alert: HostCriticalTemperature
+        expr: |
+          node_hwmon_temp_celsius > 90
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host temperature is critically high"
+          description: "Host {{ $labels.instance }} sensor {{ $labels.sensor }} temperature is {{ $value }}°C"
+
+      # Hardware Alerts
+      - alert: HostRaidArrayDegraded
+        expr: |
+          node_md_disks{state="active"} < node_md_disks_required
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "RAID array is degraded"
+          description: "RAID array {{ $labels.device }} on {{ $labels.instance }} is degraded"
+
+      # Time Sync Alerts
+      - alert: HostClockSkew
+        expr: |
+          abs(node_time_seconds - on(instance) group_left() (node_time_seconds{instance="localhost:9100"})) > 30
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host clock is skewed"
+          description: "Host {{ $labels.instance }} clock is skewed by {{ $value }} seconds"
+
+      # Process Alerts
+      - alert: TooManyProcesses
+        expr: |
+          node_procs_running > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Too many processes running"
+          description: "Host {{ $labels.instance }} has {{ $value }} processes running"
+
+      # File Descriptor Alerts
+      - alert: HostHighFileDescriptorUsage
+        expr: |
+          (node_filefd_allocated / node_filefd_maximum) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host file descriptor usage is high"
+          description: "Host {{ $labels.instance }} file descriptor usage is {{ $value | humanize }}%"
+
+      # Swap Usage Alerts
+      - alert: HostSwapUsage
+        expr: |
+          (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 50
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Host is using swap space"
+          description: "Host {{ $labels.instance }} swap usage is {{ $value | humanize }}%"
+
+      # Connectivity Alerts
+      - alert: HostConnectivityLoss
+        expr: |
+          up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host connectivity lost"
+          description: "Unable to connect to host {{ $labels.instance }} for 2 minutes"

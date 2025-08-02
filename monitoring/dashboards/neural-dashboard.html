@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Media Dashboard - AI-Powered Monitoring</title>
+    
+    <!-- External Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.6.1/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        /* Neural Network Background */
+        #neural-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        /* Header */
+        .header {
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-bottom: 2px solid #00ff88;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            text-align: center;
+            background: linear-gradient(45deg, #00ff88, #00d4ff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { filter: brightness(1); }
+            to { filter: brightness(1.2); }
+        }
+        
+        /* AI Status Bar */
+        .ai-status {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            margin: 20px;
+            border-radius: 15px;
+            border: 1px solid #00ff88;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-bottom: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-active { background: #00ff88; }
+        .status-warning { background: #ffaa00; }
+        .status-error { background: #ff4444; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        /* Widget Base */
+        .widget {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .widget:hover {
+            border-color: #00ff88;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+        
+        .widget-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        
+        /* 3D Visualization Container */
+        .viz-3d {
+            height: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+        
+        /* Real-time Heatmap */
+        .heatmap-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .heatmap-cell {
+            position: absolute;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            border: 2px solid #ffffff;
+        }
+        
+        /* Predictive Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            canvas {
+                border-radius: 10px;
+            }
+        }
+        
+        /* Interactive Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+        }
+        
+        /* AI Insights Panel */
+        .ai-insights {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1));
+            border: 1px solid #00ff88;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px;
+        }
+        
+        .insight-item {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #00ff88;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .insight-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .insight-severity-critical {
+            border-left-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+        
+        .insight-severity-warning {
+            border-left-color: #ffaa00;
+            background: rgba(255, 170, 0, 0.1);
+        }
+        
+        /* Performance Metrics */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric-card {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: #00ff88;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            color: #cccccc;
+            margin-top: 5px;
+        }
+        
+        /* Network Topology */
+        .network-topology {
+            height: 400px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00ff88, #00d4ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+        
+        .node:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.8);
+        }
+        
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            transform-origin: left center;
+            opacity: 0.7;
+            animation: pulse-line 2s infinite;
+        }
+        
+        @keyframes pulse-line {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        /* Alert System */
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .alert {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(20px);
+            animation: slideIn 0.5s ease;
+        }
+        
+        .alert-critical {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+        
+        .alert-warning {
+            border-color: #ffaa00;
+            background: rgba(255, 170, 0, 0.1);
+        }
+        
+        .alert-info {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .ai-status {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-left: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Neural Network Background -->
+    <div id="neural-bg"></div>
+    
+    <!-- Alert Container -->
+    <div class="alert-container" id="alertContainer"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <h1>Neural Media Dashboard</h1>
+        <div id="lastUpdate" style="text-align: center; font-size: 0.9em; color: #cccccc; margin-top: 10px;">
+            Last Update: <span id="updateTime">--:--:--</span>
+        </div>
+    </header>
+    
+    <!-- AI Status Bar -->
+    <div class="ai-status">
+        <div class="status-item">
+            <div class="status-indicator status-active" id="aiStatus"></div>
+            <span>AI Analytics</span>
+        </div>
+        <div class="status-item">
+            <div class="status-indicator status-active" id="anomalyStatus"></div>
+            <span>Anomaly Detection</span>
+        </div>
+        <div class="status-item">
+            <div class="status-indicator status-active" id="predictionStatus"></div>
+            <span>Predictive Maintenance</span>
+        </div>
+        <div class="status-item">
+            <div class="status-indicator status-active" id="optimizationStatus"></div>
+            <span>Auto Optimization</span>
+        </div>
+        <div class="status-item">
+            <div class="status-indicator status-active" id="securityStatus"></div>
+            <span>Security Monitor</span>
+        </div>
+    </div>
+    
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- System Overview 3D Visualization -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">System Architecture 3D</h3>
+                <div class="controls">
+                    <button class="control-btn active" onclick="toggle3DView('system')">System</button>
+                    <button class="control-btn" onclick="toggle3DView('network')">Network</button>
+                    <button class="control-btn" onclick="toggle3DView('data')">Data Flow</button>
+                </div>
+            </div>
+            <div class="viz-3d" id="system3D"></div>
+        </div>
+        
+        <!-- Real-time Performance Heatmap -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Performance Heatmap</h3>
+                <div class="controls">
+                    <button class="control-btn active" onclick="updateHeatmap('cpu')">CPU</button>
+                    <button class="control-btn" onclick="updateHeatmap('memory')">Memory</button>
+                    <button class="control-btn" onclick="updateHeatmap('disk')">Disk I/O</button>
+                    <button class="control-btn" onclick="updateHeatmap('network')">Network</button>
+                </div>
+            </div>
+            <div class="heatmap-container" id="performanceHeatmap"></div>
+        </div>
+        
+        <!-- Predictive Analytics Chart -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Predictive Analytics</h3>
+                <div class="controls">
+                    <button class="control-btn active" onclick="updatePrediction('capacity')">Capacity</button>
+                    <button class="control-btn" onclick="updatePrediction('failures')">Failures</button>
+                    <button class="control-btn" onclick="updatePrediction('maintenance')">Maintenance</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="predictiveChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- User Behavior Analytics -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">User Analytics (Privacy-Safe)</h3>
+                <div class="controls">
+                    <button class="control-btn active" onclick="updateUserAnalytics('sessions')">Sessions</button>
+                    <button class="control-btn" onclick="updateUserAnalytics('content')">Content</button>
+                    <button class="control-btn" onclick="updateUserAnalytics('devices')">Devices</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="userChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Network Quality Monitor -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Network Quality</h3>
+            </div>
+            <div class="network-topology" id="networkTopology"></div>
+        </div>
+        
+        <!-- Resource Optimization -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Resource Optimization</h3>
+            </div>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="cpuOptimization">--</div>
+                    <div class="metric-label">CPU Efficiency</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="memoryOptimization">--</div>
+                    <div class="metric-label">Memory Usage</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="diskOptimization">--</div>
+                    <div class="metric-label">Disk I/O</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="networkEfficiency">--</div>
+                    <div class="metric-label">Network</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content Performance -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Content Performance</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="contentChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Auto-scaling Decisions -->
+        <div class="widget">
+            <div class="widget-header">
+                <h3 class="widget-title">Auto-scaling Intelligence</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="scalingChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Insights Panel -->
+    <div class="ai-insights">
+        <h2 style="margin-bottom: 20px; color: #00ff88;">🧠 AI-Generated Insights</h2>
+        <div id="insightsContainer">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Global variables
+        let scene, camera, renderer, animationId;
+        let wsConnection = null;
+        let dashboardData = {};
+        let charts = {};
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNeuralBackground();
+            initializeWebSocket();
+            initialize3DVisualization();
+            initializeCharts();
+            initializeHeatmap();
+            initializeNetworkTopology();
+            startDataUpdates();
+            
+            // Update timestamp
+            updateTimestamp();
+            setInterval(updateTimestamp, 1000);
+        });
+        
+        // Neural network background
+        function initializeNeuralBackground() {
+            const container = document.getElementById('neural-bg');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+            
+            // Create neural network nodes
+            const nodeGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+            const nodeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const nodes = [];
+            const connections = [];
+            
+            // Create nodes
+            for (let i = 0; i < 50; i++) {
+                const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                node.position.set(
+                    (Math.random() - 0.5) * 100,
+                    (Math.random() - 0.5) * 100,
+                    (Math.random() - 0.5) * 100
+                );
+                scene.add(node);
+                nodes.push(node);
+            }
+            
+            // Create connections
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x00d4ff,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (Math.random() < 0.1) { // 10% connection probability
+                        const geometry = new THREE.BufferGeometry().setFromPoints([
+                            nodes[i].position,
+                            nodes[j].position
+                        ]);
+                        const line = new THREE.Line(geometry, lineMaterial);
+                        scene.add(line);
+                        connections.push(line);
+                    }
+                }
+            }
+            
+            camera.position.z = 50;
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Rotate nodes
+                nodes.forEach((node, index) => {
+                    node.rotation.x += 0.01;
+                    node.rotation.y += 0.01;
+                    
+                    // Gentle floating motion
+                    node.position.y += Math.sin(Date.now() * 0.001 + index) * 0.1;
+                });
+                
+                // Pulse connections
+                connections.forEach((connection, index) => {
+                    const opacity = 0.1 + Math.sin(Date.now() * 0.002 + index) * 0.2;
+                    connection.material.opacity = Math.max(0.1, opacity);
+                });
+                
+                scene.rotation.y += 0.002;
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        // WebSocket connection
+        function initializeWebSocket() {
+            try {
+                wsConnection = new WebSocket('ws://localhost:8765');
+                
+                wsConnection.onopen = function(event) {
+                    console.log('Connected to monitoring WebSocket');
+                    updateStatus('aiStatus', 'active');
+                };
+                
+                wsConnection.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+                
+                wsConnection.onclose = function(event) {
+                    console.log('WebSocket connection closed');
+                    updateStatus('aiStatus', 'error');
+                    
+                    // Attempt to reconnect after 5 seconds
+                    setTimeout(initializeWebSocket, 5000);
+                };
+                
+                wsConnection.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateStatus('aiStatus', 'error');
+                };
+                
+            } catch (error) {
+                console.error('Failed to initialize WebSocket:', error);
+                // Fall back to HTTP polling
+                startHttpPolling();
+            }
+        }
+        
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'metrics_update':
+                    updateDashboardMetrics(data.data);
+                    break;
+                case 'anomaly_alert':
+                    showAlert(data.data);
+                    break;
+                case 'prediction_update':
+                    updatePredictiveCharts(data.data);
+                    break;
+                case 'insights_update':
+                    updateAIInsights(data.data);
+                    break;
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        }
+        
+        // Initialize 3D visualization
+        function initialize3DVisualization() {
+            const container = document.getElementById('system3D');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x000000, 0.1);
+            container.appendChild(renderer.domElement);
+            
+            // Create system components as 3D objects
+            const components = [
+                { name: 'Jellyfin', position: [0, 0, 0], color: 0x00ff88, size: 2 },
+                { name: 'Sonarr', position: [-3, 2, 0], color: 0x00d4ff, size: 1.5 },
+                { name: 'Radarr', position: [3, 2, 0], color: 0x00d4ff, size: 1.5 },
+                { name: 'Prowlarr', position: [0, -2, 0], color: 0xffaa00, size: 1.2 },
+                { name: 'qBittorrent', position: [-2, -2, 2], color: 0xff6b6b, size: 1.3 },
+                { name: 'Grafana', position: [2, -2, -2], color: 0x9b59b6, size: 1.0 },
+                { name: 'Prometheus', position: [0, 2, -2], color: 0xe74c3c, size: 1.1 }
+            ];
+            
+            const componentMeshes = [];
+            
+            components.forEach(comp => {
+                const geometry = new THREE.SphereGeometry(comp.size, 16, 16);
+                const material = new THREE.MeshPhongMaterial({
+                    color: comp.color,
+                    transparent: true,
+                    opacity: 0.8,
+                    shininess: 100
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(...comp.position);
+                mesh.userData = comp;
+                
+                scene.add(mesh);
+                componentMeshes.push(mesh);
+                
+                // Add text label
+                const loader = new THREE.FontLoader();
+                // Note: You'd need to load a font file for text rendering
+                // For now, we'll use the component color as an indicator
+            });
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+            
+            camera.position.set(0, 0, 10);
+            
+            // Animation loop
+            function animate3D() {
+                requestAnimationFrame(animate3D);
+                
+                // Rotate components based on their load
+                componentMeshes.forEach((mesh, index) => {
+                    mesh.rotation.y += 0.01 + (Math.random() * 0.02);
+                    
+                    // Pulsate based on activity
+                    const scale = 1 + Math.sin(Date.now() * 0.003 + index) * 0.1;
+                    mesh.scale.set(scale, scale, scale);
+                });
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate3D();
+            
+            // Store references for updates
+            window.system3D = { scene, camera, renderer, componentMeshes };
+        }
+        
+        // Initialize charts
+        function initializeCharts() {
+            // Predictive Chart
+            const predictiveCtx = document.getElementById('predictiveChart').getContext('2d');
+            charts.predictive = new Chart(predictiveCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Predicted Load',
+                        data: [],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Actual Load',
+                        data: [],
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+            
+            // User Analytics Chart
+            const userCtx = document.getElementById('userChart').getContext('2d');
+            charts.user = new Chart(userCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Sessions', 'Idle Sessions', 'Transcoding'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#00ff88', '#ffaa00', '#ff6b6b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    }
+                }
+            });
+            
+            // Content Performance Chart
+            const contentCtx = document.getElementById('contentChart').getContext('2d');
+            charts.content = new Chart(contentCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Movies', 'TV Shows', 'Music', 'Audiobooks'],
+                    datasets: [{
+                        label: 'Views',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#00ff88', '#00d4ff', '#ffaa00', '#ff6b6b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+            
+            // Auto-scaling Chart
+            const scalingCtx = document.getElementById('scalingChart').getContext('2d');
+            charts.scaling = new Chart(scalingCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Instances',
+                        data: [],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        stepped: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize heatmap
+        function initializeHeatmap() {
+            const container = document.getElementById('performanceHeatmap');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // Create SVG for heatmap
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Generate sample heatmap data
+            const heatmapData = [];
+            const cellSize = 20;
+            const cols = Math.floor(width / cellSize);
+            const rows = Math.floor(height / cellSize);
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    heatmapData.push({
+                        row: i,
+                        col: j,
+                        value: Math.random() * 100,
+                        x: j * cellSize,
+                        y: i * cellSize
+                    });
+                }
+            }
+            
+            // Color scale
+            const colorScale = d3.scaleSequential(d3.interpolateViridis)
+                .domain([0, 100]);
+            
+            // Create heatmap cells
+            svg.selectAll('.heatmap-cell')
+                .data(heatmapData)
+                .enter()
+                .append('rect')
+                .attr('class', 'heatmap-cell')
+                .attr('x', d => d.x)
+                .attr('y', d => d.y)
+                .attr('width', cellSize - 1)
+                .attr('height', cellSize - 1)
+                .attr('fill', d => colorScale(d.value))
+                .attr('opacity', 0.8)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('opacity', 1);
+                    showTooltip(event, `Value: ${d.value.toFixed(1)}%`);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('opacity', 0.8);
+                    hideTooltip();
+                });
+            
+            // Store reference for updates
+            window.heatmapData = { svg, data: heatmapData, colorScale, cellSize };
+        }
+        
+        // Initialize network topology
+        function initializeNetworkTopology() {
+            const container = document.getElementById('networkTopology');
+            
+            // Sample network nodes
+            const nodes = [
+                { id: 'router', name: 'Router', x: 200, y: 100, type: 'network' },
+                { id: 'jellyfin', name: 'Jellyfin', x: 100, y: 200, type: 'media' },
+                { id: 'sonarr', name: 'Sonarr', x: 300, y: 200, type: 'arr' },
+                { id: 'radarr', name: 'Radarr', x: 500, y: 200, type: 'arr' },
+                { id: 'qbt', name: 'qBit', x: 200, y: 300, type: 'download' },
+                { id: 'grafana', name: 'Grafana', x: 400, y: 300, type: 'monitor' }
+            ];
+            
+            const connections = [
+                { from: 'router', to: 'jellyfin' },
+                { from: 'router', to: 'sonarr' },
+                { from: 'router', to: 'radarr' },
+                { from: 'router', to: 'qbt' },
+                { from: 'router', to: 'grafana' },
+                { from: 'sonarr', to: 'qbt' },
+                { from: 'radarr', to: 'qbt' }
+            ];
+            
+            // Create connections
+            connections.forEach(conn => {
+                const fromNode = nodes.find(n => n.id === conn.from);
+                const toNode = nodes.find(n => n.id === conn.to);
+                
+                if (fromNode && toNode) {
+                    const line = document.createElement('div');
+                    line.className = 'connection';
+                    
+                    const dx = toNode.x - fromNode.x;
+                    const dy = toNode.y - fromNode.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    line.style.left = fromNode.x + 'px';
+                    line.style.top = fromNode.y + 20 + 'px';
+                    line.style.width = length + 'px';
+                    line.style.transform = `rotate(${angle}deg)`;
+                    
+                    container.appendChild(line);
+                }
+            });
+            
+            // Create nodes
+            nodes.forEach(node => {
+                const nodeElement = document.createElement('div');
+                nodeElement.className = 'node';
+                nodeElement.style.left = node.x + 'px';
+                nodeElement.style.top = node.y + 'px';
+                nodeElement.textContent = node.name.substring(0, 3);
+                nodeElement.title = node.name;
+                
+                // Add type-specific styling
+                switch (node.type) {
+                    case 'network':
+                        nodeElement.style.background = 'radial-gradient(circle, #ff6b6b, #ff8e8e)';
+                        break;
+                    case 'media':
+                        nodeElement.style.background = 'radial-gradient(circle, #00ff88, #00d4ff)';
+                        break;
+                    case 'arr':
+                        nodeElement.style.background = 'radial-gradient(circle, #00d4ff, #0099cc)';
+                        break;
+                    case 'download':
+                        nodeElement.style.background = 'radial-gradient(circle, #ffaa00, #ff8800)';
+                        break;
+                    case 'monitor':
+                        nodeElement.style.background = 'radial-gradient(circle, #9b59b6, #8e44ad)';
+                        break;
+                }
+                
+                container.appendChild(nodeElement);
+            });
+        }
+        
+        // Update functions
+        function updateDashboardMetrics(metrics) {
+            dashboardData = metrics;
+            
+            // Update metric cards
+            document.getElementById('cpuOptimization').textContent = (metrics.cpu_usage * 100).toFixed(1) + '%';
+            document.getElementById('memoryOptimization').textContent = (metrics.memory_usage * 100).toFixed(1) + '%';
+            document.getElementById('diskOptimization').textContent = (metrics.disk_usage * 100).toFixed(1) + '%';
+            document.getElementById('networkEfficiency').textContent = metrics.network_latency?.toFixed(0) + 'ms' || '--';
+            
+            // Update charts with new data
+            updateChartsWithNewData(metrics);
+        }
+        
+        function updateChartsWithNewData(metrics) {
+            const now = new Date().toLocaleTimeString();
+            
+            // Update predictive chart
+            if (charts.predictive) {
+                charts.predictive.data.labels.push(now);
+                charts.predictive.data.datasets[0].data.push(metrics.predicted_load || Math.random() * 100);
+                charts.predictive.data.datasets[1].data.push(metrics.actual_load || Math.random() * 100);
+                
+                // Keep only last 20 data points
+                if (charts.predictive.data.labels.length > 20) {
+                    charts.predictive.data.labels.shift();
+                    charts.predictive.data.datasets[0].data.shift();
+                    charts.predictive.data.datasets[1].data.shift();
+                }
+                
+                charts.predictive.update('none');
+            }
+            
+            // Update user analytics
+            if (charts.user) {
+                charts.user.data.datasets[0].data = [
+                    metrics.active_sessions || Math.floor(Math.random() * 10),
+                    metrics.idle_sessions || Math.floor(Math.random() * 5),
+                    metrics.transcoding_sessions || Math.floor(Math.random() * 3)
+                ];
+                charts.user.update('none');
+            }
+            
+            // Update content performance
+            if (charts.content) {
+                charts.content.data.datasets[0].data = [
+                    metrics.movie_views || Math.floor(Math.random() * 100),
+                    metrics.tv_views || Math.floor(Math.random() * 150),
+                    metrics.music_plays || Math.floor(Math.random() * 200),
+                    metrics.audiobook_plays || Math.floor(Math.random() * 50)
+                ];
+                charts.content.update('none');
+            }
+            
+            // Update scaling chart
+            if (charts.scaling) {
+                charts.scaling.data.labels.push(now);
+                charts.scaling.data.datasets[0].data.push(metrics.active_instances || Math.floor(Math.random() * 5) + 1);
+                
+                if (charts.scaling.data.labels.length > 20) {
+                    charts.scaling.data.labels.shift();
+                    charts.scaling.data.datasets[0].data.shift();
+                }
+                
+                charts.scaling.update('none');
+            }
+        }
+        
+        function updateAIInsights(insights) {
+            const container = document.getElementById('insightsContainer');
+            container.innerHTML = '';
+            
+            if (!insights || insights.length === 0) {
+                insights = [
+                    {
+                        severity: 'info',
+                        message: 'System performance is optimal. All services running smoothly.',
+                        confidence: 0.95,
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        severity: 'warning',
+                        message: 'Predicted storage capacity will reach 80% in 14 days.',
+                        confidence: 0.87,
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        severity: 'info',
+                        message: 'Network optimization resulted in 15% latency reduction.',
+                        confidence: 0.92,
+                        timestamp: new Date().toISOString()
+                    }
+                ];
+            }
+            
+            insights.forEach((insight, index) => {
+                const insightElement = document.createElement('div');
+                insightElement.className = `insight-item insight-severity-${insight.severity}`;
+                
+                insightElement.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong>${insight.severity.toUpperCase()}</strong>
+                        <span style="font-size: 0.8em; opacity: 0.7;">Confidence: ${(insight.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                    <p>${insight.message}</p>
+                    <div style="font-size: 0.8em; opacity: 0.6; margin-top: 10px;">
+                        ${new Date(insight.timestamp).toLocaleString()}
+                    </div>
+                `;
+                
+                container.appendChild(insightElement);
+                
+                // Animate in
+                gsap.from(insightElement, {
+                    duration: 0.5,
+                    opacity: 0,
+                    x: -50,
+                    delay: index * 0.1
+                });
+            });
+        }
+        
+        function showAlert(alert) {
+            const container = document.getElementById('alertContainer');
+            const alertElement = document.createElement('div');
+            alertElement.className = `alert alert-${alert.severity}`;
+            
+            alertElement.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>${alert.title}</strong>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer;">×</button>
+                </div>
+                <p style="margin: 10px 0;">${alert.message}</p>
+                <div style="font-size: 0.8em; opacity: 0.7;">
+                    ${new Date().toLocaleTimeString()}
+                </div>
+            `;
+            
+            container.appendChild(alertElement);
+            
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                if (alertElement.parentNode) {
+                    alertElement.remove();
+                }
+            }, 10000);
+        }
+        
+        function updateStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.className = `status-indicator status-${status}`;
+            }
+        }
+        
+        function updateTimestamp() {
+            document.getElementById('updateTime').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Control functions
+        function toggle3DView(viewType) {
+            // Update active button
+            document.querySelectorAll('#system3D').forEach(widget => {
+                widget.parentElement.querySelectorAll('.control-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            });
+            event.target.classList.add('active');
+            
+            // Switch 3D view based on type
+            console.log('Switching 3D view to:', viewType);
+        }
+        
+        function updateHeatmap(metricType) {
+            // Update active button
+            document.querySelectorAll('#performanceHeatmap').forEach(widget => {
+                widget.parentElement.querySelectorAll('.control-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            });
+            event.target.classList.add('active');
+            
+            // Update heatmap data based on metric type
+            if (window.heatmapData) {
+                window.heatmapData.data.forEach(cell => {
+                    cell.value = Math.random() * 100;
+                });
+                
+                window.heatmapData.svg.selectAll('.heatmap-cell')
+                    .datum(d => {
+                        d.value = Math.random() * 100;
+                        return d;
+                    })
+                    .transition()
+                    .duration(500)
+                    .attr('fill', d => window.heatmapData.colorScale(d.value));
+            }
+        }
+        
+        function updatePrediction(predictionType) {
+            // Update active button
+            event.target.parentElement.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            console.log('Updating prediction for:', predictionType);
+        }
+        
+        function updateUserAnalytics(analyticsType) {
+            // Update active button
+            event.target.parentElement.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            console.log('Updating user analytics for:', analyticsType);
+        }
+        
+        // Start data updates
+        function startDataUpdates() {
+            // Simulate real-time data updates
+            setInterval(() => {
+                const mockMetrics = {
+                    cpu_usage: Math.random() * 0.8 + 0.1,
+                    memory_usage: Math.random() * 0.7 + 0.2,
+                    disk_usage: Math.random() * 0.6 + 0.3,
+                    network_latency: Math.random() * 100 + 20,
+                    active_sessions: Math.floor(Math.random() * 10) + 1,
+                    idle_sessions: Math.floor(Math.random() * 5),
+                    transcoding_sessions: Math.floor(Math.random() * 3),
+                    movie_views: Math.floor(Math.random() * 100) + 50,
+                    tv_views: Math.floor(Math.random() * 150) + 75,
+                    music_plays: Math.floor(Math.random() * 200) + 100,
+                    audiobook_plays: Math.floor(Math.random() * 50) + 25,
+                    active_instances: Math.floor(Math.random() * 5) + 1
+                };
+                
+                updateDashboardMetrics(mockMetrics);
+                
+                // Randomly generate insights
+                if (Math.random() < 0.1) { // 10% chance every update
+                    const insights = [
+                        {
+                            severity: 'info',
+                            message: 'AI optimization improved transcoding efficiency by 12%',
+                            confidence: 0.94,
+                            timestamp: new Date().toISOString()
+                        }
+                    ];
+                    updateAIInsights(insights);
+                }
+                
+                // Randomly show alerts
+                if (Math.random() < 0.05) { // 5% chance
+                    showAlert({
+                        severity: 'warning',
+                        title: 'Performance Alert',
+                        message: 'CPU usage approaching threshold levels'
+                    });
+                }
+                
+            }, 2000); // Update every 2 seconds
+        }
+        
+        // HTTP polling fallback
+        function startHttpPolling() {
+            console.log('Starting HTTP polling fallback...');
+            updateStatus('aiStatus', 'warning');
+            
+            setInterval(async () => {
+                try {
+                    // You would implement actual HTTP endpoints here
+                    const response = await fetch('/api/metrics');
+                    const data = await response.json();
+                    updateDashboardMetrics(data);
+                } catch (error) {
+                    console.error('HTTP polling failed:', error);
+                }
+            }, 5000);
+        }
+        
+        // Utility functions
+        function showTooltip(event, text) {
+            // Implementation for tooltip
+            console.log('Tooltip:', text);
+        }
+        
+        function hideTooltip() {
+            // Implementation for hiding tooltip
+        }
+    </script>
+</body>
+</html>

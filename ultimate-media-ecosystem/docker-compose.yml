@@ -1,0 +1,1405 @@
+version: '3.8'
+
+services:
+  # ===== CORE INFRASTRUCTURE =====
+  
+  # Reverse Proxy & Load Balancer
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      # Core settings
+      - --api=true
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=traefik_network
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.metrics.address=:8082
+      # HTTP to HTTPS redirect
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # SSL settings
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-v02.api.letsencrypt.org/directory
+      # Logging
+      - --log.level=INFO
+      - --accesslog=true
+      - --accesslog.filepath=/logs/access.log
+      # Metrics
+      - --metrics.prometheus=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      - --metrics.prometheus.entrypoint=metrics
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_data:/letsencrypt
+      - traefik_logs:/logs
+    networks:
+      - traefik_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=authelia@docker"
+      - "com.centurylinklabs.watchtower.monitor-only=true"
+
+  # Authentication & SSO
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    volumes:
+      - authelia_config:/config
+      - authelia_data:/data
+    networks:
+      - traefik_network
+      - auth_network
+    environment:
+      - TZ=${TZ}
+      - AUTHELIA_JWT_SECRET_FILE=/run/secrets/authelia_jwt_secret
+      - AUTHELIA_SESSION_SECRET_FILE=/run/secrets/authelia_session_secret
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE=/run/secrets/authelia_encryption_key
+      - AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD_FILE=/run/secrets/authelia_ldap_password
+      - AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE=/run/secrets/authelia_smtp_password
+    secrets:
+      - authelia_jwt_secret
+      - authelia_session_secret
+      - authelia_encryption_key
+      - authelia_ldap_password
+      - authelia_smtp_password
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+
+  # ===== MEDIA SERVERS =====
+  
+  # Primary Media Server - Jellyfin
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAIN}
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - media_movies:/data/movies:ro
+      - media_tvshows:/data/tvshows:ro
+      - media_music:/data/music:ro
+      - media_audiobooks:/data/audiobooks:ro
+      - media_photos:/data/photos:ro
+      - media_comics:/data/comics:ro
+      - /dev/shm:/transcode
+    devices:
+      # Hardware acceleration - uncomment based on your hardware
+      - /dev/dri:/dev/dri  # Intel QuickSync / AMD
+      # - /dev/nvidia0:/dev/nvidia0  # NVIDIA
+      # - /dev/nvidia-uvm:/dev/nvidia-uvm  # NVIDIA
+      # - /dev/nvidia-modeset:/dev/nvidia-modeset  # NVIDIA
+      # - /dev/nvidiactl:/dev/nvidiactl  # NVIDIA
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "8096:8096"  # HTTP
+      - "8920:8920"  # HTTPS
+      - "7359:7359/udp"  # Client discovery
+      - "1900:1900/udp"  # DLNA
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # Alternative Media Server - Emby
+  emby:
+    image: emby/embyserver:latest
+    container_name: emby
+    environment:
+      - UID=${PUID}
+      - GID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - emby_config:/config
+      - media_movies:/data/movies:ro
+      - media_tvshows:/data/tvshows:ro
+      - media_music:/data/music:ro
+      - /dev/shm:/transcode
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "8097:8096"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN}`)"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.tls.certresolver=letsencrypt"
+      - "traefik.http.services.emby.loadbalancer.server.port=8096"
+      - "traefik.http.routers.emby.middlewares=authelia@docker"
+
+  # ===== DOWNLOAD INFRASTRUCTURE =====
+  
+  # VPN Gateway for Downloads
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8888:8888/tcp"  # HTTP proxy
+      - "8388:8388/tcp"  # Shadowsocks
+      - "8080:8080"  # qBittorrent
+      - "9117:9117"  # Jackett
+      - "6881:6881"  # Torrent port
+      - "6881:6881/udp"
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-mullvad}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=${VPN_COUNTRIES:-Netherlands,Switzerland}
+      - FIREWALL_OUTBOUND_SUBNETS=172.16.0.0/12,192.168.0.0/16
+      - SHADOWSOCKS=on
+      - HTTPPROXY=on
+      - FIREWALL_VPN_INPUT_PORTS=6881
+      - DOT=on
+      - BLOCK_MALICIOUS=on
+      - BLOCK_ADS=on
+      - BLOCK_SURVEILLANCE=on
+      - TZ=${TZ}
+    volumes:
+      - gluetun_data:/gluetun
+    networks:
+      - download_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      start_period: 10s
+
+  # Torrent Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - qbittorrent_config:/config
+      - downloads_torrents:/downloads
+      - downloads_incomplete:/incomplete
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  # Usenet Client
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - sabnzbd_config:/config
+      - downloads_usenet:/downloads
+      - downloads_incomplete:/incomplete
+    networks:
+      - download_network
+      - traefik_network
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAIN}`)"
+      - "traefik.http.routers.sabnzbd.entrypoints=websecure"
+      - "traefik.http.routers.sabnzbd.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
+      - "traefik.http.routers.sabnzbd.middlewares=authelia@docker"
+
+  # ===== MEDIA MANAGEMENT (ARR SUITE) =====
+  
+  # Indexer Manager
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr_config:/config
+    networks:
+      - arr_network
+      - download_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.routers.prowlarr.middlewares=authelia@docker"
+
+  # Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - radarr_config:/config
+      - media_movies:/movies
+      - downloads_torrents:/downloads/torrents
+      - downloads_usenet:/downloads/usenet
+    networks:
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr.middlewares=authelia@docker"
+
+  # TV Series Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - sonarr_config:/config
+      - media_tvshows:/tv
+      - downloads_torrents:/downloads/torrents
+      - downloads_usenet:/downloads/usenet
+    networks:
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr.middlewares=authelia@docker"
+
+  # Music Management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - lidarr_config:/config
+      - media_music:/music
+      - downloads_torrents:/downloads/torrents
+      - downloads_usenet:/downloads/usenet
+    networks:
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)"
+      - "traefik.http.routers.lidarr.entrypoints=websecure"
+      - "traefik.http.routers.lidarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker"
+
+  # Book/Audiobook Management
+  readarr:
+    image: lscr.io/linuxserver/readarr:nightly
+    container_name: readarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - readarr_config:/config
+      - media_books:/books
+      - media_audiobooks:/audiobooks
+      - downloads_torrents:/downloads/torrents
+      - downloads_usenet:/downloads/usenet
+    networks:
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN}`)"
+      - "traefik.http.routers.readarr.entrypoints=websecure"
+      - "traefik.http.routers.readarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.readarr.loadbalancer.server.port=8787"
+      - "traefik.http.routers.readarr.middlewares=authelia@docker"
+
+  # Subtitle Management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - bazarr_config:/config
+      - media_movies:/movies
+      - media_tvshows:/tv
+    networks:
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr.entrypoints=websecure"
+      - "traefik.http.routers.bazarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+      - "traefik.http.routers.bazarr.middlewares=authelia@docker"
+
+  # ===== REQUEST & DISCOVERY =====
+  
+  # Media Requests - Overseerr
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - overseerr_config:/config
+    networks:
+      - request_network
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.rule=Host(`requests.${DOMAIN}`)"
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
+
+  # Alternative Request System - Ombi
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ombi_config:/config
+    networks:
+      - request_network
+      - arr_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ombi.rule=Host(`ombi.${DOMAIN}`)"
+      - "traefik.http.routers.ombi.entrypoints=websecure"
+      - "traefik.http.routers.ombi.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ombi.loadbalancer.server.port=3579"
+
+  # ===== MEDIA PROCESSING =====
+  
+  # Transcoding Automation
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=true
+      - inContainer=true
+      - ffmpegVersion=6
+      - nodeName=MainNode
+    volumes:
+      - tdarr_config:/app/configs
+      - tdarr_server:/app/server
+      - tdarr_logs:/app/logs
+      - tdarr_transcode_cache:/temp
+      - media_movies:/media/movies
+      - media_tvshows:/media/tvshows
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - processing_network
+      - traefik_network
+    ports:
+      - "8265:8265"  # Web UI
+      - "8266:8266"  # Server
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tdarr.rule=Host(`tdarr.${DOMAIN}`)"
+      - "traefik.http.routers.tdarr.entrypoints=websecure"
+      - "traefik.http.routers.tdarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tdarr.loadbalancer.server.port=8265"
+      - "traefik.http.routers.tdarr.middlewares=authelia@docker"
+
+  # File Organization
+  filebot:
+    image: jlesage/filebot:latest
+    container_name: filebot
+    environment:
+      - USER_ID=${PUID}
+      - GROUP_ID=${PGID}
+      - TZ=${TZ}
+      - KEEP_APP_RUNNING=1
+      - CLEAN_TMP_DIR=1
+      - DISPLAY_WIDTH=1280
+      - DISPLAY_HEIGHT=768
+      - VNC_PASSWORD=filebot
+    volumes:
+      - filebot_config:/config
+      - downloads_torrents:/storage/downloads:rw
+      - media_movies:/storage/movies:rw
+      - media_tvshows:/storage/tvshows:rw
+      - media_music:/storage/music:rw
+    networks:
+      - processing_network
+      - traefik_network
+    ports:
+      - "5800:5800"  # Web UI
+      - "5900:5900"  # VNC
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.filebot.rule=Host(`filebot.${DOMAIN}`)"
+      - "traefik.http.routers.filebot.entrypoints=websecure"
+      - "traefik.http.routers.filebot.tls.certresolver=letsencrypt"
+      - "traefik.http.services.filebot.loadbalancer.server.port=5800"
+      - "traefik.http.routers.filebot.middlewares=authelia@docker"
+
+  # ===== SPECIALIZED MEDIA SERVERS =====
+  
+  # Comics/Manga Server
+  komga:
+    image: gotson/komga:latest
+    container_name: komga
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JAVA_TOOL_OPTIONS=-Xmx4g
+    volumes:
+      - komga_config:/config
+      - media_comics:/data/comics:ro
+      - media_manga:/data/manga:ro
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "8084:8080"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.komga.rule=Host(`comics.${DOMAIN}`)"
+      - "traefik.http.routers.komga.entrypoints=websecure"
+      - "traefik.http.routers.komga.tls.certresolver=letsencrypt"
+      - "traefik.http.services.komga.loadbalancer.server.port=8080"
+
+  # Music Streaming Server
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=/
+      - ND_ENABLETRANSCODINGCONFIG=true
+      - ND_ENABLESHARING=true
+      - ND_ENABLEEXTERNALSERVICES=true
+    volumes:
+      - navidrome_data:/data
+      - media_music:/music:ro
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "4533:4533"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=Host(`music.${DOMAIN}`)"
+      - "traefik.http.routers.navidrome.entrypoints=websecure"
+      - "traefik.http.routers.navidrome.tls.certresolver=letsencrypt"
+      - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
+
+  # Photo Management
+  photoprism:
+    image: photoprism/photoprism:latest
+    container_name: photoprism
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    environment:
+      - PHOTOPRISM_ADMIN_PASSWORD=${PHOTOPRISM_ADMIN_PASSWORD}
+      - PHOTOPRISM_SITE_URL=https://photos.${DOMAIN}
+      - PHOTOPRISM_ORIGINALS_LIMIT=5000
+      - PHOTOPRISM_HTTP_COMPRESSION=gzip
+      - PHOTOPRISM_DATABASE_DRIVER=mysql
+      - PHOTOPRISM_DATABASE_SERVER=mariadb:3306
+      - PHOTOPRISM_DATABASE_NAME=photoprism
+      - PHOTOPRISM_DATABASE_USER=photoprism
+      - PHOTOPRISM_DATABASE_PASSWORD=${MYSQL_PASSWORD}
+      - PHOTOPRISM_DISABLE_CHOWN=false
+      - PHOTOPRISM_DISABLE_BACKUPS=false
+      - PHOTOPRISM_DISABLE_WEBDAV=false
+      - PHOTOPRISM_DETECT_NSFW=false
+      - PHOTOPRISM_UPLOAD_NSFW=true
+      - PHOTOPRISM_THUMB_FILTER=lanczos
+      - PHOTOPRISM_THUMB_UNCACHED=true
+      - PHOTOPRISM_THUMB_SIZE=2048
+      - PHOTOPRISM_THUMB_SIZE_UNCACHED=7680
+      - PHOTOPRISM_JPEG_SIZE=7680
+      - PHOTOPRISM_JPEG_QUALITY=92
+      - PHOTOPRISM_WORKERS=4
+      - PHOTOPRISM_WAKEUP_INTERVAL=900
+      - PHOTOPRISM_RAW_PRESETS=false
+      - PHOTOPRISM_SIDECAR_YAML=true
+      - PHOTOPRISM_BACKUP_ALBUMS=true
+      - PHOTOPRISM_BACKUP_DATABASE=true
+      - PHOTOPRISM_BACKUP_SCHEDULE=daily
+      - PHOTOPRISM_INDEX_SCHEDULE=0 * * * *
+      - PHOTOPRISM_AUTO_INDEX=300
+      - PHOTOPRISM_AUTO_IMPORT=300
+    volumes:
+      - photoprism_storage:/photoprism/storage
+      - media_photos:/photoprism/originals
+      - photoprism_import:/photoprism/import
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - media_network
+      - database_network
+      - traefik_network
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.photoprism.rule=Host(`photos.${DOMAIN}`)"
+      - "traefik.http.routers.photoprism.entrypoints=websecure"
+      - "traefik.http.routers.photoprism.tls.certresolver=letsencrypt"
+      - "traefik.http.services.photoprism.loadbalancer.server.port=2342"
+
+  # Alternative Photo Management - Immich
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_server
+    command: ["start.sh", "immich"]
+    volumes:
+      - immich_upload:/usr/src/app/upload
+      - media_photos:/photos:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - DB_HOSTNAME=postgres_immich
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis_immich
+      - UPLOAD_LOCATION=/usr/src/app/upload
+      - IMMICH_VERSION=release
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY}
+      - PUBLIC_LOGIN_PAGE_MESSAGE=Welcome to Immich
+    depends_on:
+      - redis_immich
+      - postgres_immich
+    networks:
+      - immich_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN}`)"
+      - "traefik.http.routers.immich.entrypoints=websecure"
+      - "traefik.http.routers.immich.tls.certresolver=letsencrypt"
+      - "traefik.http.services.immich.loadbalancer.server.port=3001"
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich_microservices
+    command: ["start.sh", "microservices"]
+    volumes:
+      - immich_upload:/usr/src/app/upload
+      - media_photos:/photos:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - DB_HOSTNAME=postgres_immich
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis_immich
+      - UPLOAD_LOCATION=/usr/src/app/upload
+      - IMMICH_VERSION=release
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY}
+    devices:
+      - /dev/dri:/dev/dri
+    depends_on:
+      - redis_immich
+      - postgres_immich
+    networks:
+      - immich_network
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich_machine_learning
+    volumes:
+      - immich_model_cache:/cache
+    environment:
+      - IMMICH_VERSION=release
+    networks:
+      - immich_network
+    restart: unless-stopped
+
+  # Audiobook Server
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - AUDIOBOOKSHELF_UID=${PUID}
+      - AUDIOBOOKSHELF_GID=${PGID}
+    volumes:
+      - audiobookshelf_config:/config
+      - audiobookshelf_metadata:/metadata
+      - media_audiobooks:/audiobooks
+      - media_podcasts:/podcasts
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "13378:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN}`)"
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=letsencrypt"
+      - "traefik.http.services.audiobookshelf.loadbalancer.server.port=80"
+
+  # E-book Management
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    volumes:
+      - calibre_config:/config
+      - media_books:/books
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calibre.rule=Host(`books.${DOMAIN}`)"
+      - "traefik.http.routers.calibre.entrypoints=websecure"
+      - "traefik.http.routers.calibre.tls.certresolver=letsencrypt"
+      - "traefik.http.services.calibre.loadbalancer.server.port=8083"
+
+  # Alternative Book Server - Kavita
+  kavita:
+    image: kizaing/kavita:latest
+    container_name: kavita
+    volumes:
+      - kavita_config:/kavita/config
+      - media_books:/books
+      - media_comics:/comics
+      - media_manga:/manga
+    environment:
+      - TZ=${TZ}
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kavita.rule=Host(`kavita.${DOMAIN}`)"
+      - "traefik.http.routers.kavita.entrypoints=websecure"
+      - "traefik.http.routers.kavita.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kavita.loadbalancer.server.port=5000"
+
+  # News/RSS Aggregator
+  freshrss:
+    image: freshrss/freshrss:latest
+    container_name: freshrss
+    environment:
+      - TZ=${TZ}
+      - CRON_MIN=1,31
+    volumes:
+      - freshrss_data:/var/www/FreshRSS/data
+      - freshrss_extensions:/var/www/FreshRSS/extensions
+    networks:
+      - media_network
+      - traefik_network
+    ports:
+      - "8085:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.freshrss.rule=Host(`rss.${DOMAIN}`)"
+      - "traefik.http.routers.freshrss.entrypoints=websecure"
+      - "traefik.http.routers.freshrss.tls.certresolver=letsencrypt"
+      - "traefik.http.services.freshrss.loadbalancer.server.port=80"
+
+  # ===== ANALYTICS & MONITORING =====
+  
+  # Media Server Analytics
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - tautulli_config:/config
+      - jellyfin_logs:/logs:ro
+    networks:
+      - monitoring_network
+      - media_network
+      - traefik_network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.rule=Host(`analytics.${DOMAIN}`)"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tautulli.loadbalancer.server.port=8181"
+      - "traefik.http.routers.tautulli.middlewares=authelia@docker"
+
+  # System Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - prometheus_config:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring_network
+      - traefik_network
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+
+  # Monitoring Dashboard - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN}
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=${SMTP_HOST}
+      - GF_SMTP_USER=${SMTP_USER}
+      - GF_SMTP_PASSWORD=${SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${SMTP_FROM}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - grafana_provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring_network
+      - traefik_network
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  # Container Monitoring
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    networks:
+      - monitoring_network
+    ports:
+      - "8086:8080"
+    restart: unless-stopped
+
+  # Uptime Monitoring
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks:
+      - monitoring_network
+      - traefik_network
+    ports:
+      - "3002:3001"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime.rule=Host(`uptime.${DOMAIN}`)"
+      - "traefik.http.routers.uptime.entrypoints=websecure"
+      - "traefik.http.routers.uptime.tls.certresolver=letsencrypt"
+      - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+
+  # ===== DASHBOARD & MANAGEMENT =====
+  
+  # Homepage Dashboard
+  homepage:
+    image: ghcr.io/benphelps/homepage:latest
+    container_name: homepage
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik_network
+      - media_network
+      - arr_network
+      - monitoring_network
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`${DOMAIN}`) || Host(`dashboard.${DOMAIN}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+
+  # Alternative Dashboard - Heimdall
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - heimdall_config:/config
+    networks:
+      - traefik_network
+    ports:
+      - "8087:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.heimdall.rule=Host(`heimdall.${DOMAIN}`)"
+      - "traefik.http.routers.heimdall.entrypoints=websecure"
+      - "traefik.http.routers.heimdall.tls.certresolver=letsencrypt"
+      - "traefik.http.services.heimdall.loadbalancer.server.port=80"
+
+  # Container Management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - management_network
+      - traefik_network
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.routers.portainer.middlewares=authelia@docker"
+
+  # ===== BACKUP & RECOVERY =====
+  
+  # Backup Solution
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - duplicati_config:/config
+      - backups:/backups
+      - /:/source:ro
+    networks:
+      - backup_network
+      - traefik_network
+    ports:
+      - "8200:8200"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=letsencrypt"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker"
+
+  # ===== DATABASES =====
+  
+  # MariaDB for PhotoPrism
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW --innodb-file-per-table=1 --skip-innodb-read-only-compressed
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=photoprism
+      - MYSQL_USER=photoprism
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - database_network
+    restart: unless-stopped
+
+  # PostgreSQL for Immich
+  postgres_immich:
+    image: postgres:15-alpine
+    container_name: postgres_immich
+    environment:
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=immich
+    volumes:
+      - postgres_immich_data:/var/lib/postgresql/data
+    networks:
+      - immich_network
+    restart: unless-stopped
+
+  # Redis for Immich
+  redis_immich:
+    image: redis:7-alpine
+    container_name: redis_immich
+    networks:
+      - immich_network
+    restart: unless-stopped
+
+  # Redis for Authelia
+  redis_authelia:
+    image: redis:7-alpine
+    container_name: redis_authelia
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  # ===== SEEDBOX AUTOMATION =====
+  
+  # Cross-seed automation
+  cross-seed:
+    image: crossseed/cross-seed:latest
+    container_name: cross-seed
+    user: "${PUID}:${PGID}"
+    volumes:
+      - crossseed_config:/config
+      - downloads_torrents:/torrents:ro
+      - crossseed_output:/cross-seeds
+    environment:
+      - CROSSSEED_PORT=2468
+    networks:
+      - seedbox_network
+    ports:
+      - "2468:2468"
+    restart: unless-stopped
+
+  # Autobrr - Automation tool
+  autobrr:
+    image: ghcr.io/autobrr/autobrr:latest
+    container_name: autobrr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - autobrr_config:/config
+    networks:
+      - seedbox_network
+      - arr_network
+      - traefik_network
+    ports:
+      - "7474:7474"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.autobrr.rule=Host(`autobrr.${DOMAIN}`)"
+      - "traefik.http.routers.autobrr.entrypoints=websecure"
+      - "traefik.http.routers.autobrr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.autobrr.loadbalancer.server.port=7474"
+      - "traefik.http.routers.autobrr.middlewares=authelia@docker"
+
+  # ===== UTILITY SERVICES =====
+  
+  # Watchtower - Auto updater
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_MONITOR_ONLY=false
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${SMTP_FROM}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=${SMTP_HOST}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=${SMTP_PORT:-587}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${SMTP_USER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${SMTP_PASSWORD}
+      - WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - management_network
+    restart: unless-stopped
+
+  # File Browser
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - /:/srv
+      - filebrowser_db:/database
+    networks:
+      - management_network
+      - traefik_network
+    ports:
+      - "8088:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.filebrowser.rule=Host(`files.${DOMAIN}`)"
+      - "traefik.http.routers.filebrowser.entrypoints=websecure"
+      - "traefik.http.routers.filebrowser.tls.certresolver=letsencrypt"
+      - "traefik.http.services.filebrowser.loadbalancer.server.port=80"
+      - "traefik.http.routers.filebrowser.middlewares=authelia@docker"
+
+  # Speed Test
+  speedtest:
+    image: ghcr.io/librespeed/speedtest:latest
+    container_name: speedtest
+    environment:
+      - TZ=${TZ}
+      - TELEMETRY=true
+      - ENABLE_ID_OBFUSCATION=true
+      - REDACT_IP_ADDRESSES=true
+      - PASSWORD=${SPEEDTEST_PASSWORD}
+      - EMAIL=${EMAIL}
+    networks:
+      - monitoring_network
+      - traefik_network
+    ports:
+      - "8089:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.speedtest.rule=Host(`speedtest.${DOMAIN}`)"
+      - "traefik.http.routers.speedtest.entrypoints=websecure"
+      - "traefik.http.routers.speedtest.tls.certresolver=letsencrypt"
+      - "traefik.http.services.speedtest.loadbalancer.server.port=80"
+
+# ===== NETWORKS =====
+networks:
+  traefik_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+  
+  auth_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.1.0/24
+  
+  media_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.2.0/24
+  
+  arr_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.3.0/24
+  
+  download_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.4.0/24
+  
+  request_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.5.0/24
+  
+  processing_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.6.0/24
+  
+  monitoring_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.7.0/24
+  
+  database_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.8.0/24
+  
+  management_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.9.0/24
+  
+  backup_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.10.0/24
+  
+  seedbox_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.11.0/24
+  
+  immich_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.12.0/24
+
+# ===== VOLUMES =====
+volumes:
+  # Infrastructure
+  traefik_data:
+  traefik_logs:
+  authelia_config:
+  authelia_data:
+  
+  # Media Servers
+  jellyfin_config:
+  jellyfin_cache:
+  jellyfin_logs:
+  emby_config:
+  
+  # Download Clients
+  gluetun_data:
+  qbittorrent_config:
+  sabnzbd_config:
+  
+  # Arr Suite
+  prowlarr_config:
+  radarr_config:
+  sonarr_config:
+  lidarr_config:
+  readarr_config:
+  bazarr_config:
+  
+  # Request Systems
+  overseerr_config:
+  ombi_config:
+  
+  # Processing
+  tdarr_config:
+  tdarr_server:
+  tdarr_logs:
+  tdarr_transcode_cache:
+  filebot_config:
+  
+  # Specialized Media
+  komga_config:
+  navidrome_data:
+  photoprism_storage:
+  photoprism_import:
+  immich_upload:
+  immich_model_cache:
+  audiobookshelf_config:
+  audiobookshelf_metadata:
+  calibre_config:
+  kavita_config:
+  freshrss_data:
+  freshrss_extensions:
+  
+  # Analytics & Monitoring
+  tautulli_config:
+  prometheus_config:
+  prometheus_data:
+  grafana_data:
+  grafana_provisioning:
+  uptime_kuma_data:
+  
+  # Management
+  homepage_config:
+  heimdall_config:
+  portainer_data:
+  duplicati_config:
+  filebrowser_db:
+  
+  # Databases
+  mariadb_data:
+  postgres_immich_data:
+  
+  # Seedbox
+  crossseed_config:
+  crossseed_output:
+  autobrr_config:
+  
+  # Media Storage
+  media_movies:
+  media_tvshows:
+  media_music:
+  media_audiobooks:
+  media_books:
+  media_comics:
+  media_manga:
+  media_photos:
+  media_podcasts:
+  
+  # Downloads
+  downloads_torrents:
+  downloads_usenet:
+  downloads_incomplete:
+  
+  # Backups
+  backups:
+
+# ===== SECRETS =====
+secrets:
+  authelia_jwt_secret:
+    file: ./secrets/authelia_jwt_secret.txt
+  authelia_session_secret:
+    file: ./secrets/authelia_session_secret.txt
+  authelia_encryption_key:
+    file: ./secrets/authelia_encryption_key.txt
+  authelia_ldap_password:
+    file: ./secrets/authelia_ldap_password.txt
+  authelia_smtp_password:
+    file: ./secrets/authelia_smtp_password.txt

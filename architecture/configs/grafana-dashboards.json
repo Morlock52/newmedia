@@ -1,0 +1,233 @@
+{
+  "dashboards": [
+    {
+      "name": "Media Server Overview",
+      "uid": "media-overview",
+      "panels": [
+        {
+          "title": "System Health Score",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "(1 - (sum(rate(up{job=~\"jellyfin|navidrome|immich|audiobookshelf|kavita\"}[5m]) == 0) / count(up{job=~\"jellyfin|navidrome|immich|audiobookshelf|kavita\"}))) * 100"
+            }
+          ]
+        },
+        {
+          "title": "Active Streams",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "sum(jellyfin_active_streams) by (type)"
+            }
+          ]
+        },
+        {
+          "title": "Storage Usage by Media Type",
+          "type": "piechart",
+          "targets": [
+            {
+              "expr": "sum(node_filesystem_size_bytes - node_filesystem_avail_bytes) by (media_type)"
+            }
+          ]
+        },
+        {
+          "title": "Bandwidth Usage",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "sum(rate(node_network_transmit_bytes_total[5m])) by (instance)"
+            }
+          ]
+        },
+        {
+          "title": "Request Rate by Service",
+          "type": "heatmap",
+          "targets": [
+            {
+              "expr": "sum(rate(traefik_service_requests_total[5m])) by (service)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Performance Monitoring",
+      "uid": "media-performance",
+      "panels": [
+        {
+          "title": "CPU Usage by Container",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (name) * 100"
+            }
+          ]
+        },
+        {
+          "title": "Memory Usage by Container",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "sum(container_memory_usage_bytes) by (name)"
+            }
+          ]
+        },
+        {
+          "title": "GPU Utilization",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "nvidia_gpu_utilization_percentage"
+            }
+          ]
+        },
+        {
+          "title": "Transcoding Queue",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "jellyfin_transcode_queue_size"
+            }
+          ]
+        },
+        {
+          "title": "Cache Hit Rate",
+          "type": "gauge",
+          "targets": [
+            {
+              "expr": "redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) * 100"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Media Analytics",
+      "uid": "media-analytics",
+      "panels": [
+        {
+          "title": "Most Played Media",
+          "type": "table",
+          "targets": [
+            {
+              "expr": "topk(10, sum(jellyfin_media_plays_total) by (title))"
+            }
+          ]
+        },
+        {
+          "title": "User Activity Heatmap",
+          "type": "heatmap",
+          "targets": [
+            {
+              "expr": "sum(rate(jellyfin_user_activity[5m])) by (user, hour)"
+            }
+          ]
+        },
+        {
+          "title": "Media Quality Distribution",
+          "type": "piechart",
+          "targets": [
+            {
+              "expr": "count(jellyfin_media_items) by (quality)"
+            }
+          ]
+        },
+        {
+          "title": "Storage Growth Trend",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "predict_linear(node_filesystem_size_bytes[1d], 86400 * 30)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Security Dashboard",
+      "uid": "media-security",
+      "panels": [
+        {
+          "title": "Authentication Success Rate",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "sum(rate(authelia_authentication_success_total[5m])) / sum(rate(authelia_authentication_attempts_total[5m])) * 100"
+            }
+          ]
+        },
+        {
+          "title": "Failed Login Attempts",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "sum(rate(authelia_authentication_failures_total[5m])) by (username)"
+            }
+          ]
+        },
+        {
+          "title": "Blocked IPs",
+          "type": "table",
+          "targets": [
+            {
+              "expr": "crowdsec_blocked_ips"
+            }
+          ]
+        },
+        {
+          "title": "VPN Connections",
+          "type": "worldmap",
+          "targets": [
+            {
+              "expr": "wireguard_peer_connections by (country)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "datasources": [
+    {
+      "name": "Prometheus",
+      "type": "prometheus",
+      "url": "http://prometheus:9090",
+      "isDefault": true
+    },
+    {
+      "name": "Loki",
+      "type": "loki",
+      "url": "http://loki:3100"
+    },
+    {
+      "name": "Elasticsearch",
+      "type": "elasticsearch",
+      "url": "http://elasticsearch:9200"
+    }
+  ],
+  "alerting": {
+    "notification_channels": [
+      {
+        "name": "email",
+        "type": "email",
+        "settings": {
+          "addresses": "admin@example.com"
+        }
+      },
+      {
+        "name": "discord",
+        "type": "discord",
+        "settings": {
+          "webhook_url": "${DISCORD_WEBHOOK_URL}"
+        }
+      },
+      {
+        "name": "pagerduty",
+        "type": "pagerduty",
+        "settings": {
+          "integration_key": "${PAGERDUTY_KEY}"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+version: 2
+updates:
+  # ==================
+  # NPM Dependencies
+  # ==================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "@security-team"
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      - dependency-name: "aws-sdk"
+        versions: ["2.x"]
+    groups:
+      aws:
+        patterns:
+          - "@aws-sdk/*"
+          - "aws-*"
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing:
+        patterns:
+          - "*jest*"
+          - "@testing-library/*"
+          - "playwright"
+
+  # Service-specific npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/ai-ml-nexus"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ai-ml-nexus"
+
+  - package-ecosystem: "npm"
+    directory: "/ar-vr-media"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ar-vr-media"
+
+  - package-ecosystem: "npm"
+    directory: "/voice-ai-system"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "voice-ai-system"
+
+  - package-ecosystem: "npm"
+    directory: "/web3-blockchain-integration"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "web3-blockchain"
+
+  - package-ecosystem: "npm"
+    directory: "/dashboard"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "dashboard"
+
+  # ==================
+  # Python Dependencies
+  # ==================
+  - package-ecosystem: "pip"
+    directory: "/ai-ml-nexus"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "03:00"
+    labels:
+      - "dependencies"
+      - "python"
+      - "ai-ml-nexus"
+    commit-message:
+      prefix: "chore"
+    groups:
+      ml-frameworks:
+        patterns:
+          - "tensorflow*"
+          - "torch*"
+          - "scikit-learn"
+          - "numpy"
+          - "pandas"
+
+  - package-ecosystem: "pip"
+    directory: "/quantum-security"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+      - "quantum-security"
+
+  - package-ecosystem: "pip"
+    directory: "/performance-monitoring"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+      - "performance"
+
+  # ==================
+  # Go Dependencies
+  # ==================
+  - package-ecosystem: "gomod"
+    directory: "/config-server"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "03:00"
+    labels:
+      - "dependencies"
+      - "golang"
+      - "config-server"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "gomod"
+    directory: "/autoscaler"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "golang"
+      - "autoscaler"
+
+  # ==================
+  # Docker Dependencies
+  # ==================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "03:00"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore"
+    reviewers:
+      - "@devops-team"
+
+  - package-ecosystem: "docker"
+    directory: "/ai-ml-nexus"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "ai-ml-nexus"
+
+  - package-ecosystem: "docker"
+    directory: "/ar-vr-media"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "ar-vr-media"
+
+  - package-ecosystem: "docker"
+    directory: "/voice-ai-system"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "voice-ai-system"
+
+  - package-ecosystem: "docker"
+    directory: "/web3-blockchain-integration/api"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "web3-blockchain"
+
+  - package-ecosystem: "docker"
+    directory: "/quantum-security"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "quantum-security"
+
+  # ==================
+  # GitHub Actions
+  # ==================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "03:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+      aws:
+        patterns:
+          - "aws-actions/*"
+      docker:
+        patterns:
+          - "docker/*"
+
+  # ==================
+  # Terraform
+  # ==================
+  - package-ecosystem: "terraform"
+    directory: "/infrastructure"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "infrastructure"
+    commit-message:
+      prefix: "chore"
+    reviewers:
+      - "@infrastructure-team"
+
+  # ==================
+  # Composer (PHP)
+  # ==================
+  - package-ecosystem: "composer"
+    directory: "/legacy-api"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "php"
+      - "legacy"
+    commit-message:
+      prefix: "chore"
+    versioning-strategy: "widen"
+
+# Security alerts configuration
+# Note: Security updates are created immediately, regardless of schedule

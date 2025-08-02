@@ -1,0 +1,47 @@
+{
+  "name": "default",
+  "config": {
+    "settings": {
+      "customTitle": "Media Server Dashboard",
+      "logo": "",
+      "favicon": "",
+      "theme": "dark",
+      "colorScheme": "dark",
+      "background": {
+        "type": "gradient",
+        "gradient": {
+          "angle": 135,
+          "colors": ["#1a1a1a", "#2d2d2d"]
+        }
+      },
+      "cardStyle": {
+        "borderRadius": 8,
+        "shadow": "lg"
+      }
+    },
+    "layout": {
+      "type": "grid",
+      "columns": 4,
+      "gap": 16
+    }
+  },
+  "sections": [
+    {
+      "name": "Media Services",
+      "widgets": []
+    },
+    {
+      "name": "Download Clients",
+      "widgets": []
+    },
+    {
+      "name": "Management",
+      "widgets": []
+    },
+    {
+      "name": "Monitoring",
+      "widgets": []
+    }
+  ],
+  "version": "0.15.0"
+}

@@ -1,0 +1,46 @@
+{
+  "name": "web3-media-smart-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Web3 Media Platform",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:goerli": "hardhat run scripts/deploy.js --network goerli",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "deploy:mumbai": "hardhat run scripts/deploy.js --network mumbai",
+    "verify:etherscan": "hardhat verify --network mainnet",
+    "verify:polygonscan": "hardhat verify --network polygon",
+    "node": "hardhat node",
+    "clean": "hardhat clean",
+    "flatten": "hardhat flatten",
+    "size": "hardhat size-contracts",
+    "coverage": "hardhat coverage"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/hardhat-upgrades": "^1.28.0",
+    "@typechain/ethers-v5": "^10.2.1",
+    "@typechain/hardhat": "^6.1.6",
+    "chai": "^4.3.7",
+    "ethereum-waffle": "^4.0.10",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.17.0",
+    "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.2",
+    "typechain": "^8.2.0"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^0.7.1",
+    "@openzeppelin/contracts": "^4.9.2",
+    "@openzeppelin/contracts-upgradeable": "^4.9.2",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": ["web3", "blockchain", "smart-contracts", "nft", "dao", "defi"],
+  "author": "Web3 Media Platform Team",
+  "license": "MIT"
+}

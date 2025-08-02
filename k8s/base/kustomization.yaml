@@ -1,0 +1,89 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: media-platform
+
+commonLabels:
+  app.kubernetes.io/part-of: media-platform
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  # Core Infrastructure
+  - namespaces.yaml
+  - service-accounts.yaml
+  - configmaps.yaml
+  - secrets.yaml
+  
+  # Networking
+  - service-mesh/
+  - ingress/
+  
+  # Data Layer
+  - databases/
+  - caching/
+  - storage/
+  
+  # Core Services
+  - services/auth/
+  - services/media/
+  - services/streaming/
+  - services/ml/
+  
+  # Monitoring
+  - monitoring/
+  - logging/
+  - tracing/
+
+configMapGenerator:
+  - name: platform-config
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - ENABLE_TRACING=true
+      - ENABLE_METRICS=true
+
+secretGenerator:
+  - name: platform-secrets
+    literals:
+      - JWT_SECRET=change-me-in-production
+      - ENCRYPTION_KEY=change-me-in-production
+
+images:
+  - name: media-service
+    newName: media-platform/media-service
+    newTag: 2.0.0
+  - name: auth-service
+    newName: media-platform/auth-service
+    newTag: 2.0.0
+  - name: streaming-service
+    newName: media-platform/streaming-service
+    newTag: 2.0.0
+  - name: ml-service
+    newName: media-platform/ml-service
+    newTag: 2.0.0
+
+replicas:
+  - name: media-service
+    count: 3
+  - name: auth-service
+    count: 2
+  - name: streaming-service
+    count: 5
+  - name: ml-service
+    count: 2
+
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/topologySpreadConstraints
+        value:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/part-of: media-platform
