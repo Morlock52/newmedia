@@ -1,0 +1,21 @@
+{
+  "name": "newmedia-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Containerized real backend server for newmedia",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.7.5",
+    "ws": "^8.18.3"
+  }
+}
+

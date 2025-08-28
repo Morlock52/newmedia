@@ -1,0 +1,24 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Environment
+ENV NODE_ENV=production \
+    API_PORT=3333
+
+# Install minimal runtime dependencies for the real backend
+COPY docker/backend-package.json ./package.json
+RUN npm install --omit=dev --no-audit --no-fund
+
+# Copy server and optional compose file for service discovery
+COPY real-backend-server.js ./real-backend-server.js
+COPY docker-compose.yml ./docker-compose.yml
+
+# Expose backend port
+EXPOSE 3333
+
+# Healthcheck against the API
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD wget -qO- http://localhost:3333/health || exit 1
+
+CMD ["node", "real-backend-server.js"]

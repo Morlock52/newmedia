@@ -10,9 +10,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const STACK_DIR = process.env.STACK_DIR || '/app/compose';
 let COMPOSE_BIN = 'docker compose';
+const DOCS_DIR = path.join(STACK_DIR, 'docs');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+// Serve documentation images from stack docs folder
+app.use('/docs/images', express.static(path.join(DOCS_DIR, 'images')));
 
 console.log('🎬 Media Server Stack Web UI starting...');
 console.log(`📁 Stack directory: ${STACK_DIR}`);
@@ -70,6 +73,69 @@ async function runCompose(args, options = {}) {
     }
   }
 }
+
+// ---- Docs API ----
+async function listMarkdownFiles(dir, base = '') {
+  const items = await fs.readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const item of items) {
+    if (item.name.startsWith('.')) continue;
+    const rel = path.join(base, item.name);
+    const full = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      const nested = await listMarkdownFiles(full, rel);
+      files.push(...nested);
+    } else if (item.isFile() && item.name.toLowerCase().endsWith('.md')) {
+      files.push(rel.replace(/\\/g, '/'));
+    }
+  }
+  return files.sort();
+}
+
+app.get('/api/docs/list', async (req, res) => {
+  try {
+    const docs = [];
+    // List docs under /docs
+    try {
+      const inDocs = await listMarkdownFiles(DOCS_DIR);
+      for (const p of inDocs) {
+        docs.push({
+          path: `docs/${p}`,
+          name: p.split('/').pop()
+        });
+      }
+    } catch {}
+    // Include selected top-level markdowns
+    const topCandidates = ['README.md', 'WEBUI-VERIFICATION.md'];
+    for (const name of topCandidates) {
+      try {
+        const full = path.join(STACK_DIR, name);
+        await fs.access(full);
+        docs.unshift({ path: name, name });
+      } catch {}
+    }
+    res.json({ docs });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/docs/content', async (req, res) => {
+  try {
+    const rel = String(req.query.path || '');
+    if (!rel || rel.includes('..')) return res.status(400).send('Invalid path');
+    let fullPath;
+    if (rel.startsWith('docs/')) {
+      fullPath = path.join(STACK_DIR, rel);
+    } else {
+      fullPath = path.join(STACK_DIR, rel);
+    }
+    const content = await fs.readFile(fullPath, 'utf8');
+    res.type('text/plain').send(content);
+  } catch (error) {
+    res.status(404).send('Not found');
+  }
+});
 
 // API Endpoints
 app.get('/api/system-info', async (req, res) => {

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation Viewer</title>
+  <style>
+    :root { --accent: #667eea; --bg: #f7f8fb; }
+    body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto, sans-serif; background: var(--bg); color: #222; }
+    header { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 18px; margin: 0; }
+    .bar { display: flex; gap: 8px; align-items: center; }
+    .btn { background: #fff; color: #333; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+    .btn:hover { background: #f0f2ff; }
+    .select { padding: 8px; border-radius: 6px; border: 1px solid #dcdfe6; }
+    main { display: grid; grid-template-columns: 280px 1fr; gap: 16px; padding: 16px; }
+    .sidebar { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); padding: 12px; height: calc(100vh - 84px); overflow: auto; }
+    .content { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); padding: 24px; height: calc(100vh - 84px); overflow: auto; }
+    .doc-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+    .doc-item:hover { background: #f5f6ff; }
+    .doc-item.active { background: #eef0ff; color: #2c3e50; font-weight: 600; }
+    .doc-title { font-size: 14px; margin: 0; }
+    /* GitHub-like markdown styles (very light subset) */
+    .markdown h1 { font-size: 1.8rem; border-bottom: 1px solid #eee; padding-bottom: .3rem; }
+    .markdown h2 { font-size: 1.4rem; border-bottom: 1px solid #eee; padding-bottom: .2rem; }
+    .markdown h3 { font-size: 1.2rem; }
+    .markdown p { line-height: 1.6; }
+    .markdown pre { background: #0b1021; color: #e6e6e6; padding: 12px; border-radius: 6px; overflow: auto; }
+    .markdown code { background: #f2f4f8; padding: 2px 4px; border-radius: 4px; }
+    .markdown ul { padding-left: 1.2rem; }
+    .markdown img { max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .muted { color: #6b7280; font-size: 12px; }
+    @media print {
+      header, .sidebar { display: none; }
+      main { display: block; padding: 0; }
+      .content { box-shadow: none; height: auto; }
+      .markdown h1, .markdown h2, .markdown h3 { page-break-after: avoid; }
+      .markdown pre, .markdown img { page-break-inside: avoid; }
+    }
+  </style>
+  <script defer src="docs.js"></script>
+  <link rel="icon" href="data:," />
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Docs viewer and printer">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store" />
+</head>
+<body>
+  <header>
+    <h1>📚 Documentation Viewer</h1>
+    <div class="bar">
+      <select id="docSelect" class="select"></select>
+      <button class="btn" onclick="printDoc()">🖨️ Print</button>
+      <a class="btn" href="/">⬅ Back</a>
+    </div>
+  </header>
+  <main>
+    <aside class="sidebar">
+      <div id="docList"></div>
+      <div class="muted" style="margin-top:12px">Images served from /docs/images/</div>
+    </aside>
+    <section class="content">
+      <article id="doc" class="markdown"></article>
+    </section>
+  </main>
+</body>
+</html>
+

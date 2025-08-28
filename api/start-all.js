@@ -48,10 +48,10 @@ class APIServiceManager {
     async start() {
         console.log('🎬 Starting Media Server API Services...\n');
 
-        // Start Enhanced API Server (main API)
+        // Start Main API Server
         this.startService(
-            'Enhanced API Server',
-            path.join(this.baseDir, 'enhanced-server.js'),
+            'Main API Server',
+            path.join(this.baseDir, 'server.js'),
             3004
         );
 
