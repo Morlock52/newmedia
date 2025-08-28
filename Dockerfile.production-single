@@ -1,0 +1,206 @@
+# Production-Ready Single Container Media Server
+# Based on Agent Consensus Architecture
+# Version: 2025.08.09
+
+FROM ubuntu:22.04 AS base
+
+# Metadata
+LABEL maintainer="Media Server AI Team"
+LABEL version="2025.08.09-consensus"
+LABEL description="Production-ready media server with 30+ services and AI"
+
+# Environment setup
+ENV DEBIAN_FRONTEND=noninteractive \
+    S6_OVERLAY_VERSION=3.1.6.2 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TZ=UTC \
+    PUID=1000 \
+    PGID=1000
+
+# Install xz-utils first for extracting archives
+RUN apt-get update && apt-get install -y xz-utils && rm -rf /var/lib/apt/lists/*
+
+# Install s6-overlay (proper v3 installation)
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz && \
+    rm /tmp/*.tar.xz
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y \
+    # Core utilities
+    curl wget git vim nano htop iotop \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg lsb-release \
+    build-essential cmake pkg-config \
+    # Network and security
+    net-tools iputils-ping dnsutils netcat-openbsd \
+    openssl libssl-dev \
+    # Python and Node.js
+    python3.11 python3.11-dev python3-pip python3.11-venv \
+    nodejs npm \
+    # Media processing
+    ffmpeg mediainfo \
+    libavcodec-extra \
+    vainfo intel-media-va-driver-non-free \
+    # Database tools
+    postgresql-client redis-tools sqlite3 \
+    # Process monitoring
+    lsof strace \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install .NET Runtime for *arr services
+RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --channel 6.0 --runtime dotnet --install-dir /usr/share/dotnet && \
+    ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet && \
+    rm dotnet-install.sh
+
+# Install Node.js 20 LTS
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest pnpm yarn
+
+# Create user and directories
+RUN groupadd -g 1000 mediaserver && \
+    useradd -u 1000 -g 1000 -d /config -s /bin/bash mediaserver && \
+    mkdir -p /config /data /media /downloads /logs /app && \
+    chown -R mediaserver:mediaserver /config /data /media /downloads /logs /app
+
+# Install Traefik v3 for internal service mesh
+RUN wget -O /tmp/traefik.tar.gz https://github.com/traefik/traefik/releases/download/v3.0.0/traefik_v3.0.0_linux_amd64.tar.gz && \
+    tar -xzf /tmp/traefik.tar.gz -C /usr/local/bin && \
+    chmod +x /usr/local/bin/traefik && \
+    rm /tmp/traefik.tar.gz
+
+# Install Jellyfin (proper method)
+RUN curl https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor --yes --output /etc/apt/keyrings/jellyfin.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/debian $(lsb_release -cs) main" > /etc/apt/sources.list.d/jellyfin.sources && \
+    apt-get update && \
+    apt-get install -y jellyfin jellyfin-web jellyfin-ffmpeg6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install *arr services
+WORKDIR /opt
+
+# Sonarr
+RUN wget -O - https://github.com/Sonarr/Sonarr/releases/download/v4.0.0.748/Sonarr.main.4.0.0.748.linux-x64.tar.gz | \
+    tar xzf - && \
+    mv Sonarr sonarr
+
+# Radarr
+RUN wget -O - https://github.com/Radarr/Radarr/releases/download/v5.2.6.8376/Radarr.master.5.2.6.8376.linux-core-x64.tar.gz | \
+    tar xzf - && \
+    mv Radarr radarr
+
+# Prowlarr
+RUN wget -O - https://github.com/Prowlarr/Prowlarr/releases/download/v1.11.4.4173/Prowlarr.master.1.11.4.4173.linux-core-x64.tar.gz | \
+    tar xzf - && \
+    mv Prowlarr prowlarr
+
+# Lidarr
+RUN wget -O - https://github.com/Lidarr/Lidarr/releases/download/v2.0.7.3849/Lidarr.master.2.0.7.3849.linux-core-x64.tar.gz | \
+    tar xzf - && \
+    mv Lidarr lidarr
+
+# Bazarr
+RUN wget -O - https://github.com/morpheus65535/bazarr/releases/latest/download/bazarr.zip | \
+    python3 -m zipfile -e - /opt/bazarr
+
+# Install qBittorrent-nox
+RUN add-apt-repository ppa:qbittorrent-team/qbittorrent-stable -y && \
+    apt-get update && \
+    apt-get install -y qbittorrent-nox && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Redis for caching
+RUN apt-get update && \
+    apt-get install -y redis-server && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install PostgreSQL client libraries
+RUN apt-get update && \
+    apt-get install -y libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python packages for AI
+RUN pip3 install --no-cache-dir \
+    fastapi uvicorn \
+    langchain langchain-community \
+    ollama chromadb qdrant-client \
+    transformers torch torchvision \
+    redis psycopg2-binary \
+    pydantic python-multipart \
+    websockets aiofiles
+
+# Install Ollama for local AI
+RUN curl -fsSL https://ollama.ai/install.sh | sh
+
+# Copy application files
+WORKDIR /app
+
+# Copy Next.js dashboard (will be built in next stage)
+COPY dashboard/ /app/dashboard/
+
+# Build dashboard
+WORKDIR /app/dashboard
+RUN npm ci && npm run build
+
+# Copy AI services
+COPY ai-services/ /app/ai-services/
+
+# Copy s6-overlay service definitions
+COPY s6-services/ /etc/s6-overlay/s6-rc.d/
+
+# Copy configuration files
+COPY configs/ /defaults/
+
+# Copy scripts
+COPY scripts/ /app/scripts/
+RUN chmod +x /app/scripts/*.sh
+
+# Create s6-overlay service structure
+RUN for service in jellyfin sonarr radarr prowlarr lidarr bazarr qbittorrent redis traefik dashboard ai-assistant; do \
+        mkdir -p /etc/s6-overlay/s6-rc.d/$service && \
+        echo "longrun" > /etc/s6-overlay/s6-rc.d/$service/type; \
+    done
+
+# Create user bundle
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d && \
+    for service in jellyfin sonarr radarr prowlarr lidarr bazarr qbittorrent redis traefik dashboard ai-assistant; do \
+        touch /etc/s6-overlay/s6-rc.d/user/contents.d/$service; \
+    done
+
+# Set up volumes
+VOLUME ["/config", "/data", "/media", "/downloads", "/logs"]
+
+# Expose ports
+EXPOSE 80 443
+# Jellyfin
+EXPOSE 8096
+# *arr services
+EXPOSE 8989 7878 9696 8686 6767
+# qBittorrent
+EXPOSE 8080
+# Dashboard
+EXPOSE 3000
+# AI services
+EXPOSE 8090 8091
+# Traefik dashboard
+EXPOSE 8088
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=5 \
+    CMD /app/scripts/healthcheck.sh || exit 1
+
+# Set working directory
+WORKDIR /config
+
+# Entry point
+ENTRYPOINT ["/init"]

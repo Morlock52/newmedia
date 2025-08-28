@@ -1,0 +1,42 @@
+{
+  "title": "Node Exporter Overview (Compact)",
+  "uid": "node-exporter-compact",
+  "schemaVersion": 38,
+  "version": 1,
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "CPU %",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        { "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "CPU %" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Mem Used %",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        { "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))", "legendFormat": "Mem %" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Filesystem Usage",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "100 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\", mountpoint=~\"/|/rootfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\", mountpoint=~\"/|/rootfs\"} * 100)", "legendFormat": "{{mountpoint}}" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Network Traffic (bytes/s)",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (device) (irate(node_network_receive_bytes_total[5m]))", "legendFormat": "{{device}} rx" },
+        { "expr": "sum by (device) (irate(node_network_transmit_bytes_total[5m]))", "legendFormat": "{{device}} tx" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "name": "TorrentLeech (Private)",
+    "implementation": "TorrentLeech",
+    "configContract": "TorrentLeechSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://www.torrentleech.org" },
+      { "name": "username", "value": "YOUR_USERNAME" },
+      { "name": "password", "value": "YOUR_PASSWORD" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  },
+  {
+    "name": "BeyondHD (Private)",
+    "implementation": "BeyondHd",
+    "configContract": "BeyondHdSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://beyond-hd.me" },
+      { "name": "apikey", "value": "YOUR_API_KEY" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  }
+]

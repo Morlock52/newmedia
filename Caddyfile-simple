@@ -1,0 +1,21 @@
+:80 {
+    root * /usr/share/caddy
+    file_server
+    
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # Reverse proxy to services when they're running
+    handle /jellyfin* {
+        reverse_proxy localhost:8096
+    }
+    
+    handle /sonarr* {
+        reverse_proxy localhost:8989
+    }
+    
+    handle /radarr* {
+        reverse_proxy localhost:7878
+    }
+}

@@ -1,0 +1,229 @@
+{
+  "server": {
+    "name": "unified-media-mcp",
+    "version": "1.0.0",
+    "description": "Unified MCP Server for Media Management",
+    "author": "Media Automation System"
+  },
+  "services": {
+    "jellyfin": {
+      "port": 8096,
+      "api": "/api/v1",
+      "healthPath": "/health",
+      "priority": 1,
+      "type": "media_server",
+      "capabilities": ["streaming", "library_management", "transcoding"],
+      "docker": {
+        "container": "jellyfin",
+        "configPath": "/config",
+        "dataPath": "/media"
+      }
+    },
+    "sonarr": {
+      "port": 8989,
+      "api": "/api/v3",
+      "healthPath": "/api/v3/system/status",
+      "priority": 2,
+      "type": "arr_service",
+      "capabilities": ["tv_management", "search", "download_automation"],
+      "docker": {
+        "container": "sonarr",
+        "configPath": "/config",
+        "dataPath": "/tv"
+      }
+    },
+    "radarr": {
+      "port": 7878,
+      "api": "/api/v3",
+      "healthPath": "/api/v3/system/status",
+      "priority": 2,
+      "type": "arr_service",
+      "capabilities": ["movie_management", "search", "download_automation"],
+      "docker": {
+        "container": "radarr",
+        "configPath": "/config",
+        "dataPath": "/movies"
+      }
+    },
+    "lidarr": {
+      "port": 8686,
+      "api": "/api/v1",
+      "healthPath": "/api/v1/system/status",
+      "priority": 2,
+      "type": "arr_service",
+      "capabilities": ["music_management", "search", "download_automation"],
+      "docker": {
+        "container": "lidarr",
+        "configPath": "/config",
+        "dataPath": "/music"
+      }
+    },
+    "prowlarr": {
+      "port": 9696,
+      "api": "/api/v1",
+      "healthPath": "/api/v1/system/status",
+      "priority": 3,
+      "type": "indexer_manager",
+      "capabilities": ["indexer_management", "search_coordination"],
+      "docker": {
+        "container": "prowlarr",
+        "configPath": "/config"
+      }
+    },
+    "bazarr": {
+      "port": 6767,
+      "api": "/api",
+      "healthPath": "/api/system/status",
+      "priority": 4,
+      "type": "subtitle_manager",
+      "capabilities": ["subtitle_management", "auto_download"],
+      "docker": {
+        "container": "bazarr",
+        "configPath": "/config"
+      }
+    },
+    "qbittorrent": {
+      "port": 8080,
+      "api": "/api/v2",
+      "healthPath": "/api/v2/app/version",
+      "priority": 5,
+      "type": "download_client",
+      "capabilities": ["torrent_management", "download_control"],
+      "docker": {
+        "container": "qbittorrent",
+        "configPath": "/config",
+        "dataPath": "/downloads"
+      }
+    },
+    "transmission": {
+      "port": 9091,
+      "api": "/transmission/rpc",
+      "healthPath": "/transmission/rpc",
+      "priority": 5,
+      "type": "download_client",
+      "capabilities": ["torrent_management", "download_control"],
+      "docker": {
+        "container": "transmission",
+        "configPath": "/config",
+        "dataPath": "/downloads"
+      }
+    },
+    "sabnzbd": {
+      "port": 8085,
+      "api": "/sabnzbd/api",
+      "healthPath": "/sabnzbd/api?mode=version",
+      "priority": 5,
+      "type": "download_client",
+      "capabilities": ["usenet_downloads", "nzb_processing"],
+      "docker": {
+        "container": "sabnzbd",
+        "configPath": "/config",
+        "dataPath": "/downloads"
+      }
+    },
+    "plex": {
+      "port": 32400,
+      "api": "/api/v2",
+      "healthPath": "/identity",
+      "priority": 1,
+      "type": "media_server",
+      "capabilities": ["streaming", "library_management", "transcoding"],
+      "docker": {
+        "container": "plex",
+        "configPath": "/config",
+        "dataPath": "/media"
+      }
+    },
+    "tautulli": {
+      "port": 8181,
+      "api": "/api/v2",
+      "healthPath": "/api/v2?cmd=get_server_info",
+      "priority": 6,
+      "type": "monitoring",
+      "capabilities": ["analytics", "monitoring", "notifications"],
+      "docker": {
+        "container": "tautulli",
+        "configPath": "/config"
+      }
+    },
+    "overseerr": {
+      "port": 5055,
+      "api": "/api/v1",
+      "healthPath": "/api/v1/status",
+      "priority": 3,
+      "type": "request_manager",
+      "capabilities": ["media_requests", "user_management"],
+      "docker": {
+        "container": "overseerr",
+        "configPath": "/app/config"
+      }
+    },
+    "requestrr": {
+      "port": 4545,
+      "api": "/api/v1",
+      "healthPath": "/api/v1/health",
+      "priority": 3,
+      "type": "request_manager",
+      "capabilities": ["discord_bot", "media_requests"],
+      "docker": {
+        "container": "requestrr",
+        "configPath": "/root/config"
+      }
+    },
+    "homepage": {
+      "port": 3000,
+      "api": "/api",
+      "healthPath": "/api/ping",
+      "priority": 7,
+      "type": "dashboard",
+      "capabilities": ["dashboard", "service_links"],
+      "docker": {
+        "container": "homepage",
+        "configPath": "/app/config"
+      }
+    }
+  },
+  "monitoring": {
+    "healthCheckInterval": 30000,
+    "retryAttempts": 3,
+    "circuitBreakerThreshold": 5,
+    "timeoutMs": 10000,
+    "enableMetrics": true,
+    "metricsPort": 9090
+  },
+  "docker": {
+    "network": "media-net",
+    "composeFile": "/Users/morlock/fun/newmedia/docker-compose.yml",
+    "volumeBasePath": "/Users/morlock/fun/newmedia",
+    "enableContainerManagement": true,
+    "autoRestart": true
+  },
+  "security": {
+    "apiKeyRequired": false,
+    "allowedHosts": ["localhost", "127.0.0.1"],
+    "enableCors": true,
+    "rateLimitRpm": 100
+  },
+  "integration": {
+    "enableWebhooks": true,
+    "webhookPort": 9091,
+    "enableEventBus": true,
+    "syncInterval": 300000,
+    "autoDiscovery": true
+  },
+  "logging": {
+    "level": "info",
+    "enableFileLogging": true,
+    "logPath": "/Users/morlock/fun/newmedia/logs/unified-mcp.log",
+    "maxFileSize": "10MB",
+    "maxFiles": 5
+  },
+  "backup": {
+    "enabled": true,
+    "interval": "0 2 * * *",
+    "backupPath": "/Users/morlock/fun/newmedia/backups",
+    "retentionDays": 30,
+    "includeConfigs": true,
+    "includeDatabases": true
+  }
+}

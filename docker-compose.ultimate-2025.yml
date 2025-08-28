@@ -1,0 +1,128 @@
+version: '3.9'
+
+services:
+  ultimate-media-server:
+    image: ultimate-media-server:2025
+    container_name: ultimate-media-server
+    build:
+      context: .
+      dockerfile: Dockerfile.ultimate-2025
+      args:
+        - S6_OVERLAY_VERSION=3.1.6.2
+    restart: unless-stopped
+    
+    environment:
+      # System settings
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      
+      # S6 overlay settings
+      - S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+      - S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+      - S6_SERVICES_GRACETIME=30000
+      - S6_KILL_GRACETIME=5000
+      
+      # Service URLs for internal communication
+      - JELLYFIN_URL=http://localhost:8096
+      - SONARR_URL=http://localhost:8989
+      - RADARR_URL=http://localhost:7878
+      - LIDARR_URL=http://localhost:8686
+      - PROWLARR_URL=http://localhost:9696
+      - BAZARR_URL=http://localhost:6767
+      - QBITTORRENT_URL=http://localhost:8080
+      - SABNZBD_URL=http://localhost:8085
+      - TRANSMISSION_URL=http://localhost:9091
+      
+    ports:
+      # Caddy (main entry point with reverse proxy)
+      - "80:80"
+      - "443:443"
+      
+      # Direct service access (optional - can be removed once Caddy is configured)
+      - "8096:8096"  # Jellyfin
+      - "8989:8989"  # Sonarr
+      - "7878:7878"  # Radarr  
+      - "8686:8686"  # Lidarr
+      - "9696:9696"  # Prowlarr
+      - "6767:6767"  # Bazarr
+      - "8080:8080"  # qBittorrent
+      - "8085:8085"  # SABnzbd
+      - "9091:9091"  # Transmission
+      - "3001:3001"  # Uptime Kuma
+      - "3002:3002"  # API Server
+      
+    volumes:
+      # Configuration directories
+      - ./config:/config
+      - ./config/jellyfin:/var/lib/jellyfin
+      - ./config/sonarr:/config/sonarr
+      - ./config/radarr:/config/radarr
+      - ./config/lidarr:/config/lidarr
+      - ./config/prowlarr:/config/prowlarr
+      - ./config/bazarr:/config/bazarr
+      - ./config/qbittorrent:/config/qbittorrent
+      - ./config/sabnzbd:/config/sabnzbd
+      - ./config/transmission:/config/transmission
+      - ./config/uptime-kuma:/opt/uptime-kuma/data
+      - ./config/caddy:/data/caddy
+      
+      # Media and downloads
+      - ./media:/data/media
+      - ./downloads:/data/downloads
+      
+      # Optional: Use existing data if migrating
+      - ./jellyfin-config:/var/lib/jellyfin:ro
+      - ./sonarr-config:/config/sonarr-import:ro
+      - ./radarr-config:/config/radarr-import:ro
+      - ./lidarr-config:/config/lidarr-import:ro
+      - ./prowlarr-config:/config/prowlarr-import:ro
+      - ./bazarr-config:/config/bazarr-import:ro
+      
+    devices:
+      # Hardware transcoding (optional)
+      - /dev/dri:/dev/dri
+      
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+          
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      
+    security_opt:
+      - no-new-privileges:true
+      
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+      
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=false"
+      - "homepage.group=Media"
+      - "homepage.name=Ultimate Media Server"
+      - "homepage.icon=jellyfin.png"
+      - "homepage.href=http://localhost"
+      - "homepage.description=All-in-one media server 2025"
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Uptime Kuma service cleanup
+
+echo "$(date) [INFO] Uptime Kuma service stopped" >> /logs/uptime-kuma.log

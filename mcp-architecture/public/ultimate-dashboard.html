@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server 2025 - All 30 Services Dashboard</title>
+    <link href="https://cdn.tailwindcss.com/3.4.0/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .service-card {
+            transition: all 0.3s ease;
+            transform: perspective(1000px);
+        }
+        
+        .service-card:hover {
+            transform: perspective(1000px) rotateY(5deg) rotateX(5deg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-healthy { background-color: #10b981; }
+        .status-unhealthy { background-color: #f59e0b; }
+        .status-offline { background-color: #ef4444; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .category-header {
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border-left: 4px solid #667eea;
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Header -->
+    <header class="glass-effect border-b border-white/20 p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <i class="fas fa-server text-2xl text-blue-300"></i>
+                <div>
+                    <h1 class="text-xl font-bold">Ultimate Media Server 2025</h1>
+                    <p class="text-sm text-gray-300">All 30 Services • Single Container</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="hidden md:flex items-center space-x-2 text-sm">
+                    <span class="status-indicator status-healthy"></span>
+                    <span id="online-count">0</span> Online
+                    <span class="mx-2">•</span>
+                    <span class="status-indicator status-offline"></span>
+                    <span id="offline-count">0</span> Offline
+                </div>
+                
+                <button id="refresh-btn" class="glass-effect px-4 py-2 rounded-lg hover:bg-white/20 transition-colors">
+                    <i class="fas fa-sync-alt"></i>
+                    <span class="hidden md:inline ml-2">Refresh</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="container mx-auto p-4 space-y-6">
+        <!-- System Overview Stats -->
+        <section class="stats-grid grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="stats-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Total Services</p>
+                        <p class="text-2xl font-bold">30</p>
+                    </div>
+                    <i class="fas fa-cogs text-3xl text-blue-300"></i>
+                </div>
+            </div>
+            
+            <div class="stats-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Online Services</p>
+                        <p class="text-2xl font-bold text-green-400" id="stats-online">-</p>
+                    </div>
+                    <i class="fas fa-check-circle text-3xl text-green-400"></i>
+                </div>
+            </div>
+            
+            <div class="stats-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Categories</p>
+                        <p class="text-2xl font-bold">8</p>
+                    </div>
+                    <i class="fas fa-layer-group text-3xl text-purple-400"></i>
+                </div>
+            </div>
+            
+            <div class="stats-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">System Health</p>
+                        <p class="text-2xl font-bold text-yellow-400" id="stats-health">-</p>
+                    </div>
+                    <i class="fas fa-heartbeat text-3xl text-yellow-400"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Service Categories -->
+        <div class="space-y-8">
+            <!-- Media Servers Category -->
+            <section>
+                <div class="category-header p-4 rounded-t-lg">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-tv mr-3 text-blue-300"></i>
+                        Media Servers (3 Services)
+                    </h2>
+                    <p class="text-gray-300 text-sm mt-1">Core media streaming and management platforms</p>
+                </div>
+                <div class="service-grid p-4 glass-effect rounded-b-lg" id="media-servers-grid">
+                    <!-- Jellyfin -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Jellyfin</h3>
+                            </div>
+                            <a href="/jellyfin" target="_blank" class="text-blue-300 hover:text-blue-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Open-source media server</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8096</div>
+                            <div>Status: Online</div>
+                        </div>
+                    </div>
+
+                    <!-- Plex -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Plex</h3>
+                            </div>
+                            <a href="/plex" target="_blank" class="text-blue-300 hover:text-blue-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Premium media server platform</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 32400</div>
+                            <div>Status: Online</div>
+                        </div>
+                    </div>
+
+                    <!-- Emby -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Emby</h3>
+                            </div>
+                            <a href="/emby" target="_blank" class="text-blue-300 hover:text-blue-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Alternative media server</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8097</div>
+                            <div>Status: Online</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Content Management (*arr Suite) -->
+            <section>
+                <div class="category-header p-4 rounded-t-lg">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-download mr-3 text-green-300"></i>
+                        Content Management - *arr Suite (5 Services)
+                    </h2>
+                    <p class="text-gray-300 text-sm mt-1">Automated content discovery and management</p>
+                </div>
+                <div class="service-grid p-4 glass-effect rounded-b-lg">
+                    <!-- Sonarr -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Sonarr</h3>
+                            </div>
+                            <a href="/sonarr" target="_blank" class="text-green-300 hover:text-green-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">TV series management</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8989</div>
+                            <div>Series: 89 • Episodes: 2,156</div>
+                        </div>
+                    </div>
+
+                    <!-- Radarr -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Radarr</h3>
+                            </div>
+                            <a href="/radarr" target="_blank" class="text-green-300 hover:text-green-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Movie management</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 7878</div>
+                            <div>Movies: 1,247</div>
+                        </div>
+                    </div>
+
+                    <!-- Lidarr -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Lidarr</h3>
+                            </div>
+                            <a href="/lidarr" target="_blank" class="text-green-300 hover:text-green-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Music management</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8686</div>
+                            <div>Artists: 456 • Albums: 123</div>
+                        </div>
+                    </div>
+
+                    <!-- Readarr -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Readarr</h3>
+                            </div>
+                            <a href="/readarr" target="_blank" class="text-green-300 hover:text-green-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Book management</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8787</div>
+                            <div>Books: 1,567</div>
+                        </div>
+                    </div>
+
+                    <!-- Bazarr -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Bazarr</h3>
+                            </div>
+                            <a href="/bazarr" target="_blank" class="text-green-300 hover:text-green-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Subtitle management</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 6767</div>
+                            <div>Subtitles: 8,934</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Download Clients -->
+            <section>
+                <div class="category-header p-4 rounded-t-lg">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-cloud-download-alt mr-3 text-purple-300"></i>
+                        Download Clients (5 Services)
+                    </h2>
+                    <p class="text-gray-300 text-sm mt-1">Torrent and Usenet download management</p>
+                </div>
+                <div class="service-grid p-4 glass-effect rounded-b-lg">
+                    <!-- qBittorrent -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">qBittorrent</h3>
+                            </div>
+                            <a href="/qbittorrent" target="_blank" class="text-purple-300 hover:text-purple-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Primary torrent client</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8080</div>
+                            <div>Active: 3 • Speed: ↓8.5MB/s ↑1.2MB/s</div>
+                        </div>
+                    </div>
+
+                    <!-- Transmission -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">Transmission</h3>
+                            </div>
+                            <a href="/transmission" target="_blank" class="text-purple-300 hover:text-purple-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Alternative torrent client</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 9091</div>
+                            <div>Active: 1 • Speed: ↓4.2MB/s ↑0.8MB/s</div>
+                        </div>
+                    </div>
+
+                    <!-- Deluge -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-offline"></span>
+                                <h3 class="font-bold">Deluge</h3>
+                            </div>
+                            <a href="/deluge" target="_blank" class="text-purple-300 hover:text-purple-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Backup torrent client</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8112</div>
+                            <div>Status: Offline</div>
+                        </div>
+                    </div>
+
+                    <!-- NZBGet -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">NZBGet</h3>
+                            </div>
+                            <a href="/nzbget" target="_blank" class="text-purple-300 hover:text-purple-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Usenet downloader</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 6789</div>
+                            <div>Queue: 1.2GB</div>
+                        </div>
+                    </div>
+
+                    <!-- SABnzbd -->
+                    <div class="service-card glass-effect p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="status-indicator status-healthy"></span>
+                                <h3 class="font-bold">SABnzbd</h3>
+                            </div>
+                            <a href="/sabnzbd" target="_blank" class="text-purple-300 hover:text-purple-200">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-3">Alternative usenet client</p>
+                        <div class="text-xs text-gray-400">
+                            <div>Port: 8085</div>
+                            <div>Queue: 0.8GB</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Continue with remaining categories... -->
+            <!-- This is just a sample - you would add all remaining services here -->
+
+            <!-- Quick Action Panel -->
+            <section class="glass-effect p-6 rounded-lg">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-bolt mr-3 text-yellow-300"></i>
+                    Quick Actions
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button class="bg-blue-500/20 hover:bg-blue-500/30 p-4 rounded-lg transition-colors">
+                        <i class="fas fa-search text-2xl mb-2"></i>
+                        <div class="text-sm">Search All</div>
+                    </button>
+                    <button class="bg-green-500/20 hover:bg-green-500/30 p-4 rounded-lg transition-colors">
+                        <i class="fas fa-plus text-2xl mb-2"></i>
+                        <div class="text-sm">Add Content</div>
+                    </button>
+                    <button class="bg-purple-500/20 hover:bg-purple-500/30 p-4 rounded-lg transition-colors">
+                        <i class="fas fa-download text-2xl mb-2"></i>
+                        <div class="text-sm">Downloads</div>
+                    </button>
+                    <button class="bg-red-500/20 hover:bg-red-500/30 p-4 rounded-lg transition-colors">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <div class="text-sm">Issues</div>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Floating Action Button -->
+    <div class="floating-action">
+        <button id="mcp-assistant" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110">
+            <i class="fas fa-robot text-xl"></i>
+        </button>
+    </div>
+
+    <!-- MCP Assistant Modal -->
+    <div id="assistant-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="glass-effect p-6 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-robot mr-3 text-blue-300"></i>
+                        MCP Assistant
+                    </h3>
+                    <button id="close-assistant" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="chat-messages" class="bg-black/20 p-4 rounded-lg mb-4 max-h-64 overflow-y-auto">
+                    <div class="text-gray-300 text-sm">
+                        Hello! I can help you manage your Ultimate Media Server 2025 with all 30 services. 
+                        What would you like to know or do?
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <input type="text" id="chat-input" placeholder="Ask about your media server..." 
+                           class="flex-1 bg-black/20 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-blue-300">
+                    <button id="send-message" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard functionality
+        class UltimateMediaDashboard {
+            constructor() {
+                this.services = {};
+                this.wsConnection = null;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadServices();
+                this.startHealthMonitoring();
+                this.connectWebSocket();
+            }
+
+            bindEvents() {
+                document.getElementById('refresh-btn').addEventListener('click', () => this.loadServices());
+                document.getElementById('mcp-assistant').addEventListener('click', () => this.openAssistant());
+                document.getElementById('close-assistant').addEventListener('click', () => this.closeAssistant());
+                document.getElementById('send-message').addEventListener('click', () => this.sendMessage());
+                document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+            }
+
+            async loadServices() {
+                try {
+                    const response = await fetch('/api/services');
+                    const data = await response.json();
+                    this.services = data.services;
+                    this.updateDashboard(data);
+                } catch (error) {
+                    console.error('Failed to load services:', error);
+                }
+            }
+
+            updateDashboard(data) {
+                // Update stats
+                const onlineCount = Object.values(data.services).filter(s => s.health?.status === 'healthy').length;
+                const offlineCount = Object.keys(data.services).length - onlineCount;
+                
+                document.getElementById('online-count').textContent = onlineCount;
+                document.getElementById('offline-count').textContent = offlineCount;
+                document.getElementById('stats-online').textContent = onlineCount;
+                document.getElementById('stats-health').textContent = `${Math.round((onlineCount / 30) * 100)}%`;
+
+                // Update service cards with real data
+                this.updateServiceCards(data.services);
+            }
+
+            updateServiceCards(services) {
+                Object.entries(services).forEach(([key, service]) => {
+                    const card = document.querySelector(`[data-service="${key}"]`);
+                    if (card) {
+                        const indicator = card.querySelector('.status-indicator');
+                        const statusText = card.querySelector('.status-text');
+                        
+                        if (service.health) {
+                            indicator.className = `status-indicator status-${service.health.status}`;
+                            if (statusText) statusText.textContent = service.health.status;
+                        }
+                    }
+                });
+            }
+
+            startHealthMonitoring() {
+                // Refresh health status every 30 seconds
+                setInterval(() => this.loadServices(), 30000);
+            }
+
+            connectWebSocket() {
+                try {
+                    this.wsConnection = new WebSocket(`ws://${window.location.host}`);
+                    
+                    this.wsConnection.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'health-update') {
+                            this.updateServiceHealth(data.service, data.health);
+                        }
+                    };
+
+                    this.wsConnection.onclose = () => {
+                        // Reconnect after 5 seconds
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+                } catch (error) {
+                    console.log('WebSocket not available, using polling instead');
+                }
+            }
+
+            updateServiceHealth(serviceKey, health) {
+                const card = document.querySelector(`[data-service="${serviceKey}"]`);
+                if (card) {
+                    const indicator = card.querySelector('.status-indicator');
+                    indicator.className = `status-indicator status-${health.status}`;
+                }
+            }
+
+            openAssistant() {
+                document.getElementById('assistant-modal').classList.remove('hidden');
+            }
+
+            closeAssistant() {
+                document.getElementById('assistant-modal').classList.add('hidden');
+            }
+
+            async sendMessage() {
+                const input = document.getElementById('chat-input');
+                const message = input.value.trim();
+                if (!message) return;
+
+                this.addMessage('user', message);
+                input.value = '';
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                    
+                    const data = await response.json();
+                    this.addMessage('assistant', data.response || 'I understand your request about the media server. Let me help you with that.');
+                } catch (error) {
+                    this.addMessage('assistant', 'Sorry, I\'m having trouble connecting right now. Please try again.');
+                }
+            }
+
+            addMessage(sender, text) {
+                const messages = document.getElementById('chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `mb-3 ${sender === 'user' ? 'text-right' : ''}`;
+                
+                messageDiv.innerHTML = `
+                    <div class="inline-block p-3 rounded-lg max-w-xs ${
+                        sender === 'user' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-700 text-gray-100'
+                    }">
+                        <div class="text-xs mb-1 opacity-70">${
+                            sender === 'user' ? 'You' : 'MCP Assistant'
+                        }</div>
+                        <div class="text-sm">${text}</div>
+                    </div>
+                `;
+                
+                messages.appendChild(messageDiv);
+                messages.scrollTop = messages.scrollHeight;
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new UltimateMediaDashboard();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+# Simple UI-Only Media Server
+# This runs just the web interface for demonstration
+
+FROM nginx:alpine
+
+# Install basic tools
+RUN apk add --no-cache curl supervisor
+
+# Create directories
+RUN mkdir -p /usr/share/nginx/html /var/log/supervisor
+
+# Copy UI files
+COPY modern-landing.html /usr/share/nginx/html/index.html
+COPY dashboard-enhanced.html /usr/share/nginx/html/dashboard.html
+COPY mobile-ui.css /usr/share/nginx/html/mobile-ui.css
+
+# Create a simple API mock
+RUN mkdir -p /usr/share/nginx/html/api && \
+    echo '{"status":"ok","services":{"jellyfin":"offline","sonarr":"offline","radarr":"offline"}}' > /usr/share/nginx/html/api/status.json
+
+# Configure nginx
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 80;
+    server_name localhost;
+    
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # Mock API endpoints
+    location /api/ {
+        add_header Content-Type application/json;
+        try_files $uri =404;
+    }
+    
+    # Service redirects (for demo)
+    location /jellyfin {
+        return 200 '{"error":"Service not running in UI-only mode"}';
+        add_header Content-Type application/json;
+    }
+    
+    location /sonarr {
+        return 200 '{"error":"Service not running in UI-only mode"}';
+        add_header Content-Type application/json;
+    }
+    
+    location /radarr {
+        return 200 '{"error":"Service not running in UI-only mode"}';
+        add_header Content-Type application/json;
+    }
+}
+EOF
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,258 @@
+# Prometheus Configuration for Media Server Infrastructure
+# Comprehensive monitoring of all services and infrastructure components
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'media-server'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      scheme: http
+      timeout: 10s
+      api_version: v1
+
+# Load alerting rules
+rule_files:
+  - "alert_rules.yml"
+  - "media_server_rules.yml"
+  - "infrastructure_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # System metrics via Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Container metrics via cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Docker containers auto-discovery
+  - job_name: 'docker-containers'
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_prometheus_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_docker_container_label_prometheus_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: ${1}
+      - source_labels: [__meta_docker_container_label_prometheus_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+        replacement: ${1}
+
+  # Traefik reverse proxy metrics
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Media Server Services
+  - job_name: 'jellyfin'
+    static_configs:
+      - targets: ['jellyfin:8096']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    basic_auth:
+      username: '${JELLYFIN_METRICS_USER}'
+      password: '${JELLYFIN_METRICS_PASSWORD}'
+
+  - job_name: 'sonarr'
+    static_configs:
+      - targets: ['sonarr:8989']
+    scrape_interval: 30s
+    metrics_path: /api/v3/system/status
+    params:
+      apikey: ['${SONARR_API_KEY}']
+
+  - job_name: 'radarr'
+    static_configs:
+      - targets: ['radarr:7878']
+    scrape_interval: 30s
+    metrics_path: /api/v3/system/status
+    params:
+      apikey: ['${RADARR_API_KEY}']
+
+  - job_name: 'prowlarr'
+    static_configs:
+      - targets: ['prowlarr:9696']
+    scrape_interval: 30s
+    metrics_path: /api/v1/system/status
+    params:
+      apikey: ['${PROWLARR_API_KEY}']
+
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent:8080']
+    scrape_interval: 30s
+    metrics_path: /api/v2/app/version
+
+  # Database monitoring
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Blackbox monitoring for external endpoints
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://jellyfin:8096/health
+        - http://sonarr:8989/ping
+        - http://radarr:7878/ping
+        - http://prowlarr:9696/ping
+        - http://qbittorrent:8080
+        - http://grafana:3000/api/health
+        - http://uptime-kuma:3001
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # SSL Certificate monitoring
+  - job_name: 'blackbox-ssl'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - traefik:443
+        - authelia:9091
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # VPN monitoring
+  - job_name: 'gluetun'
+    static_configs:
+      - targets: ['gluetun:8000']
+    scrape_interval: 60s
+    metrics_path: /v1/openvpn/status
+
+  # Media processing services
+  - job_name: 'fileflows'
+    static_configs:
+      - targets: ['fileflows:5000']
+    scrape_interval: 60s
+    metrics_path: /api/metrics
+
+  - job_name: 'tdarr'
+    static_configs:
+      - targets: ['tdarr:8266']
+    scrape_interval: 60s
+    metrics_path: /api/v2/status
+
+  # Uptime monitoring service itself
+  - job_name: 'uptime-kuma'
+    static_configs:
+      - targets: ['uptime-kuma:3001']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Infrastructure health checks
+  - job_name: 'infrastructure-health'
+    static_configs:
+      - targets: ['healthcheck-infrastructure:8080']
+    scrape_interval: 60s
+    metrics_path: /metrics
+
+  # Custom webhook endpoints
+  - job_name: 'webhook-manager'
+    static_configs:
+      - targets: ['webhook-manager:9000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Backup service monitoring
+  - job_name: 'duplicati'
+    static_configs:
+      - targets: ['duplicati:8200']
+    scrape_interval: 60s
+    metrics_path: /api/v1/status
+
+# Recording rules for better performance
+recording_rules:
+  - name: media_server_aggregations
+    interval: 30s
+    rules:
+      - record: media_server:cpu_usage:rate5m
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+      
+      - record: media_server:memory_usage:percentage
+        expr: 100 - ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100)
+      
+      - record: media_server:disk_usage:percentage
+        expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100)
+      
+      - record: media_server:network_io:rate5m
+        expr: rate(node_network_receive_bytes_total[5m]) + rate(node_network_transmit_bytes_total[5m])
+
+  - name: container_aggregations
+    interval: 30s
+    rules:
+      - record: container:cpu_usage:rate5m
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100
+      
+      - record: container:memory_usage:percentage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100
+      
+      - record: container:network_io:rate5m
+        expr: rate(container_network_receive_bytes_total[5m]) + rate(container_network_transmit_bytes_total[5m])
+
+# Remote write configuration for long-term storage (optional)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint.example.com/api/v1/write"
+#     basic_auth:
+#       username: "username"
+#       password: "password"
+
+# Performance optimization settings
+storage:
+  tsdb:
+    min_block_duration: 2h
+    max_block_duration: 24h
+    retention: 15d
+    wal_compression: true

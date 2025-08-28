@@ -1,0 +1,108 @@
+{
+  "testDate": "2025-08-03T16:30:00Z",
+  "testDuration": "120s",
+  "testEnvironment": "local",
+  "endpoints": {
+    "jellyfin": {
+      "baseUrl": "http://127.0.0.1:8096",
+      "status": "HEALTHY",
+      "endpoints": {
+        "/": {"status": 302, "responseTime": "10.432ms", "result": "SUCCESS - Redirect to setup"},
+        "/web": {"status": 301, "responseTime": "11.538ms", "result": "SUCCESS - Redirect to web UI"},
+        "/system/info/public": {"status": 200, "responseTime": "8.051ms", "size": "213 bytes", "result": "SUCCESS"}
+      },
+      "loadTest": {
+        "concurrentRequests": 10,
+        "averageResponseTime": "13.106ms",
+        "minResponseTime": "10.200ms",
+        "maxResponseTime": "15.789ms",
+        "result": "EXCELLENT"
+      }
+    },
+    "sonarr": {
+      "baseUrl": "http://127.0.0.1:8989",
+      "status": "HEALTHY",
+      "apiKey": "6e6bfac6e15d4f9a9d0e0d35ec0b8e23",
+      "endpoints": {
+        "/api/v3/system/status": {"status": 200, "responseTime": "19.010ms", "result": "SUCCESS", "version": "Retrieved"}
+      }
+    },
+    "radarr": {
+      "baseUrl": "http://127.0.0.1:7878",
+      "status": "HEALTHY",
+      "apiKey": "7b74da952069425f9568ea361b001a12",
+      "endpoints": {
+        "/api/v3/system/status": {"status": 200, "responseTime": "15.149ms", "result": "SUCCESS", "version": "Retrieved"}
+      }
+    },
+    "prowlarr": {
+      "baseUrl": "http://127.0.0.1:9696",
+      "status": "HEALTHY",
+      "apiKey": "b7ef1468932940b2a4cf27ad980f1076",
+      "endpoints": {
+        "/api/v1/system/status": {"status": 200, "responseTime": "25.826ms", "result": "SUCCESS", "version": "Retrieved"}
+      }
+    },
+    "sabnzbd": {
+      "baseUrl": "http://127.0.0.1:8080",
+      "status": "HEALTHY",
+      "endpoints": {
+        "/": {"status": 200, "responseTime": "180.054ms", "size": "1805 bytes", "result": "SUCCESS"}
+      }
+    },
+    "transmission": {
+      "baseUrl": "http://127.0.0.1:9091",
+      "status": "UNAVAILABLE",
+      "endpoints": {
+        "/": {"status": 0, "result": "FAILED - Connection refused"}
+      }
+    },
+    "bazarr": {
+      "baseUrl": "http://127.0.0.1:6767",
+      "status": "UNAVAILABLE",
+      "endpoints": {
+        "/": {"status": 0, "result": "FAILED - Connection refused"}
+      }
+    },
+    "lidarr": {
+      "baseUrl": "http://127.0.0.1:8686",
+      "status": "UNAVAILABLE",
+      "endpoints": {
+        "/": {"status": 0, "result": "FAILED - Connection refused"}
+      }
+    },
+    "qbittorrent": {
+      "baseUrl": "http://127.0.0.1:8112",
+      "status": "UNAVAILABLE",
+      "endpoints": {
+        "/": {"status": 0, "result": "FAILED - Connection refused"}
+      }
+    }
+  },
+  "dashboards": {
+    "localhost": {
+      "baseUrl": "http://127.0.0.1:8000",
+      "status": "HEALTHY",
+      "endpoints": {
+        "/index.html": {"status": 200, "responseTime": "27.959ms", "size": "5634 bytes", "result": "SUCCESS"},
+        "/dashboard-enhanced.html": {"status": 200, "responseTime": "33.226ms", "size": "28331 bytes", "result": "SUCCESS"},
+        "/ULTIMATE_MEDIA_HUB_2025.html": {"status": 200, "responseTime": "17.553ms", "size": "27220 bytes", "result": "SUCCESS"}
+      }
+    }
+  },
+  "summary": {
+    "totalEndpoints": 15,
+    "healthyServices": 5,
+    "unhealthyServices": 4,
+    "successfulTests": 11,
+    "failedTests": 4,
+    "averageResponseTime": "28.7ms",
+    "recommendations": [
+      "Start missing services: Transmission, Bazarr, Lidarr, qBittorrent",
+      "Jellyfin performance is excellent (<20ms response times)",
+      "API authentication working correctly for all *arr services",
+      "Dashboard files load successfully with good performance",
+      "Consider implementing health check endpoints for better monitoring"
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "default": [
+    {
+      "key": "mcp_integration_start",
+      "value": "Initializing MCP integration for media server project",
+      "namespace": "default",
+      "timestamp": 1754217684867
+    },
+    {
+      "key": "user-preferences/research-strategy",
+      "value": "Always check internet and social media for research, frameworks, design, AI, frontends, backends, databases, examples and details. State of the art UI design expertise. Master of Docker and seedbox design. Current date context: August 9, 2025.",
+      "namespace": "default",
+      "timestamp": 1754758617076
+    },
+    {
+      "key": "user-preferences/expertise-areas",
+      "value": "Docker containerization, Seedbox architecture, Modern UI/UX design, Full-stack development, AI integration, Social media research, Framework evaluation, Database optimization",
+      "namespace": "default",
+      "timestamp": 1754758630550
+    },
+    {
+      "key": "user-preferences/current-date",
+      "value": "August 9, 2025",
+      "namespace": "default",
+      "timestamp": 1754758672573
+    }
+  ]
+}

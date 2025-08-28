@@ -1,0 +1,87 @@
+{
+  "name": "mediaserver-mcp-suite",
+  "version": "1.0.0",
+  "description": "Complete MCP server suite for media server services with AI agent voting system",
+  "main": "index.js",
+  "bin": {
+    "media-server-mcp": "./standalone-mcp.js",
+    "sonarr-mcp": "./sonarr-mcp-standalone.js", 
+    "jellyfin-mcp": "./jellyfin-mcp-standalone.js",
+    "radarr-mcp": "./radarr-mcp-standalone.js",
+    "prowlarr-mcp": "./prowlarr-mcp-standalone.js"
+  },
+  "scripts": {
+    "start": "node src/simple-index.js",
+    "start-full": "node src/index.js",
+    "dev": "nodemon src/simple-index.js",
+    "build": "npm run build:jellyfin && npm run build:sonarr && npm run build:radarr && npm run build:prowlarr && npm run build:qbittorrent",
+    "build:jellyfin": "node src/servers/jellyfin-mcp.js",
+    "build:sonarr": "node src/servers/sonarr-mcp.js",
+    "build:radarr": "node src/servers/radarr-mcp.js",
+    "build:prowlarr": "node src/servers/prowlarr-mcp.js",
+    "build:qbittorrent": "node src/servers/qbittorrent-mcp.js",
+    "test": "jest",
+    "lint": "eslint src/",
+    "docker:build": "docker build -t mediaserver-mcp .",
+    "docker:run": "docker run -d -p 3001:3001 -p 3002:3002 -p 3003:3003 -p 3004:3004 -p 3005:3005 -p 8090:8090 mediaserver-mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "jellyfin",
+    "sonarr",
+    "radarr",
+    "prowlarr",
+    "qbittorrent",
+    "ai-agents",
+    "openai",
+    "o1-mini",
+    "voting-system",
+    "media-automation"
+  ],
+  "author": "MediaServer MCP Suite",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.2.0",
+    "axios": "^1.7.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "eventsource": "^4.0.0",
+    "express": "^4.19.2",
+    "fast-json-patch": "^3.1.1",
+    "helmet": "^7.1.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "node-cron": "^3.0.3",
+    "openai": "^4.52.0",
+    "rate-limiter-flexible": "^4.0.1",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.0",
+    "ws": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "eslint": "^8.57.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.4.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mediaserver/mcp-suite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mediaserver/mcp-suite/issues"
+  },
+  "homepage": "https://github.com/mediaserver/mcp-suite#readme"
+}

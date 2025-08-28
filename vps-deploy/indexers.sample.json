@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Rarbg",
+    "app": "Prowlarr",
+    "implementation": "Rarbg",
+    "configContract": "RarbgSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://rarbg.to" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  }
+]

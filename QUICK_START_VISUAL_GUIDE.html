@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Ultimate Media Server 2025 - Quick Start Guide</title>
+    
+    <!-- Performance Optimizations -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Modern Design System */
+        :root {
+            --primary-bg: linear-gradient(135deg, #0c0c1d 0%, #1a1a2e 50%, #16213e 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent-blue: #4facfe;
+            --accent-green: #43e97b;
+            --accent-purple: #667eea;
+            --accent-pink: #f093fb;
+            --font-system: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-system);
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            background: radial-gradient(ellipse at center, rgba(120, 119, 198, 0.3) 0%, transparent 70%);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Quick Setup Section */
+        .quick-setup {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .setup-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .step h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .step p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: 'Terminal';
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: var(--accent-blue);
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Services Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .service-category {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .service-category:hover {
+            transform: translateY(-3px);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .category-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .service-list {
+            list-style: none;
+        }
+
+        .service-list li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .service-list li:last-child {
+            border-bottom: none;
+        }
+
+        .service-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Access Links */
+        .access-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .access-link {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-decoration: none;
+            text-align: center;
+            font-weight: 500;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .access-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+        }
+
+        /* Status Indicators */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .status-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--card-border);
+            margin-top: 4rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .setup-steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>🚀 Ultimate Media Server 2025</h1>
+            <p>Your complete media automation platform featuring 30+ integrated services. Get started in minutes with our one-command setup!</p>
+        </div>
+
+        <!-- Quick Setup -->
+        <div class="quick-setup">
+            <h2>⚡ Quick Setup - 3 Simple Steps</h2>
+            <div class="setup-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Clone Repository</h3>
+                    <p>Download the complete media server project to your local machine</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Run Setup Script</h3>
+                    <p>Execute our automated setup script to configure all services</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Access Dashboard</h3>
+                    <p>Open your browser and start managing your media collection</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+git clone https://github.com/yourusername/ultimate-media-server-2025
+cd ultimate-media-server-2025
+./scripts/quick-setup.sh
+            </div>
+
+            <p style="margin-top: 1rem; color: var(--text-secondary);">
+                Setup time: 2-3 minutes | Requires: Docker & 8GB RAM
+            </p>
+        </div>
+
+        <!-- Service Categories -->
+        <h2 style="text-align: center; margin: 3rem 0 2rem;">🌟 Integrated Services</h2>
+        <div class="services-grid">
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">🎬</div>
+                    <h3>Media Servers</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">Jellyfin</span> - Primary streaming platform</li>
+                    <li><span class="service-name">Plex</span> - Premium media server</li>
+                    <li><span class="service-name">Emby</span> - Alternative media server</li>
+                </ul>
+            </div>
+
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">⚙️</div>
+                    <h3>Automation (*arr)</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">Sonarr</span> - TV show management</li>
+                    <li><span class="service-name">Radarr</span> - Movie automation</li>
+                    <li><span class="service-name">Lidarr</span> - Music collection</li>
+                    <li><span class="service-name">Prowlarr</span> - Indexer management</li>
+                    <li><span class="service-name">Bazarr</span> - Subtitle automation</li>
+                </ul>
+            </div>
+
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">📥</div>
+                    <h3>Download Clients</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">qBittorrent</span> - Primary torrent client</li>
+                    <li><span class="service-name">Transmission</span> - Alternative torrent</li>
+                    <li><span class="service-name">SABnzbd</span> - Usenet downloader</li>
+                    <li><span class="service-name">NZBGet</span> - Alternative usenet</li>
+                </ul>
+            </div>
+
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">📚</div>
+                    <h3>Content Libraries</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">Audiobookshelf</span> - Audiobooks & podcasts</li>
+                    <li><span class="service-name">Calibre-Web</span> - E-book library</li>
+                    <li><span class="service-name">PhotoPrism</span> - AI photo management</li>
+                    <li><span class="service-name">Navidrome</span> - Music streaming</li>
+                    <li><span class="service-name">Komga</span> - Comics & manga</li>
+                </ul>
+            </div>
+
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">📊</div>
+                    <h3>Monitoring</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">Grafana</span> - Data visualization</li>
+                    <li><span class="service-name">Prometheus</span> - Metrics collection</li>
+                    <li><span class="service-name">Uptime Kuma</span> - Service monitoring</li>
+                    <li><span class="service-name">Netdata</span> - Real-time monitoring</li>
+                </ul>
+            </div>
+
+            <div class="service-category">
+                <div class="category-header">
+                    <div class="category-icon">🛡️</div>
+                    <h3>Security & Management</h3>
+                </div>
+                <ul class="service-list">
+                    <li><span class="service-name">Portainer</span> - Docker management</li>
+                    <li><span class="service-name">Nginx Proxy</span> - Reverse proxy</li>
+                    <li><span class="service-name">Vaultwarden</span> - Password manager</li>
+                    <li><span class="service-name">Pi-hole</span> - Network ad blocker</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Access Links -->
+        <h2 style="text-align: center; margin: 3rem 0 2rem;">🌐 Access Your Services</h2>
+        <div class="access-links">
+            <a href="http://localhost:7575" class="access-link">
+                🏠 Main Dashboard<br>
+                <small>Homarr - Central Hub</small>
+            </a>
+            <a href="http://localhost:8096" class="access-link">
+                🎬 Jellyfin Media<br>
+                <small>Stream Your Content</small>
+            </a>
+            <a href="http://localhost:3000" class="access-link">
+                📊 Grafana Monitoring<br>
+                <small>System Analytics</small>
+            </a>
+            <a href="http://localhost:9000" class="access-link">
+                ⚙️ Portainer<br>
+                <small>Docker Management</small>
+            </a>
+            <a href="http://localhost:8989" class="access-link">
+                📺 Sonarr<br>
+                <small>TV Show Management</small>
+            </a>
+            <a href="http://localhost:7878" class="access-link">
+                🎭 Radarr<br>
+                <small>Movie Management</small>
+            </a>
+        </div>
+
+        <!-- System Status -->
+        <h2 style="text-align: center; margin: 3rem 0 2rem;">📈 System Status</h2>
+        <div class="status-grid">
+            <div class="status-card">
+                <h4><span class="status-indicator"></span>Core Services</h4>
+                <p>30+ services running</p>
+            </div>
+            <div class="status-card">
+                <h4><span class="status-indicator"></span>Automation</h4>
+                <p>Full *arr stack active</p>
+            </div>
+            <div class="status-card">
+                <h4><span class="status-indicator"></span>Monitoring</h4>
+                <p>Real-time analytics</p>
+            </div>
+            <div class="status-card">
+                <h4><span class="status-indicator"></span>Security</h4>
+                <p>Network protection enabled</p>
+            </div>
+        </div>
+
+        <!-- Quick Tips -->
+        <div class="quick-setup" style="margin-top: 3rem;">
+            <h2>💡 Quick Tips</h2>
+            <div class="setup-steps">
+                <div class="step">
+                    <div class="step-number">💾</div>
+                    <h3>Storage Setup</h3>
+                    <p>Configure your media directories in the .env file for optimal organization</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">🔑</div>
+                    <h3>API Keys</h3>
+                    <p>Generate and configure API keys for service integration and automation</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">📱</div>
+                    <h3>Mobile Access</h3>
+                    <p>All dashboards are mobile-responsive for management on the go</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="quick-setup" style="margin-top: 2rem;">
+            <h2>🔧 Need Help?</h2>
+            <div class="code-block">
+# Check service status
+./scripts/health-check.sh
+
+# View service logs  
+docker-compose logs [service-name]
+
+# Restart all services
+docker-compose restart
+
+# Run integration tests
+./scripts/test-integrations.sh
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Ultimate Media Server 2025</strong> - The complete media automation platform</p>
+            <p>📚 Full documentation available in <code>ULTIMATE_DOCUMENTATION_2025.md</code></p>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate elements on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all service categories and steps
+            document.querySelectorAll('.service-category, .step').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+
+            // Add click handlers for access links
+            document.querySelectorAll('.access-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Check if service is running (basic check)
+                    const url = this.href;
+                    const serviceName = this.textContent.trim().split('\n')[0];
+                    
+                    // You could add actual service checking here
+                    console.log(`Accessing ${serviceName} at ${url}`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

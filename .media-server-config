@@ -1,0 +1,22 @@
+# Media Server Configuration
+# Generated: Fri Aug 15 06:05:43 EDT 2025
+
+# Service URLs
+JELLYFIN_URL=http://localhost:8096
+SONARR_URL=http://localhost:8989
+RADARR_URL=http://localhost:7878
+PROWLARR_URL=http://localhost:9696
+QBITTORRENT_URL=http://localhost:8080
+
+# API Keys (update after initial setup)
+SONARR_API_KEY=0cd952c4a51c46cd88a03ee1c29a9297
+RADARR_API_KEY=6b64948ab79941fbbf4e24285849f489
+PROWLARR_API_KEY=9d9e2bbdfdb54310880064a32c3bdba6
+JELLYFIN_API_KEY=PENDING_SETUP
+
+# Paths
+MEDIA_ROOT=/Users/morlock/fun/newmedia/media
+DOWNLOADS_ROOT=/Users/morlock/fun/newmedia/downloads
+
+# Docker Network
+DOCKER_NETWORK=media-net

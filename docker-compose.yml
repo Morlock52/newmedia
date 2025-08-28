@@ -1,20 +1,117 @@
-version: '3.9'
+# Docker Compose Configuration for Media Server Stack
 
 x-common-variables: &common-variables
   TZ: ${TZ:-America/New_York}
   PUID: ${PUID:-1000}
   PGID: ${PGID:-1000}
 
+# ============================================================================
+# OPTIMIZED NETWORK CONFIGURATION FOR MEDIA SERVER STACK
+# ============================================================================
+# Features:
+# - Segmented networks for security and performance
+# - Optimized MTU settings for container communication
+# - DNS aliases for service discovery
+# - Load balancing preparation
+# - Network isolation between service tiers
+# ============================================================================
+
 networks:
+  # Primary media services network - optimized for high-throughput data transfer
   media-net:
+    name: media-net
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: media-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+      com.docker.network.mtu: "1500"
+      com.docker.network.bridge.default_bridge: "false"
+      com.docker.network.enable_ipv6: "false"
     ipam:
+      driver: default
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+          ip_range: 172.30.1.0/24
+    labels:
+      - "com.media-server.network.tier=media"
+      - "com.media-server.network.purpose=media-services"
+
+  # Download services network - isolated for security
+  downloads-net:
+    name: downloads-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: downloads-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.mtu: "1500"
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
+          ip_range: 172.31.1.0/24
+    labels:
+      - "com.media-server.network.tier=downloads"
+
+  # VPN network - secure tunnel for download clients
   vpn-net:
+    name: vpn-net
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: vpn-br0
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.mtu: "1436"  # Optimized for VPN overhead
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.32.0.0/16
+          gateway: 172.32.0.1
+          ip_range: 172.32.1.0/24
+    labels:
+      - "com.media-server.network.tier=vpn"
+
+  # Monitoring network - separate for observability
   monitoring-net:
+    name: monitoring-net
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: monitoring-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.33.0.0/16
+          gateway: 172.33.0.1
+          ip_range: 172.33.1.0/24
+    labels:
+      - "com.media-server.network.tier=monitoring"
+
+  # Management network - admin and reverse proxy services
+  management-net:
+    name: management-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: mgmt-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.34.0.0/16
+          gateway: 172.34.0.1
+          ip_range: 172.34.1.0/24
+    labels:
+      - "com.media-server.network.tier=management"
 
 volumes:
   # Media volumes
@@ -79,18 +176,27 @@ services:
     container_name: jellyfin
     environment:
       <<: *common-variables
+      JELLYFIN_PublishedServerUrl: "http://0.0.0.0:8096"
     volumes:
       - jellyfin-config:/config
       - media-data:/media
       - /dev/dri:/dev/dri # Hardware acceleration
     ports:
-      - "8096:8096"
-      - "8920:8920" # HTTPS
-      - "7359:7359/udp" # Discovery
-      - "1900:1900/udp" # DLNA
+      - "0.0.0.0:8096:8096"
+      - "0.0.0.0:8920:8920" # HTTPS
+      - "0.0.0.0:7359:7359/udp" # Discovery
+      - "0.0.0.0:1900:1900/udp" # DLNA
     networks:
-      - media-net
+      media-net:
+        aliases:
+          - jellyfin-server
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     labels:
       - "homepage.group=Media"
       - "homepage.name=Jellyfin"
@@ -104,25 +210,33 @@ services:
     environment:
       <<: *common-variables
       PLEX_CLAIM: ${PLEX_CLAIM:-}
-      ADVERTISE_IP: ${ADVERTISE_IP:-}
+      ADVERTISE_IP: "http://0.0.0.0:32400"
     volumes:
       - plex-config:/config
       - media-data:/media
       - /dev/dri:/dev/dri
     ports:
-      - "32400:32400"
-      - "1900:1900/udp"
-      - "3005:3005"
-      - "5353:5353/udp"
-      - "8324:8324"
-      - "32410:32410/udp"
-      - "32412:32412/udp"
-      - "32413:32413/udp"
-      - "32414:32414/udp"
-      - "32469:32469"
+      - "0.0.0.0:32400:32400"
+      - "0.0.0.0:1901:1900/udp" # Changed to avoid conflict
+      - "0.0.0.0:3005:3005"
+      - "0.0.0.0:5353:5353/udp"
+      - "0.0.0.0:8324:8324"
+      - "0.0.0.0:32410:32410/udp"
+      - "0.0.0.0:32412:32412/udp"
+      - "0.0.0.0:32413:32413/udp"
+      - "0.0.0.0:32414:32414/udp"
+      - "0.0.0.0:32469:32469"
     networks:
-      - media-net
+      media-net:
+        aliases:
+          - plex-server
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:32400/identity"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
     labels:
       - "homepage.group=Media"
       - "homepage.name=Plex"
@@ -159,15 +273,26 @@ services:
     container_name: sonarr
     environment:
       <<: *common-variables
+      SONARR__INSTANCE_NAME: "Sonarr"
+      SONARR__BRANCH: "main"
+      SONARR__PORT: "8989"
     volumes:
       - sonarr-config:/config
       - media-data:/media
       - downloads:/downloads
     ports:
-      - "8989:8989"
+      - "0.0.0.0:8989:8989"
     networks:
-      - media-net
+      media-net:
+        aliases:
+          - sonarr-api
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
     labels:
       - "homepage.group=Media Management"
       - "homepage.name=Sonarr"
@@ -180,15 +305,26 @@ services:
     container_name: radarr
     environment:
       <<: *common-variables
+      RADARR__INSTANCE_NAME: "Radarr"
+      RADARR__BRANCH: "master"
+      RADARR__PORT: "7878"
     volumes:
       - radarr-config:/config
       - media-data:/media
       - downloads:/downloads
     ports:
-      - "7878:7878"
+      - "0.0.0.0:7878:7878"
     networks:
-      - media-net
+      media-net:
+        aliases:
+          - radarr-api
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
     labels:
       - "homepage.group=Media Management"
       - "homepage.name=Radarr"
@@ -263,13 +399,24 @@ services:
     container_name: prowlarr
     environment:
       <<: *common-variables
+      PROWLARR__INSTANCE_NAME: "Prowlarr"
+      PROWLARR__BRANCH: "master"
+      PROWLARR__PORT: "9696"
     volumes:
       - prowlarr-config:/config
     ports:
-      - "9696:9696"
+      - "0.0.0.0:9696:9696"
     networks:
-      - media-net
+      media-net:
+        aliases:
+          - prowlarr-indexer
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
     labels:
       - "homepage.group=Media Management"
       - "homepage.name=Prowlarr"
@@ -374,17 +521,30 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    network_mode: "service:gluetun"
     environment:
       <<: *common-variables
       WEBUI_PORT: 8080
+      QBT_EULA: "accept"
+      QBT_VERSION: "latest"
     volumes:
       - qbittorrent-config:/config
       - downloads:/downloads
       - torrents:/torrents
-    depends_on:
-      - gluetun
+    ports:
+      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:6881:6881"
+      - "0.0.0.0:6881:6881/udp"
+    networks:
+      media-net:
+        aliases:
+          - qbittorrent-client
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v2/app/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     labels:
       - "homepage.group=Downloads"
       - "homepage.name=qBittorrent"
@@ -545,6 +705,12 @@ services:
       - monitoring-net
       - media-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     labels:
       - "homepage.group=Monitoring"
       - "homepage.name=Uptime Kuma"
@@ -1049,7 +1215,8 @@ services:
       - NET_ADMIN
     networks:
       media-net:
-        ipv4_address: 172.20.0.253
+        aliases:
+          - pihole-dns
     restart: unless-stopped
     labels:
       - "homepage.group=Utilities"
@@ -1177,6 +1344,71 @@ services:
 
   # ==================== DASHBOARDS ====================
   
+  media-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: media-dashboard
+    environment:
+      - NODE_ENV=production
+      - API_BASE_URL=http://api-server:3002
+      - WS_URL=ws://api-server:3002
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3002
+    volumes:
+      - ./dashboard/.env.local:/app/.env.local:ro
+    ports:
+      - "3030:3000"
+    networks:
+      - media-net
+      - monitoring-net
+    depends_on:
+      - api-server
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "homepage.group=Dashboards"
+      - "homepage.name=Media Dashboard"
+      - "homepage.icon=dashboard.png"
+      - "homepage.href=http://media-dashboard:3000"
+      - "homepage.description=Ultimate Media Server Dashboard"
+
+  api-server:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-server
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3002
+      - CORS_ORIGIN=http://localhost:3030
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./api:/app
+    ports:
+      - "3002:3002"
+    networks:
+      - media-net
+      - monitoring-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "homepage.group=API"
+      - "homepage.name=Media API"
+      - "homepage.icon=api.png"
+      - "homepage.href=http://api-server:3002"
+      - "homepage.description=Media Server API Backend"
+
   homarr:
     image: ghcr.io/ajnart/homarr:latest
     container_name: homarr
@@ -1220,7 +1452,7 @@ services:
       <<: *common-variables
     volumes:
       - ./homepage-config:/app/config
-      - media-data:/media:ro
+      - ./media:/media:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "3003:3000"
@@ -1253,6 +1485,51 @@ services:
       - "homepage.href=http://dashy"
       - "homepage.description=Feature-rich Dashboard"
 
+  # ==================== ERROR RECOVERY & MONITORING ====================
+  
+  error-recovery-system:
+    build:
+      context: .
+      dockerfile: Dockerfile.error-recovery
+    container_name: error-recovery-system
+    environment:
+      - NODE_ENV=production
+      - HEALTH_CHECK_PORT=3010
+      - JELLYFIN_URL=http://jellyfin:8096
+      - SONARR_URL=http://sonarr:8989
+      - RADARR_URL=http://radarr:7878
+      - PROWLARR_URL=http://prowlarr:9696
+      - QBITTORRENT_URL=http://qbittorrent:8080
+      - PLEX_URL=http://plex:32400
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./scripts:/scripts:ro
+      - ./logs:/var/log/health-checks
+    ports:
+      - "3010:3010"
+    networks:
+      - media-net
+      - monitoring-net
+    restart: unless-stopped
+    depends_on:
+      - jellyfin
+      - sonarr
+      - radarr
+      - prowlarr
+      - qbittorrent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Error Recovery"
+      - "homepage.icon=healthchecks.png"
+      - "homepage.href=http://error-recovery-system:3010/status"
+      - "homepage.description=Automated Error Recovery"
+
   # ==================== DATABASE SERVICES ====================
   
   postgres:
@@ -1275,6 +1552,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   mariadb:
     image: mariadb:11
@@ -1315,3 +1593,4 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s

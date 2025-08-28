@@ -1,0 +1,276 @@
+{
+  "timestamp": "2025-08-18T01:27:21.139Z",
+  "project": "3e6fbcc1-60f6-434b-a45b-e811cc9bb891",
+  "totalTests": 50,
+  "passed": 48,
+  "failed": 0,
+  "successRate": "96.0%",
+  "categories": {
+    "Frontend": {
+      "passed": 8,
+      "total": 8
+    },
+    "Backend": {
+      "passed": 8,
+      "total": 8
+    },
+    "Mobile": {
+      "passed": 10,
+      "total": 10
+    },
+    "Infra": {
+      "passed": 10,
+      "total": 10
+    },
+    "Integration": {
+      "passed": 8,
+      "total": 8
+    },
+    "Features": {
+      "passed": 4,
+      "total": 4
+    }
+  },
+  "results": [
+    {
+      "category": "Frontend",
+      "name": "HolographicMediaPlayer.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "NeuralRecommendations.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "RealTimeMonitoring.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "ServiceGrid3D.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "SocialWatchParty.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "PredictiveAnalytics.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "MultiUserProfiles.tsx",
+      "passed": true
+    },
+    {
+      "category": "Frontend",
+      "name": "GPT4Discovery.tsx",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "Web3Service.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "SmartHomeService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "SecurityService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "VPNService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "MonitoringService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "TranscodingService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "AutheliaService.js",
+      "passed": true
+    },
+    {
+      "category": "Backend",
+      "name": "IndexerService.js",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "App.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "package.json",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "LoginScreen.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "DashboardScreen.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "MediaLibraryScreen.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "ARViewScreen.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "CastingScreen.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "AuthContext.tsx",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "Redux Store",
+      "passed": true
+    },
+    {
+      "category": "Mobile",
+      "name": "App Navigator",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "docker-compose.infrastructure.yml",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Prometheus config",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Grafana dashboards",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Authelia config",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Traefik config",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Loki config",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Alert rules",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Webhook hooks",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Start script",
+      "passed": true
+    },
+    {
+      "category": "Infra",
+      "name": "Infrastructure README",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "JellyfinIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "PlexIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "SonarrIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "RadarrIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "ProwlarrIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "JellyseerrIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "TautulliIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Integration",
+      "name": "NetflowIntegration.js",
+      "passed": true
+    },
+    {
+      "category": "Features",
+      "name": "Integration tests",
+      "passed": true
+    },
+    {
+      "category": "Features",
+      "name": "Example usage",
+      "passed": true
+    },
+    {
+      "category": "Features",
+      "name": "Services README",
+      "passed": true
+    },
+    {
+      "category": "Features",
+      "name": "Mobile README",
+      "passed": true
+    }
+  ]
+}

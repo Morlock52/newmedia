@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Caddy service cleanup
+
+echo "$(date) [INFO] Caddy service stopped" >> /logs/caddy.log

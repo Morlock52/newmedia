@@ -1,0 +1,83 @@
+version: '3.8'
+
+# Quick Deploy - Uses existing running services
+# This configuration leverages the already running containers
+
+services:
+  # Unified Dashboard (Quick Deploy)
+  media-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    image: media-dashboard:latest
+    container_name: media-dashboard
+    restart: unless-stopped
+    ports:
+      - "5173:5173"  # Development server
+      - "4173:4173"  # Production preview
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8090
+      # Service URLs for dashboard
+      - JELLYFIN_URL=http://localhost:8096
+      - SONARR_URL=http://localhost:8989
+      - RADARR_URL=http://localhost:7878
+      - PROWLARR_URL=http://localhost:9696
+      - QBITTORRENT_URL=http://localhost:8080
+    volumes:
+      - ./dashboard:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    command: npm run dev
+    networks:
+      - media-network
+
+  # AI Assistant Service (Lightweight)
+  ai-assistant:
+    image: python:3.11-slim
+    container_name: ai-assistant
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AI_MODE=lightweight
+      - CACHE_ENABLED=true
+    volumes:
+      - ./ai-services:/app
+      - ./ai-models:/models
+    working_dir: /app
+    command: >
+      sh -c "pip install fastapi uvicorn langchain chromadb redis &&
+             python -m uvicorn main:app --host 0.0.0.0 --port 8090"
+    networks:
+      - media-network
+
+  # Service Coordinator (Links existing services)
+  service-coordinator:
+    image: alpine:latest
+    container_name: service-coordinator
+    restart: unless-stopped
+    volumes:
+      - ./scripts:/scripts
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: >
+      sh -c "apk add --no-cache docker-cli curl jq &&
+             while true; do
+               echo 'Monitoring services...';
+               docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20;
+               sleep 60;
+             done"
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    external: true
+    name: newmedia_default
+
+# This configuration:
+# 1. Adds a unified dashboard for all existing services
+# 2. Adds lightweight AI assistance
+# 3. Monitors and coordinates existing containers
+# 4. Uses the existing network to communicate with running services

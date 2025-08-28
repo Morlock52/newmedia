@@ -1,0 +1,53 @@
+#!/bin/bash
+
+echo "🐳 Building MediaServer AI Container (Simplified)"
+echo "================================================"
+
+# Build the Docker image
+echo "📦 Building Docker image..."
+docker build -t mediaserver-ai -f Dockerfile.multi-service .
+
+if [ $? -eq 0 ]; then
+    echo "✅ Build successful!"
+    echo ""
+    echo "🚀 To run the container:"
+    echo "docker run -d \\"
+    echo "  --name mediaserver-ai \\"
+    echo "  --restart unless-stopped \\"
+    echo "  -p 80:80 \\"
+    echo "  -p 8096:8096 \\"
+    echo "  -p 8989:8989 \\"
+    echo "  -p 7878:7878 \\"
+    echo "  -p 9696:9696 \\"
+    echo "  -p 8080:8080 \\"
+    echo "  -p 8090:8090 \\"
+    echo "  -p 3001:3001 \\"
+    echo "  -p 3002:3002 \\"
+    echo "  -p 3003:3003 \\"
+    echo "  -p 3004:3004 \\"
+    echo "  -p 3005:3005 \\"
+    echo "  -v \$(pwd)/config:/config \\"
+    echo "  -v \$(pwd)/media:/data/media \\"
+    echo "  -v \$(pwd)/downloads:/data/downloads \\"
+    echo "  -e PUID=\$(id -u) \\"
+    echo "  -e PGID=\$(id -g) \\"
+    echo "  -e TZ=America/New_York \\"
+    echo "  -e OPENAI_API_KEY=\"your-openai-key-here\" \\"
+    echo "  mediaserver-ai"
+    echo ""
+    echo "📡 Access points:"
+    echo "  • Main Dashboard: http://localhost"
+    echo "  • AI Assistant: http://localhost:8090"
+    echo "  • Jellyfin: http://localhost:8096"
+    echo "  • MCP Servers: http://localhost:3001-3005"
+    echo ""
+    echo "🧪 Test the build:"
+    echo "  cd mcp-architecture && node test-mcp-servers.js"
+else
+    echo "❌ Build failed!"
+    echo ""
+    echo "🔧 Troubleshooting:"
+    echo "1. Check Docker is running: docker version"
+    echo "2. Clean build cache: docker system prune -f"
+    echo "3. Try alternative build: ./simple-build.sh"
+fi

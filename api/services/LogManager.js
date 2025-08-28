@@ -1,673 +1,416 @@
 /**
  * Log Manager Service
- * Comprehensive logging system with aggregation, streaming, and analysis
+ * Comprehensive logging system with multiple transports and filtering
  */
 
 const fs = require('fs').promises;
 const path = require('path');
 const { createWriteStream } = require('fs');
-const { exec } = require('child_process');
-const { promisify } = require('util');
-
-const execAsync = promisify(exec);
 
 class LogManager {
     constructor() {
-        this.logsPath = path.join(__dirname, '../../logs');
-        this.logFiles = {
-            api: path.join(this.logsPath, 'api.log'),
-            error: path.join(this.logsPath, 'error.log'),
-            access: path.join(this.logsPath, 'access.log'),
-            docker: path.join(this.logsPath, 'docker.log'),
-            system: path.join(this.logsPath, 'system.log')
-        };
-        
-        this.logStreams = {};
-        this.subscribers = new Map();
-        this.logBuffer = [];
-        this.maxBufferSize = 1000;
-        
-        // Log levels
-        this.levels = {
+        this.logs = [];
+        this.maxLogs = process.env.MAX_LOGS || 10000;
+        this.logLevels = {
             error: 0,
             warn: 1,
             info: 2,
-            debug: 3,
-            trace: 4
+            debug: 3
         };
-        
-        this.currentLevel = this.levels[process.env.LOG_LEVEL || 'info'];
-        
-        // Log rotation settings
-        this.rotationSettings = {
-            maxSize: 10 * 1024 * 1024, // 10MB
-            maxFiles: 5,
-            interval: '1d' // daily
-        };
-
-        // Service log paths (Docker container logs)
-        this.serviceLogPaths = {
-            jellyfin: '/var/log/jellyfin',
-            sonarr: './config/sonarr/logs',
-            radarr: './config/radarr/logs',
-            lidarr: './config/lidarr/logs',
-            prowlarr: './config/prowlarr/logs',
-            bazarr: './config/bazarr/log',
-            qbittorrent: './config/qbittorrent/logs',
-            overseerr: './config/overseerr/logs',
-            tautulli: './config/tautulli/logs'
-        };
+        this.currentLevel = this.logLevels[process.env.LOG_LEVEL || 'info'];
+        this.logDir = path.join(__dirname, '../../logs');
+        this.logFile = path.join(this.logDir, 'api.log');
+        this.subscribers = new Set();
+        this.fileStream = null;
+        this.initialized = false;
     }
 
     async initialize() {
         try {
-            // Ensure logs directory exists
-            await this.ensureLogsDirectory();
+            // Ensure log directory exists
+            await fs.mkdir(this.logDir, { recursive: true });
             
-            // Initialize log streams
-            await this.initializeLogStreams();
+            // Create file stream for persistent logging
+            this.fileStream = createWriteStream(this.logFile, { flags: 'a' });
             
-            // Set up log rotation
-            this.setupLogRotation();
-            
-            console.log('LogManager initialized successfully');
+            this.initialized = true;
+            this.info('LogManager initialized successfully');
         } catch (error) {
             console.error('Failed to initialize LogManager:', error);
             throw error;
         }
     }
 
-    async ensureLogsDirectory() {
-        try {
-            await fs.access(this.logsPath);
-        } catch (error) {
-            await fs.mkdir(this.logsPath, { recursive: true });
-            console.log('Created logs directory');
-        }
+    // Core logging methods
+    error(message, metadata = {}) {
+        this.log('error', message, metadata);
     }
 
-    async initializeLogStreams() {
-        for (const [type, logFile] of Object.entries(this.logFiles)) {
-            this.logStreams[type] = createWriteStream(logFile, { flags: 'a' });
-            
-            this.logStreams[type].on('error', (error) => {
-                console.error(`Log stream error for ${type}:`, error);
-            });
-        }
+    warn(message, metadata = {}) {
+        this.log('warn', message, metadata);
     }
 
-    setupLogRotation() {
-        // Set up daily log rotation
-        setInterval(async () => {
-            await this.rotateLogs();
-        }, 24 * 60 * 60 * 1000); // Daily
+    info(message, metadata = {}) {
+        this.log('info', message, metadata);
     }
 
-    async rotateLogs() {
-        try {
-            for (const [type, logFile] of Object.entries(this.logFiles)) {
-                const stats = await fs.stat(logFile);
-                
-                if (stats.size > this.rotationSettings.maxSize) {
-                    await this.rotateLogFile(type, logFile);
-                }
-            }
-        } catch (error) {
-            console.error('Log rotation error:', error);
-        }
+    debug(message, metadata = {}) {
+        this.log('debug', message, metadata);
     }
 
-    async rotateLogFile(type, logFile) {
-        try {
-            // Close current stream
-            this.logStreams[type].end();
-            
-            // Move current log to rotated name
-            const timestamp = new Date().toISOString().split('T')[0];
-            const rotatedFile = `${logFile}.${timestamp}`;
-            await fs.rename(logFile, rotatedFile);
-            
-            // Create new stream
-            this.logStreams[type] = createWriteStream(logFile, { flags: 'a' });
-            
-            // Clean up old log files
-            await this.cleanupOldLogs(path.dirname(logFile), type);
-            
-            console.log(`Rotated log file: ${type}`);
-        } catch (error) {
-            console.error(`Failed to rotate log file ${type}:`, error);
-        }
-    }
-
-    async cleanupOldLogs(logDir, type) {
-        try {
-            const files = await fs.readdir(logDir);
-            const logFiles = files
-                .filter(file => file.startsWith(`${type}.log.`))
-                .map(file => ({
-                    name: file,
-                    path: path.join(logDir, file),
-                    mtime: null
-                }));
-
-            // Get modification times
-            for (const file of logFiles) {
-                const stats = await fs.stat(file.path);
-                file.mtime = stats.mtime;
-            }
-
-            // Sort by modification time (newest first)
-            logFiles.sort((a, b) => b.mtime - a.mtime);
-
-            // Remove old files beyond maxFiles limit
-            if (logFiles.length > this.rotationSettings.maxFiles) {
-                const filesToRemove = logFiles.slice(this.rotationSettings.maxFiles);
-                
-                for (const file of filesToRemove) {
-                    await fs.unlink(file.path);
-                    console.log(`Removed old log file: ${file.name}`);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to cleanup old logs:', error);
-        }
-    }
-
-    log(level, message, meta = {}) {
-        if (this.levels[level] > this.currentLevel) {
+    log(level, message, metadata = {}) {
+        // Check if log level is enabled
+        if (this.logLevels[level] > this.currentLevel) {
             return;
         }
 
         const logEntry = {
+            id: this.generateLogId(),
             timestamp: new Date().toISOString(),
-            level: level.toUpperCase(),
+            level,
             message,
-            meta,
-            pid: process.pid
+            metadata,
+            service: metadata.service || 'api',
+            ip: metadata.ip || null,
+            userId: metadata.userId || null,
+            sessionId: metadata.sessionId || null,
+            userAgent: metadata.userAgent || null
         };
 
-        // Add to buffer
-        this.logBuffer.push(logEntry);
-        if (this.logBuffer.length > this.maxBufferSize) {
-            this.logBuffer.shift();
+        // Add to in-memory store
+        this.logs.unshift(logEntry);
+        
+        // Trim logs if exceeded max
+        if (this.logs.length > this.maxLogs) {
+            this.logs = this.logs.slice(0, this.maxLogs);
         }
 
-        // Format log entry
-        const formattedEntry = this.formatLogEntry(logEntry);
+        // Console output with colors
+        this.outputToConsole(logEntry);
 
-        // Write to appropriate streams
-        if (level === 'error') {
-            this.writeToStream('error', formattedEntry);
+        // File output
+        if (this.fileStream && this.initialized) {
+            this.outputToFile(logEntry);
+        }
+
+        // Notify subscribers
+        this.notifySubscribers(logEntry);
+    }
+
+    outputToConsole(logEntry) {
+        const colors = {
+            error: '\x1b[31m', // Red
+            warn: '\x1b[33m',  // Yellow
+            info: '\x1b[36m',  // Cyan
+            debug: '\x1b[90m'  // Gray
+        };
+        
+        const reset = '\x1b[0m';
+        const color = colors[logEntry.level] || '';
+        
+        const timestamp = new Date(logEntry.timestamp).toLocaleString();
+        const service = logEntry.service ? `[${logEntry.service}]` : '';
+        
+        console.log(
+            `${color}[${timestamp}] [${logEntry.level.toUpperCase()}]${service} ${logEntry.message}${reset}`
+        );
+        
+        // Log metadata if present and debug level
+        if (Object.keys(logEntry.metadata).length > 0 && this.currentLevel >= this.logLevels.debug) {
+            console.log(`${color}Metadata:${reset}`, JSON.stringify(logEntry.metadata, null, 2));
+        }
+    }
+
+    outputToFile(logEntry) {
+        const logLine = JSON.stringify(logEntry) + '\n';
+        this.fileStream.write(logLine);
+    }
+
+    // Retrieve logs with filtering
+    getLogs(options = {}) {
+        let filteredLogs = [...this.logs];
+        
+        // Filter by level
+        if (options.level) {
+            filteredLogs = filteredLogs.filter(log => log.level === options.level);
         }
         
-        this.writeToStream('api', formattedEntry);
-
-        // Broadcast to subscribers
-        this.broadcastToSubscribers('log-entry', logEntry);
-
-        // Console output in development
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(formattedEntry);
+        // Filter by service
+        if (options.service) {
+            filteredLogs = filteredLogs.filter(log => log.service === options.service);
         }
-    }
-
-    formatLogEntry(entry) {
-        const metaStr = Object.keys(entry.meta).length > 0 ? JSON.stringify(entry.meta) : '';
-        return `${entry.timestamp} [${entry.level}] ${entry.message} ${metaStr}\n`;
-    }
-
-    writeToStream(streamType, content) {
-        if (this.logStreams[streamType]) {
-            this.logStreams[streamType].write(content);
-        }
-    }
-
-    // Convenience methods
-    error(message, meta = {}) {
-        this.log('error', message, meta);
-    }
-
-    warn(message, meta = {}) {
-        this.log('warn', message, meta);
-    }
-
-    info(message, meta = {}) {
-        this.log('info', message, meta);
-    }
-
-    debug(message, meta = {}) {
-        this.log('debug', message, meta);
-    }
-
-    trace(message, meta = {}) {
-        this.log('trace', message, meta);
-    }
-
-    async getLogs(options = {}) {
-        try {
-            const {
-                level = null,
-                service = null,
-                limit = 100,
-                since = null,
-                until = null,
-                search = null
-            } = options;
-
-            let logs = [];
-
-            if (service && this.serviceLogPaths[service]) {
-                // Get service-specific logs
-                logs = await this.getServiceLogs(service, options);
-            } else {
-                // Get API logs
-                logs = await this.getAPILogs(options);
-            }
-
-            // Apply filters
-            if (level) {
-                logs = logs.filter(log => log.level === level.toUpperCase());
-            }
-
-            if (since) {
-                const sinceDate = new Date(since);
-                logs = logs.filter(log => new Date(log.timestamp) >= sinceDate);
-            }
-
-            if (until) {
-                const untilDate = new Date(until);
-                logs = logs.filter(log => new Date(log.timestamp) <= untilDate);
-            }
-
-            if (search) {
-                const searchLower = search.toLowerCase();
-                logs = logs.filter(log => 
-                    log.message.toLowerCase().includes(searchLower) ||
-                    JSON.stringify(log.meta).toLowerCase().includes(searchLower)
-                );
-            }
-
-            // Apply limit
-            logs = logs.slice(-limit);
-
-            return logs;
-        } catch (error) {
-            throw new Error('Failed to get logs: ' + error.message);
-        }
-    }
-
-    async getAPILogs(options = {}) {
-        const { limit = 100 } = options;
         
-        // First, return from buffer for recent logs
-        let logs = [...this.logBuffer];
-
-        // If we need more logs, read from file
-        if (logs.length < limit) {
-            try {
-                const fileContent = await fs.readFile(this.logFiles.api, 'utf8');
-                const fileLines = fileContent.trim().split('\n').filter(line => line);
-                
-                const fileLogs = fileLines.map(line => this.parseLogLine(line)).filter(Boolean);
-                
-                // Merge and deduplicate
-                const allLogs = [...fileLogs, ...logs];
-                const uniqueLogs = this.deduplicateLogs(allLogs);
-                
-                logs = uniqueLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            } catch (error) {
-                console.error('Failed to read log file:', error);
-            }
+        // Filter by date range
+        if (options.since) {
+            const sinceDate = new Date(options.since);
+            filteredLogs = filteredLogs.filter(log => new Date(log.timestamp) >= sinceDate);
         }
-
-        return logs.slice(-limit);
+        
+        if (options.until) {
+            const untilDate = new Date(options.until);
+            filteredLogs = filteredLogs.filter(log => new Date(log.timestamp) <= untilDate);
+        }
+        
+        // Filter by search term
+        if (options.search) {
+            const searchTerm = options.search.toLowerCase();
+            filteredLogs = filteredLogs.filter(log => 
+                log.message.toLowerCase().includes(searchTerm) ||
+                JSON.stringify(log.metadata).toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        // Limit results
+        const limit = options.limit || 100;
+        if (filteredLogs.length > limit) {
+            filteredLogs = filteredLogs.slice(0, limit);
+        }
+        
+        return filteredLogs;
     }
 
-    async getServiceLogs(service, options = {}) {
-        try {
-            const { limit = 100, lines = 100 } = options;
+    // Get log statistics
+    getLogStats(hours = 24) {
+        const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+        const recentLogs = this.logs.filter(log => new Date(log.timestamp) >= since);
+        
+        const stats = {
+            total: recentLogs.length,
+            levels: {
+                error: 0,
+                warn: 0,
+                info: 0,
+                debug: 0
+            },
+            services: {},
+            period: `${hours} hours`,
+            timestamp: new Date().toISOString()
+        };
+        
+        recentLogs.forEach(log => {
+            // Count by level
+            stats.levels[log.level] = (stats.levels[log.level] || 0) + 1;
             
-            // Try to get Docker container logs first
-            try {
-                const { stdout } = await execAsync(`docker logs ${service} --tail ${lines} 2>&1`);
-                const logs = stdout.split('\n')
-                    .filter(line => line.trim())
-                    .map(line => this.parseDockerLogLine(service, line))
-                    .filter(Boolean);
-                
-                return logs.slice(-limit);
-            } catch (dockerError) {
-                console.log(`Docker logs not available for ${service}, trying file logs`);
-            }
-
-            // Fallback to service log files
-            const servicePath = this.serviceLogPaths[service];
-            if (servicePath) {
-                const logs = await this.readServiceLogFiles(service, servicePath, options);
-                return logs.slice(-limit);
-            }
-
-            return [];
-        } catch (error) {
-            throw new Error(`Failed to get logs for service ${service}: ` + error.message);
-        }
+            // Count by service
+            stats.services[log.service] = (stats.services[log.service] || 0) + 1;
+        });
+        
+        return stats;
     }
 
-    async readServiceLogFiles(service, logPath, options = {}) {
-        try {
-            const { limit = 100 } = options;
-            const logs = [];
+    // Get recent errors
+    getRecentErrors(limit = 10) {
+        return this.logs
+            .filter(log => log.level === 'error')
+            .slice(0, limit);
+    }
 
-            // Check if path exists
+    // Real-time log streaming
+    subscribeClient(client, options = {}) {
+        const subscription = {
+            client,
+            options,
+            id: this.generateLogId()
+        };
+        
+        this.subscribers.add(subscription);
+        
+        // Clean up on disconnect
+        client.on('close', () => {
+            this.subscribers.delete(subscription);
+        });
+        
+        // Send recent logs immediately
+        const recentLogs = this.getLogs({ ...options, limit: 50 });
+        client.send(JSON.stringify({
+            type: 'log-history',
+            data: recentLogs,
+            subscriptionId: subscription.id
+        }));
+        
+        return subscription.id;
+    }
+
+    notifySubscribers(logEntry) {
+        for (const subscription of this.subscribers) {
             try {
-                await fs.access(logPath);
-            } catch (error) {
-                return []; // Path doesn't exist
-            }
-
-            // Read directory or file
-            const stats = await fs.stat(logPath);
-            
-            if (stats.isDirectory()) {
-                // Read all log files in directory
-                const files = await fs.readdir(logPath);
-                const logFiles = files.filter(file => 
-                    file.endsWith('.log') || file.endsWith('.txt')
-                ).sort();
-
-                for (const file of logFiles.slice(-3)) { // Read last 3 files
-                    const filePath = path.join(logPath, file);
-                    const content = await fs.readFile(filePath, 'utf8');
-                    const fileLines = content.trim().split('\n').filter(line => line);
-                    
-                    fileLines.forEach(line => {
-                        const logEntry = this.parseServiceLogLine(service, line);
-                        if (logEntry) logs.push(logEntry);
-                    });
+                const { client, options } = subscription;
+                
+                // Check if client is still connected
+                if (client.readyState !== client.OPEN) {
+                    this.subscribers.delete(subscription);
+                    continue;
                 }
-            } else {
-                // Single file
-                const content = await fs.readFile(logPath, 'utf8');
-                const lines = content.trim().split('\n').filter(line => line);
                 
-                lines.forEach(line => {
-                    const logEntry = this.parseServiceLogLine(service, line);
-                    if (logEntry) logs.push(logEntry);
-                });
-            }
-
-            return logs.slice(-limit);
-        } catch (error) {
-            console.error(`Failed to read service logs for ${service}:`, error);
-            return [];
-        }
-    }
-
-    parseLogLine(line) {
-        try {
-            // Expected format: timestamp [LEVEL] message meta
-            const match = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[(\w+)\] (.+?)( \{.*\})?$/);
-            
-            if (match) {
-                const [, timestamp, level, message, metaStr] = match;
-                let meta = {};
+                // Apply filters
+                let shouldSend = true;
                 
-                if (metaStr) {
-                    try {
-                        meta = JSON.parse(metaStr.trim());
-                    } catch (e) {
-                        meta = { raw: metaStr.trim() };
+                if (options.level && logEntry.level !== options.level) {
+                    shouldSend = false;
+                }
+                
+                if (options.service && logEntry.service !== options.service) {
+                    shouldSend = false;
+                }
+                
+                if (options.minLevel) {
+                    const minLevel = this.logLevels[options.minLevel];
+                    const entryLevel = this.logLevels[logEntry.level];
+                    if (entryLevel > minLevel) {
+                        shouldSend = false;
                     }
                 }
-
-                return {
-                    timestamp,
-                    level,
-                    message,
-                    meta,
-                    service: 'api'
-                };
-            }
-        } catch (error) {
-            console.error('Failed to parse log line:', error);
-        }
-        
-        return null;
-    }
-
-    parseDockerLogLine(service, line) {
-        try {
-            // Docker log format includes timestamp prefix
-            const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(.+)$/);
-            
-            let timestamp = new Date().toISOString();
-            let message = line;
-            
-            if (timestampMatch) {
-                timestamp = timestampMatch[1];
-                message = timestampMatch[2];
-            }
-
-            // Try to extract log level from message
-            let level = 'INFO';
-            const levelMatch = message.match(/\b(ERROR|WARN|INFO|DEBUG|TRACE)\b/i);
-            if (levelMatch) {
-                level = levelMatch[1].toUpperCase();
-            }
-
-            return {
-                timestamp,
-                level,
-                message: message.trim(),
-                meta: {},
-                service
-            };
-        } catch (error) {
-            return {
-                timestamp: new Date().toISOString(),
-                level: 'INFO',
-                message: line,
-                meta: {},
-                service
-            };
-        }
-    }
-
-    parseServiceLogLine(service, line) {
-        try {
-            // Generic service log parsing
-            // This would be customized for each service's log format
-            
-            return {
-                timestamp: new Date().toISOString(),
-                level: 'INFO',
-                message: line.trim(),
-                meta: {},
-                service
-            };
-        } catch (error) {
-            return null;
-        }
-    }
-
-    deduplicateLogs(logs) {
-        const seen = new Set();
-        return logs.filter(log => {
-            const key = `${log.timestamp}-${log.message}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-    }
-
-    subscribeClient(ws, options = {}) {
-        const clientId = Math.random().toString(36).substr(2, 9);
-        
-        this.subscribers.set(clientId, {
-            ws,
-            options,
-            lastSent: Date.now()
-        });
-
-        ws.on('close', () => {
-            this.subscribers.delete(clientId);
-        });
-
-        // Send recent logs immediately
-        this.sendRecentLogsToClient(ws, options);
-
-        return clientId;
-    }
-
-    async sendRecentLogsToClient(ws, options = {}) {
-        try {
-            const logs = await this.getLogs({ ...options, limit: 50 });
-            
-            ws.send(JSON.stringify({
-                type: 'log-history',
-                data: logs,
-                timestamp: new Date().toISOString()
-            }));
-        } catch (error) {
-            console.error('Failed to send recent logs to client:', error);
-        }
-    }
-
-    broadcastToSubscribers(type, data) {
-        const message = JSON.stringify({
-            type,
-            data,
-            timestamp: new Date().toISOString()
-        });
-
-        this.subscribers.forEach((subscriber, clientId) => {
-            if (subscriber.ws.readyState === subscriber.ws.OPEN) {
-                // Apply client-specific filters
-                if (this.shouldSendToClient(data, subscriber.options)) {
-                    subscriber.ws.send(message);
-                    subscriber.lastSent = Date.now();
-                }
-            } else {
-                this.subscribers.delete(clientId);
-            }
-        });
-    }
-
-    shouldSendToClient(logData, options) {
-        // Apply filters based on client subscription options
-        if (options.level && logData.level !== options.level.toUpperCase()) {
-            return false;
-        }
-
-        if (options.service && logData.service !== options.service) {
-            return false;
-        }
-
-        if (options.search) {
-            const searchLower = options.search.toLowerCase();
-            if (!logData.message.toLowerCase().includes(searchLower)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    async getLogStatistics() {
-        try {
-            const stats = {
-                totalEntries: this.logBuffer.length,
-                levelDistribution: {},
-                serviceDistribution: {},
-                recentErrors: [],
-                logFiles: {}
-            };
-
-            // Analyze buffer
-            for (const entry of this.logBuffer) {
-                stats.levelDistribution[entry.level] = (stats.levelDistribution[entry.level] || 0) + 1;
-                stats.serviceDistribution[entry.service || 'api'] = (stats.serviceDistribution[entry.service || 'api'] || 0) + 1;
                 
-                if (entry.level === 'ERROR') {
-                    stats.recentErrors.push({
-                        timestamp: entry.timestamp,
-                        message: entry.message,
-                        meta: entry.meta
-                    });
+                if (shouldSend) {
+                    client.send(JSON.stringify({
+                        type: 'log-entry',
+                        data: logEntry,
+                        subscriptionId: subscription.id
+                    }));
                 }
+            } catch (error) {
+                console.error('Failed to notify log subscriber:', error);
+                this.subscribers.delete(subscription);
             }
-
-            // Get log file sizes
-            for (const [type, logFile] of Object.entries(this.logFiles)) {
-                try {
-                    const stat = await fs.stat(logFile);
-                    stats.logFiles[type] = {
-                        size: stat.size,
-                        modified: stat.mtime,
-                        sizeFormatted: this.formatBytes(stat.size)
-                    };
-                } catch (error) {
-                    stats.logFiles[type] = { error: error.message };
-                }
-            }
-
-            stats.recentErrors = stats.recentErrors.slice(-10); // Last 10 errors
-
-            return stats;
-        } catch (error) {
-            throw new Error('Failed to get log statistics: ' + error.message);
         }
     }
 
-    formatBytes(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    async exportLogs(options = {}) {
+    // Log rotation and cleanup
+    async rotateLogs() {
         try {
-            const {
-                format = 'json',
-                service = null,
-                level = null,
-                since = null,
-                until = null
-            } = options;
-
-            const logs = await this.getLogs(options);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const archiveFile = path.join(this.logDir, `api-${timestamp}.log`);
             
-            let exported = '';
-            
-            if (format === 'json') {
-                exported = JSON.stringify(logs, null, 2);
-            } else if (format === 'csv') {
-                const headers = 'timestamp,level,service,message,meta\n';
-                const rows = logs.map(log => 
-                    `"${log.timestamp}","${log.level}","${log.service || 'api'}","${log.message.replace(/"/g, '""')}","${JSON.stringify(log.meta).replace(/"/g, '""')}"`
-                ).join('\n');
-                exported = headers + rows;
-            } else if (format === 'txt') {
-                exported = logs.map(log => 
-                    `${log.timestamp} [${log.level}] ${log.service ? `[${log.service}] ` : ''}${log.message}`
-                ).join('\n');
+            // Close current stream
+            if (this.fileStream) {
+                this.fileStream.end();
             }
-
-            return {
-                format,
-                count: logs.length,
-                data: exported,
-                timestamp: new Date().toISOString()
-            };
+            
+            // Move current log to archive
+            await fs.rename(this.logFile, archiveFile);
+            
+            // Create new stream
+            this.fileStream = createWriteStream(this.logFile, { flags: 'a' });
+            
+            this.info('Log rotation completed', { archiveFile });
+            
+            // Clean up old archives (keep last 10)
+            await this.cleanupOldLogs();
+            
         } catch (error) {
-            throw new Error('Failed to export logs: ' + error.message);
+            this.error('Log rotation failed', { error: error.message });
         }
+    }
+
+    async cleanupOldLogs() {
+        try {
+            const files = await fs.readdir(this.logDir);
+            const logFiles = files
+                .filter(file => file.startsWith('api-') && file.endsWith('.log'))
+                .sort()
+                .reverse(); // Newest first
+            
+            // Keep only the 10 most recent archived logs
+            const filesToDelete = logFiles.slice(10);
+            
+            for (const file of filesToDelete) {
+                await fs.unlink(path.join(this.logDir, file));
+                this.debug('Deleted old log file', { file });
+            }
+            
+        } catch (error) {
+            this.error('Failed to cleanup old logs', { error: error.message });
+        }
+    }
+
+    // Performance logging
+    startTimer(label) {
+        const startTime = Date.now();
+        return {
+            end: (metadata = {}) => {
+                const duration = Date.now() - startTime;
+                this.info(`Timer: ${label}`, {
+                    duration: `${duration}ms`,
+                    ...metadata
+                });
+                return duration;
+            }
+        };
+    }
+
+    // HTTP request logging
+    logRequest(req, res, responseTime) {
+        const logData = {
+            method: req.method,
+            url: req.url,
+            status: res.statusCode,
+            responseTime: `${responseTime}ms`,
+            ip: req.ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            contentLength: res.get('Content-Length')
+        };
+        
+        const level = res.statusCode >= 400 ? 'warn' : 'info';
+        this.log(level, `${req.method} ${req.url} ${res.statusCode}`, logData);
+    }
+
+    // Export logs to file
+    async exportLogs(options = {}) {
+        const logs = this.getLogs(options);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `logs-export-${timestamp}.json`;
+        const filepath = path.join(this.logDir, filename);
+        
+        await fs.writeFile(filepath, JSON.stringify(logs, null, 2));
+        
+        this.info('Logs exported', { filename, count: logs.length });
+        return { filename, filepath, count: logs.length };
+    }
+
+    // Clear logs
+    clearLogs() {
+        const count = this.logs.length;
+        this.logs = [];
+        this.info('Logs cleared', { clearedCount: count });
+        return { clearedCount: count };
+    }
+
+    // Utility methods
+    generateLogId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    setLogLevel(level) {
+        if (this.logLevels.hasOwnProperty(level)) {
+            this.currentLevel = this.logLevels[level];
+            this.info(`Log level set to ${level}`);
+        } else {
+            this.error(`Invalid log level: ${level}`);
+        }
+    }
+
+    getLogLevel() {
+        return Object.keys(this.logLevels)[this.currentLevel];
+    }
+
+    // Shutdown cleanup
+    async shutdown() {
+        this.info('LogManager shutting down...');
+        
+        if (this.fileStream) {
+            this.fileStream.end();
+        }
+        
+        // Close all subscriber connections
+        for (const subscription of this.subscribers) {
+            try {
+                subscription.client.close();
+            } catch (error) {
+                // Ignore close errors during shutdown
+            }
+        }
+        
+        this.subscribers.clear();
     }
 }
 

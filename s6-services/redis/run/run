@@ -1,0 +1,30 @@
+#!/command/with-contenv bash
+# Redis service runner
+
+set -e
+
+echo "Starting Redis..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/redis
+
+# Set proper ownership
+chown -R media:media /config/redis
+
+# Create Redis config if not exists
+if [ ! -f /config/redis/redis.conf ]; then
+    cat > /config/redis/redis.conf << 'EOF'
+bind 0.0.0.0
+port 6379
+timeout 0
+save 900 1
+save 300 10
+save 60 10000
+dbfilename dump.rdb
+dir /config/redis
+logfile /config/redis/redis.log
+EOF
+fi
+
+# Run Redis
+exec s6-setuidgid media redis-server /config/redis/redis.conf

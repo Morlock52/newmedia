@@ -1,0 +1,334 @@
+# Media Server Specific Alert Rules
+# Monitoring rules for Jellyfin, *ARR services, download clients, and media-specific functionality
+
+groups:
+  # Jellyfin Media Server Monitoring
+  - name: jellyfin_monitoring
+    rules:
+      - alert: JellyfinDown
+        expr: up{job="jellyfin"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: jellyfin
+        annotations:
+          summary: "Jellyfin media server is down"
+          description: "Jellyfin has been unreachable for more than 2 minutes"
+
+      - alert: JellyfinHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name=~".*jellyfin.*"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: jellyfin
+        annotations:
+          summary: "Jellyfin high CPU usage"
+          description: "Jellyfin CPU usage is {{ $value }}% for more than 10 minutes"
+          current_value: "{{ $value }}"
+
+      - alert: JellyfinTranscodingOverload
+        expr: sum(rate(container_cpu_usage_seconds_total{name=~".*jellyfin.*"}[5m])) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: jellyfin
+        annotations:
+          summary: "Jellyfin transcoding overload detected"
+          description: "Jellyfin appears to be under heavy transcoding load ({{ $value }}% CPU)"
+
+      - alert: JellyfinDiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/media"} / node_filesystem_size_bytes{mountpoint="/media"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+          service: jellyfin
+        annotations:
+          summary: "Jellyfin media storage low"
+          description: "Media storage has less than 15% space remaining"
+
+  # Sonarr TV Show Management
+  - name: sonarr_monitoring
+    rules:
+      - alert: SonarrDown
+        expr: up{job="sonarr"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: sonarr
+        annotations:
+          summary: "Sonarr TV management is down"
+          description: "Sonarr has been unreachable for more than 3 minutes"
+
+      - alert: SonarrQueueStuck
+        expr: sonarr_queue_total > 100
+        for: 30m
+        labels:
+          severity: warning
+          service: sonarr
+        annotations:
+          summary: "Sonarr download queue is stuck"
+          description: "Sonarr has {{ $value }} items in queue for more than 30 minutes"
+
+      - alert: SonarrDiskSpaceLow
+        expr: sonarr_disk_space_available_bytes < 5000000000  # 5GB
+        for: 5m
+        labels:
+          severity: warning
+          service: sonarr
+        annotations:
+          summary: "Sonarr disk space low"
+          description: "Sonarr has less than 5GB disk space available"
+
+      - alert: SonarrImportFailed
+        expr: increase(sonarr_import_failed_total[1h]) > 5
+        for: 0m
+        labels:
+          severity: warning
+          service: sonarr
+        annotations:
+          summary: "Multiple Sonarr import failures"
+          description: "Sonarr has {{ $value }} failed imports in the last hour"
+
+  # Radarr Movie Management
+  - name: radarr_monitoring
+    rules:
+      - alert: RadarrDown
+        expr: up{job="radarr"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: radarr
+        annotations:
+          summary: "Radarr movie management is down"
+          description: "Radarr has been unreachable for more than 3 minutes"
+
+      - alert: RadarrQueueStuck
+        expr: radarr_queue_total > 50
+        for: 30m
+        labels:
+          severity: warning
+          service: radarr
+        annotations:
+          summary: "Radarr download queue is stuck"
+          description: "Radarr has {{ $value }} items in queue for more than 30 minutes"
+
+      - alert: RadarrDiskSpaceLow
+        expr: radarr_disk_space_available_bytes < 10000000000  # 10GB
+        for: 5m
+        labels:
+          severity: warning
+          service: radarr
+        annotations:
+          summary: "Radarr disk space low"
+          description: "Radarr has less than 10GB disk space available for movies"
+
+  # Prowlarr Indexer Management
+  - name: prowlarr_monitoring
+    rules:
+      - alert: ProwlarrDown
+        expr: up{job="prowlarr"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: prowlarr
+        annotations:
+          summary: "Prowlarr indexer manager is down"
+          description: "Prowlarr has been unreachable for more than 3 minutes"
+
+      - alert: ProwlarrIndexersFailing
+        expr: prowlarr_indexers_failing_total / prowlarr_indexers_total > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          service: prowlarr
+        annotations:
+          summary: "Multiple Prowlarr indexers failing"
+          description: "{{ $value | humanizePercentage }} of Prowlarr indexers are failing"
+
+      - alert: ProwlarrSearchLatencyHigh
+        expr: prowlarr_search_duration_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: prowlarr
+        annotations:
+          summary: "Prowlarr search latency high"
+          description: "Prowlarr search latency is {{ $value }}s"
+
+  # qBittorrent Download Client
+  - name: qbittorrent_monitoring
+    rules:
+      - alert: QBittorrentDown
+        expr: up{job="qbittorrent"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: qbittorrent
+        annotations:
+          summary: "qBittorrent download client is down"
+          description: "qBittorrent has been unreachable for more than 2 minutes"
+
+      - alert: QBittorrentNoSeeds
+        expr: qbittorrent_torrents_downloading{status="stalledDL"} > 10
+        for: 30m
+        labels:
+          severity: warning
+          service: qbittorrent
+        annotations:
+          summary: "Multiple torrents stalled (no seeds)"
+          description: "{{ $value }} torrents are stalled without seeds for more than 30 minutes"
+
+      - alert: QBittorrentDiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/downloads"} / node_filesystem_size_bytes{mountpoint="/downloads"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          service: qbittorrent
+        annotations:
+          summary: "Download disk space low"
+          description: "Download storage has less than 10% space remaining"
+
+      - alert: QBittorrentRatioAlert
+        expr: qbittorrent_global_ratio < 1.0
+        for: 1h
+        labels:
+          severity: info
+          service: qbittorrent
+        annotations:
+          summary: "qBittorrent global ratio below 1.0"
+          description: "Global upload ratio is {{ $value }}, consider seeding more"
+
+  # VPN Protection for Downloads
+  - name: vpn_monitoring
+    rules:
+      - alert: VPNConnectionLost
+        expr: up{job="gluetun"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: gluetun
+        annotations:
+          summary: "VPN connection lost - SECURITY RISK"
+          description: "VPN container is down - download clients may be exposed!"
+
+      - alert: VPNIPLeak
+        expr: gluetun_vpn_ip_changed == 1
+        for: 0m
+        labels:
+          severity: critical
+          service: gluetun
+        annotations:
+          summary: "VPN IP leak detected"
+          description: "VPN IP address has changed unexpectedly - potential IP leak"
+
+      - alert: VPNHighLatency
+        expr: gluetun_vpn_latency_seconds > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          service: gluetun
+        annotations:
+          summary: "VPN connection high latency"
+          description: "VPN latency is {{ $value }}s for more than 10 minutes"
+
+  # Bazarr Subtitle Management
+  - name: bazarr_monitoring
+    rules:
+      - alert: BazarrDown
+        expr: up{job="bazarr"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: bazarr
+        annotations:
+          summary: "Bazarr subtitle manager is down"
+          description: "Bazarr has been unreachable for more than 5 minutes"
+
+      - alert: BazarrSubtitleBacklog
+        expr: bazarr_wanted_subtitles_total > 100
+        for: 2h
+        labels:
+          severity: info
+          service: bazarr
+        annotations:
+          summary: "Large subtitle backlog in Bazarr"
+          description: "Bazarr has {{ $value }} wanted subtitles for more than 2 hours"
+
+  # Request Services (Jellyseerr/Overseerr)
+  - name: request_services_monitoring
+    rules:
+      - alert: JellyseerrDown
+        expr: up{job="jellyseerr"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: jellyseerr
+        annotations:
+          summary: "Jellyseerr request service is down"
+          description: "Jellyseerr has been unreachable for more than 5 minutes"
+
+      - alert: RequestBacklog
+        expr: jellyseerr_pending_requests_total > 50
+        for: 24h
+        labels:
+          severity: info
+          service: jellyseerr
+        annotations:
+          summary: "Large request backlog"
+          description: "{{ $value }} pending requests for more than 24 hours"
+
+  # Media Processing Services
+  - name: media_processing_monitoring
+    rules:
+      - alert: FileFlowsDown
+        expr: up{job="fileflows"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: fileflows
+        annotations:
+          summary: "FileFlows processing service is down"
+          description: "FileFlows has been unreachable for more than 5 minutes"
+
+      - alert: FileFlowsQueueBacklog
+        expr: fileflows_queue_pending_total > 20
+        for: 2h
+        labels:
+          severity: warning
+          service: fileflows
+        annotations:
+          summary: "FileFlows processing backlog"
+          description: "FileFlows has {{ $value }} pending items for more than 2 hours"
+
+      - alert: TdarrDown
+        expr: up{job="tdarr"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: tdarr
+        annotations:
+          summary: "Tdarr transcoding service is down"
+          description: "Tdarr has been unreachable for more than 5 minutes"
+
+  # Network Performance for Media Streaming
+  - name: media_network_monitoring
+    rules:
+      - alert: MediaStreamingLatencyHigh
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="jellyfin",uri=~"/Videos/.*/stream"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: jellyfin
+        annotations:
+          summary: "Media streaming latency high"
+          description: "95th percentile streaming latency is {{ $value }}s"
+
+      - alert: MediaBandwidthSaturated
+        expr: rate(node_network_transmit_bytes_total[5m]) > 800000000  # 800MB/s
+        for: 10m
+        labels:
+          severity: warning
+          service: network
+        annotations:
+          summary: "Media network bandwidth saturated"
+          description: "Network transmit rate is {{ $value | humanize }}B/s for more than 10 minutes"

@@ -1,0 +1,126 @@
+{
+  "passed": 22,
+  "failed": 50,
+  "services": {
+    "Jellyfin": {
+      "container": "/jellyfin",
+      "status": "running",
+      "running": true,
+      "api": {
+        "status": 200,
+        "responsive": true
+      }
+    },
+    "Sonarr": {
+      "container": "/sonarr",
+      "status": "running",
+      "running": true,
+      "api": {
+        "status": 401,
+        "responsive": true
+      }
+    },
+    "Radarr": {
+      "container": "/radarr",
+      "status": "running",
+      "running": true,
+      "api": {
+        "status": 401,
+        "responsive": true
+      }
+    },
+    "Prowlarr": {
+      "container": "/prowlarr",
+      "status": "running",
+      "running": true,
+      "api": {
+        "status": 401,
+        "responsive": true
+      }
+    },
+    "qBittorrent": {
+      "container": "/qbittorrent",
+      "status": "running",
+      "running": true,
+      "api": {
+        "status": 403,
+        "responsive": true
+      }
+    }
+  },
+  "integrations": {
+    "sonarr-qbittorrent": true,
+    "radarr-qbittorrent": true,
+    "prowlarr-arr": true,
+    "jellyfin-jellyseerr": true,
+    "bazarr-arr": true,
+    "discoveryFlow": [
+      "User Request (Overseerr)",
+      "Indexer Search (Prowlarr)",
+      "Download (qBittorrent)",
+      "Import (Sonarr/Radarr)",
+      "Subtitles (Bazarr)",
+      "Streaming (Plex/Jellyfin)",
+      "Statistics (Tautulli)"
+    ],
+    "backupFlow": [
+      "Configuration (All Services)",
+      "Backup (Duplicati)",
+      "Sync (Syncthing)",
+      "Cloud Storage (Nextcloud)"
+    ],
+    "homeAssistant": {
+      "connected": false,
+      "error": "getaddrinfo ENOTFOUND homeassistant.local"
+    },
+    "webSocket": true
+  },
+  "mcp": {
+    "claudeFlow": {
+      "connected": true,
+      "swarmReady": true
+    },
+    "controllableServices": [
+      "Plex",
+      "Jellyfin",
+      "Emby",
+      "Sonarr",
+      "Radarr",
+      "Lidarr",
+      "Readarr",
+      "Bazarr",
+      "Prowlarr",
+      "qBittorrent",
+      "SABnzbd",
+      "Transmission",
+      "Overseerr",
+      "Jellyseerr",
+      "Tautulli",
+      "Uptime Kuma",
+      "Organizr",
+      "Heimdall",
+      "Homer",
+      "Portainer",
+      "Nginx Proxy Manager",
+      "Grafana",
+      "Prometheus",
+      "Watchtower",
+      "Duplicati",
+      "Syncthing",
+      "Nextcloud",
+      "FreshRSS",
+      "Calibre-Web",
+      "PhotoPrism"
+    ],
+    "orchestration": {
+      "tasksAvailable": true,
+      "agentsReady": true,
+      "memoryActive": true
+    },
+    "monitoring": {
+      "metricsCollection": true,
+      "realTimeUpdates": true,
+      "alertsConfigured": true
+    }
+  }
+}

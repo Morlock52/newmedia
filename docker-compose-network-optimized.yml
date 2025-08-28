@@ -1,0 +1,541 @@
+version: '3.9'
+
+# ============================================================================
+# OPTIMIZED NETWORK CONFIGURATION FOR MEDIA SERVER STACK
+# ============================================================================
+# Features:
+# - Custom bridge networks with proper subnet allocation
+# - Service discovery with DNS aliases
+# - Network isolation between service tiers
+# - Optimized MTU settings for container-to-container communication
+# - Load balancing preparation
+# - Security hardening with network policies
+# ============================================================================
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+# ============================================================================
+# NETWORK DEFINITIONS - OPTIMIZED FOR PERFORMANCE AND ISOLATION
+# ============================================================================
+networks:
+  # Primary media services network - optimized for high-throughput data transfer
+  media-net:
+    name: media-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: media-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+      com.docker.network.mtu: "1500"
+      com.docker.network.bridge.default_bridge: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+          ip_range: 172.30.1.0/24
+    labels:
+      - "com.media-server.network.tier=media"
+      - "com.media-server.network.purpose=media-services"
+
+  # Download services network - isolated for security
+  downloads-net:
+    name: downloads-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: downloads-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.mtu: "1500"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
+          ip_range: 172.31.1.0/24
+    labels:
+      - "com.media-server.network.tier=downloads"
+      - "com.media-server.network.purpose=download-clients"
+
+  # VPN network - secure tunnel for download clients
+  vpn-net:
+    name: vpn-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: vpn-br0
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.mtu: "1436"  # Optimized for VPN overhead
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.32.0.0/16
+          gateway: 172.32.0.1
+          ip_range: 172.32.1.0/24
+    internal: false
+    labels:
+      - "com.media-server.network.tier=vpn"
+      - "com.media-server.network.purpose=secure-downloads"
+
+  # Monitoring network - separate for observability
+  monitoring-net:
+    name: monitoring-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: monitoring-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.33.0.0/16
+          gateway: 172.33.0.1
+          ip_range: 172.33.1.0/24
+    labels:
+      - "com.media-server.network.tier=monitoring"
+      - "com.media-server.network.purpose=observability"
+
+  # Management network - admin and reverse proxy services
+  management-net:
+    name: management-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: mgmt-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.34.0.0/16
+          gateway: 172.34.0.1
+          ip_range: 172.34.1.0/24
+    labels:
+      - "com.media-server.network.tier=management"
+      - "com.media-server.network.purpose=admin-services"
+
+# ============================================================================
+# SHARED VOLUMES CONFIGURATION
+# ============================================================================
+volumes:
+  # Media storage volumes with optimized drivers
+  media-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MEDIA_PATH:-./media}
+  downloads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DOWNLOADS_PATH:-./downloads}
+  
+  # Configuration volumes with proper ownership
+  jellyfin-config:
+    driver: local
+  sonarr-config:
+    driver: local
+  radarr-config:
+    driver: local
+  prowlarr-config:
+    driver: local
+  qbittorrent-config:
+    driver: local
+
+# ============================================================================
+# SERVICES WITH OPTIMIZED NETWORK CONFIGURATION
+# ============================================================================
+services:
+  
+  # ==================== REVERSE PROXY & LOAD BALANCER ====================
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    hostname: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.debug=true"
+      - "--log.level=INFO"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=media-net"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL:-admin@localhost}"
+      - "--certificatesresolvers.le.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      # Network optimizations
+      - "--serversTransport.insecureSkipVerify=true"
+      - "--serversTransport.maxIdleConnsPerHost=100"
+      - "--entrypoints.web.http.timeout.read=300s"
+      - "--entrypoints.web.http.timeout.write=300s"
+      - "--entrypoints.web.http.timeout.idle=180s"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8088:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-data:/data
+    networks:
+      media-net:
+        ipv4_address: 172.30.1.10
+        aliases:
+          - reverse-proxy
+          - load-balancer
+      management-net:
+        ipv4_address: 172.34.1.10
+        aliases:
+          - traefik-admin
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  # ==================== MEDIA SERVERS ====================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    hostname: jellyfin-media
+    environment:
+      <<: *common-variables
+      JELLYFIN_PublishedServerUrl: "http://jellyfin.${DOMAIN:-localhost}"
+    volumes:
+      - jellyfin-config:/config
+      - media-data:/media:ro
+      - ./jellyfin-cache:/cache
+      - /dev/dri:/dev/dri  # Hardware acceleration
+    networks:
+      media-net:
+        ipv4_address: 172.30.1.20
+        aliases:
+          - jellyfin-server
+          - media-server
+          - jellyfin-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8096/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.http.services.jellyfin.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.jellyfin.loadbalancer.healthcheck.interval=30s"
+
+  # ==================== *ARR SERVICES ====================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    hostname: sonarr-tv
+    environment:
+      <<: *common-variables
+      SONARR__INSTANCE_NAME: "Sonarr-Optimized"
+      SONARR__BRANCH: "main"
+      SONARR__PORT: "8989"
+      SONARR__ANALYTICS_ENABLED: "False"
+    volumes:
+      - sonarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    networks:
+      media-net:
+        ipv4_address: 172.30.1.30
+        aliases:
+          - sonarr-api
+          - tv-manager
+          - sonarr-service
+      downloads-net:
+        ipv4_address: 172.31.1.30
+        aliases:
+          - sonarr-downloads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8989/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.services.sonarr.loadbalancer.healthcheck.path=/ping"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    hostname: radarr-movies
+    environment:
+      <<: *common-variables
+      RADARR__INSTANCE_NAME: "Radarr-Optimized"
+      RADARR__BRANCH: "master"
+      RADARR__PORT: "7878"
+      RADARR__ANALYTICS_ENABLED: "False"
+    volumes:
+      - radarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    networks:
+      media-net:
+        ipv4_address: 172.30.1.31
+        aliases:
+          - radarr-api
+          - movie-manager
+          - radarr-service
+      downloads-net:
+        ipv4_address: 172.31.1.31
+        aliases:
+          - radarr-downloads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7878/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.http.services.radarr.loadbalancer.healthcheck.path=/ping"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    hostname: prowlarr-indexer
+    environment:
+      <<: *common-variables
+      PROWLARR__INSTANCE_NAME: "Prowlarr-Central"
+      PROWLARR__BRANCH: "master"
+      PROWLARR__PORT: "9696"
+      PROWLARR__ANALYTICS_ENABLED: "False"
+    volumes:
+      - prowlarr-config:/config
+    networks:
+      media-net:
+        ipv4_address: 172.30.1.32
+        aliases:
+          - prowlarr-api
+          - indexer-manager
+          - prowlarr-service
+      downloads-net:
+        ipv4_address: 172.31.1.32
+        aliases:
+          - prowlarr-indexer
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9696/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prowlarr.tls=true"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.services.prowlarr.loadbalancer.healthcheck.path=/ping"
+
+  # ==================== DOWNLOAD CLIENTS ====================
+  
+  # VPN Gateway for secure downloading
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun-vpn
+    hostname: vpn-gateway
+    cap_add:
+      - NET_ADMIN
+    environment:
+      <<: *common-variables
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-nordvpn}
+      VPN_TYPE: ${VPN_TYPE:-openvpn}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_COUNTRY:-Switzerland}
+      FIREWALL: "on"
+      FIREWALL_DEBUG: "off"
+      FIREWALL_INPUT_PORTS: "8080,9091"
+      FIREWALL_OUTBOUND_SUBNETS: "172.30.0.0/16,172.31.0.0/16"
+      DOT: "off"
+      HTTPPROXY: "on"
+      HTTPPROXY_LOG: "on"
+      HTTPPROXY_PORT: "8888"
+    volumes:
+      - ./gluetun-config:/gluetun
+    networks:
+      vpn-net:
+        ipv4_address: 172.32.1.10
+        aliases:
+          - vpn-gateway
+          - secure-tunnel
+      downloads-net:
+        ipv4_address: 172.31.1.10
+        aliases:
+          - download-proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider https://ipinfo.io || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    hostname: qbittorrent-client
+    environment:
+      <<: *common-variables
+      WEBUI_PORT: 8080
+      QBT_EULA: "accept"
+      QBT_VERSION: "latest"
+      QBT_WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent-config:/config
+      - downloads:/downloads
+      - ./qbittorrent-watch:/watch
+    network_mode: "service:gluetun"  # Route through VPN
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v2/app/version || exit 1"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 180s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.qbittorrent.tls=true"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+
+  # ==================== MONITORING SERVICES ====================
+  
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    hostname: uptime-monitor
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    networks:
+      monitoring-net:
+        ipv4_address: 172.33.1.10
+        aliases:
+          - uptime-monitor
+          - health-checker
+      media-net:
+        ipv4_address: 172.30.1.50
+        aliases:
+          - monitoring-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime.rule=Host(`uptime.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.uptime.tls=true"
+      - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+
+  # ==================== MANAGEMENT SERVICES ====================
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    hostname: docker-manager
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./portainer-data:/data
+    networks:
+      management-net:
+        ipv4_address: 172.34.1.20
+        aliases:
+          - docker-manager
+          - container-admin
+      media-net:
+        ipv4_address: 172.30.1.60
+        aliases:
+          - management-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+  # ==================== NETWORK DIAGNOSTIC SERVICE ====================
+  
+  network-diagnostic:
+    image: nicolaka/netshoot:latest
+    container_name: network-diagnostic
+    hostname: netdiag
+    command: sleep infinity
+    networks:
+      - media-net
+      - downloads-net
+      - monitoring-net
+      - management-net
+      - vpn-net
+    restart: unless-stopped
+    profiles:
+      - debug
+    labels:
+      - "com.media-server.service=diagnostic"
+      - "com.media-server.description=Network debugging and testing"
+
+# ============================================================================
+# CONFIGURATION TEMPLATES AND HEALTH CHECKS
+# ============================================================================
+
+# Service health check configuration
+x-health-check: &health-check-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 60s
+
+# Network performance tuning
+x-network-performance: &network-performance
+  sysctls:
+    - net.core.rmem_max=134217728
+    - net.core.wmem_max=134217728
+    - net.ipv4.tcp_rmem=4096 131072 134217728
+    - net.ipv4.tcp_wmem=4096 65536 134217728
+    - net.ipv4.tcp_congestion_control=bbr

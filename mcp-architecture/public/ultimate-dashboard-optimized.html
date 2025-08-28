@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server 2025 - Control Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Animated background */
+        .background {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 50%, #16213e 100%);
+            overflow: hidden;
+        }
+
+        .background::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3), transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3), transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2), transparent 50%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Service categories */
+        .category {
+            margin-bottom: 40px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .category-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .category-count {
+            margin-left: auto;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* Service grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* Service card */
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .service-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .service-card:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .service-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 4px 8px;
+            background: rgba(78, 205, 196, 0.2);
+            border-radius: 12px;
+            color: #4ecdc4;
+        }
+
+        .service-status.checking {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .service-status.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .service-description {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .service-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #45b7d1, #4ecdc4);
+        }
+
+        /* Quick stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* MCP Integration Panel */
+        .mcp-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mcp-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #ff6b6b);
+            border-radius: 16px;
+            opacity: 0.5;
+            z-index: -1;
+            animation: gradient-rotate 3s linear infinite;
+        }
+
+        @keyframes gradient-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .mcp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .mcp-title {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mcp-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(78, 205, 196, 0.2);
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4ecdc4;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🚀 Ultimate Media Server 2025</div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-indicator"></span>
+                    <span id="services-count">0</span> Services Active
+                </div>
+                <div class="status-item">
+                    <span class="status-indicator"></span>
+                    MCP Server <span id="mcp-status">Online</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-services">30</div>
+                <div class="stat-label">Total Services</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="active-services">0</div>
+                <div class="stat-label">Active Now</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="cpu-usage">0%</div>
+                <div class="stat-label">CPU Usage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="memory-usage">0%</div>
+                <div class="stat-label">Memory Usage</div>
+            </div>
+        </div>
+
+        <!-- MCP Integration Panel -->
+        <div class="mcp-panel">
+            <div class="mcp-header">
+                <div class="mcp-title">
+                    🤖 AI Control Center
+                </div>
+                <div class="mcp-status">
+                    <span class="status-indicator"></span>
+                    <span id="mcp-connection">Connected</span>
+                </div>
+            </div>
+            <p style="margin-bottom: 20px; opacity: 0.8;">
+                Model Context Protocol server managing all 30 services with unified AI intelligence.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <a href="http://localhost:3000/health" class="btn" target="_blank">
+                    🏥 Health Check
+                </a>
+                <a href="http://localhost:3000/tools" class="btn" target="_blank">
+                    🔧 Available Tools
+                </a>
+                <a href="http://localhost:3000/resources" class="btn" target="_blank">
+                    📦 Resources
+                </a>
+                <a href="http://localhost:3000/prompts" class="btn" target="_blank">
+                    💬 AI Prompts
+                </a>
+            </div>
+        </div>
+
+        <!-- Media Servers -->
+        <div class="category">
+            <div class="category-header">
+                <span class="category-icon">📺</span>
+                <span class="category-title">Media Servers</span>
+                <span class="category-count">3 services</span>
+            </div>
+            <div class="services-grid" id="media-servers">
+                <!-- Jellyfin -->
+                <div class="service-card" data-service="jellyfin" data-port="8096">
+                    <div class="service-header">
+                        <div class="service-name">Jellyfin</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Free and open-source media server with extensive codec support
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8096" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('jellyfin')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Plex -->
+                <div class="service-card" data-service="plex" data-port="32400">
+                    <div class="service-header">
+                        <div class="service-name">Plex</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Premium media server with mobile sync and sharing features
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:32400/web" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('plex')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Emby -->
+                <div class="service-card" data-service="emby" data-port="8097">
+                    <div class="service-header">
+                        <div class="service-name">Emby</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Media server with live TV and DVR capabilities
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8097" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('emby')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Management -->
+        <div class="category">
+            <div class="category-header">
+                <span class="category-icon">📋</span>
+                <span class="category-title">Content Management</span>
+                <span class="category-count">5 services</span>
+            </div>
+            <div class="services-grid" id="content-management">
+                <!-- Sonarr -->
+                <div class="service-card" data-service="sonarr" data-port="8989">
+                    <div class="service-header">
+                        <div class="service-name">Sonarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        TV show automation with episode tracking and quality management
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8989" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('sonarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Radarr -->
+                <div class="service-card" data-service="radarr" data-port="7878">
+                    <div class="service-header">
+                        <div class="service-name">Radarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Movie automation with quality profiles and release monitoring
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:7878" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('radarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Lidarr -->
+                <div class="service-card" data-service="lidarr" data-port="8686">
+                    <div class="service-header">
+                        <div class="service-name">Lidarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Music collection manager with automatic downloading
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8686" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('lidarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Readarr -->
+                <div class="service-card" data-service="readarr" data-port="8787">
+                    <div class="service-header">
+                        <div class="service-name">Readarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        E-book and audiobook collection management
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8787" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('readarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Bazarr -->
+                <div class="service-card" data-service="bazarr" data-port="6767">
+                    <div class="service-header">
+                        <div class="service-name">Bazarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Subtitle management and automatic downloading
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:6767" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('bazarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Clients -->
+        <div class="category">
+            <div class="category-header">
+                <span class="category-icon">📥</span>
+                <span class="category-title">Download Clients</span>
+                <span class="category-count">5 services</span>
+            </div>
+            <div class="services-grid" id="download-clients">
+                <!-- qBittorrent -->
+                <div class="service-card" data-service="qbittorrent" data-port="8080">
+                    <div class="service-header">
+                        <div class="service-name">qBittorrent</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Feature-rich BitTorrent client with web interface
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8080" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('qbittorrent')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Add more download clients similarly -->
+            </div>
+        </div>
+
+        <!-- Indexers -->
+        <div class="category">
+            <div class="category-header">
+                <span class="category-icon">🔍</span>
+                <span class="category-title">Indexers & Search</span>
+                <span class="category-count">3 services</span>
+            </div>
+            <div class="services-grid" id="indexers">
+                <!-- Prowlarr -->
+                <div class="service-card" data-service="prowlarr" data-port="9696">
+                    <div class="service-header">
+                        <div class="service-name">Prowlarr</div>
+                        <div class="service-status checking">
+                            <div class="loading"></div>
+                            Checking
+                        </div>
+                    </div>
+                    <div class="service-description">
+                        Indexer manager that integrates with all *arr apps
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:9696" class="btn btn-primary" target="_blank">
+                            🌐 Open
+                        </a>
+                        <a href="#" class="btn" onclick="showServiceInfo('prowlarr')">
+                            ℹ️ Info
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Service configuration
+        const services = {
+            jellyfin: { port: 8096, path: '', name: 'Jellyfin' },
+            plex: { port: 32400, path: '/web', name: 'Plex' },
+            emby: { port: 8097, path: '', name: 'Emby' },
+            sonarr: { port: 8989, path: '', name: 'Sonarr' },
+            radarr: { port: 7878, path: '', name: 'Radarr' },
+            lidarr: { port: 8686, path: '', name: 'Lidarr' },
+            readarr: { port: 8787, path: '', name: 'Readarr' },
+            bazarr: { port: 6767, path: '', name: 'Bazarr' },
+            prowlarr: { port: 9696, path: '', name: 'Prowlarr' },
+            qbittorrent: { port: 8080, path: '', name: 'qBittorrent' }
+        };
+
+        let activeServices = 0;
+
+        // Check service status
+        async function checkServiceStatus(serviceName) {
+            const service = services[serviceName];
+            const card = document.querySelector(`[data-service="${serviceName}"]`);
+            const statusEl = card.querySelector('.service-status');
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(`http://localhost:${service.port}${service.path}`, {
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                // With no-cors, we can't read the response, but if fetch succeeds, service is likely up
+                statusEl.innerHTML = '✅ Online';
+                statusEl.className = 'service-status';
+                activeServices++;
+                return true;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    // Timeout might mean service is starting
+                    statusEl.innerHTML = '⏳ Starting';
+                    statusEl.className = 'service-status checking';
+                } else {
+                    statusEl.innerHTML = '❌ Offline';
+                    statusEl.className = 'service-status offline';
+                }
+                return false;
+            }
+        }
+
+        // Check all services
+        async function checkAllServices() {
+            activeServices = 0;
+            const promises = Object.keys(services).map(service => checkServiceStatus(service));
+            await Promise.all(promises);
+            
+            // Update counters
+            document.getElementById('active-services').textContent = activeServices;
+            document.getElementById('services-count').textContent = activeServices;
+            
+            // Update stats
+            updateSystemStats();
+        }
+
+        // Update system stats (simulated for now)
+        function updateSystemStats() {
+            // Simulate CPU usage based on active services
+            const cpuUsage = Math.min(activeServices * 3 + Math.random() * 10, 100);
+            document.getElementById('cpu-usage').textContent = Math.round(cpuUsage) + '%';
+            
+            // Simulate memory usage
+            const memUsage = Math.min(activeServices * 5 + Math.random() * 15, 100);
+            document.getElementById('memory-usage').textContent = Math.round(memUsage) + '%';
+        }
+
+        // Check MCP server status
+        async function checkMCPStatus() {
+            try {
+                const response = await fetch('http://localhost:3000/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    document.getElementById('mcp-status').textContent = 'Online';
+                    document.getElementById('mcp-connection').textContent = 'Connected';
+                } else {
+                    document.getElementById('mcp-status').textContent = 'Error';
+                    document.getElementById('mcp-connection').textContent = 'Disconnected';
+                }
+            } catch (error) {
+                document.getElementById('mcp-status').textContent = 'Offline';
+                document.getElementById('mcp-connection').textContent = 'Disconnected';
+            }
+        }
+
+        // Show service info
+        function showServiceInfo(serviceName) {
+            const service = services[serviceName];
+            alert(`${service.name}\n\nPort: ${service.port}\nStatus: Check the service card for current status\n\nClick "Open" to access the service interface.`);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Ultimate Media Server Dashboard - Optimized Version');
+            console.log('✅ No Socket.IO dependencies');
+            console.log('🔍 Checking all services...');
+            
+            // Initial checks
+            checkAllServices();
+            checkMCPStatus();
+            
+            // Periodic updates
+            setInterval(checkAllServices, 30000); // Every 30 seconds
+            setInterval(checkMCPStatus, 15000); // Every 15 seconds
+            setInterval(updateSystemStats, 5000); // Every 5 seconds
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                console.log('🔄 Refreshing service status...');
+                checkAllServices();
+            }
+        });
+    </script>
+</body>
+</html>

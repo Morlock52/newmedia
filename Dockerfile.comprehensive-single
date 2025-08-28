@@ -1,0 +1,487 @@
+# Comprehensive Single-Container Media Server Architecture
+# Integrates 30+ services with AI features using s6-overlay v3
+# Based on 2025 best practices for container orchestration
+
+ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG DEBIAN_VERSION=bookworm-slim
+ARG NODE_VERSION=20
+ARG PYTHON_VERSION=3.11
+
+# Multi-stage build for optimized layers
+FROM node:${NODE_VERSION}-${DEBIAN_VERSION} as node-base
+FROM python:${PYTHON_VERSION}-${DEBIAN_VERSION} as python-base
+FROM postgres:16-${DEBIAN_VERSION} as postgres-base
+
+# Base system with common dependencies
+FROM debian:${DEBIAN_VERSION} as base-system
+
+# Install common runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Core system utilities
+    ca-certificates curl wget gnupg lsb-release \
+    # Process management and networking
+    supervisor procps net-tools iproute2 \
+    # Development tools
+    build-essential git \
+    # Media processing
+    ffmpeg mediainfo \
+    # Python and Node.js
+    python3 python3-pip python3-venv \
+    # Database clients
+    postgresql-client redis-tools \
+    # Web server
+    nginx apache2 \
+    # Archive handling
+    unzip xz-utils \
+    # Localization
+    locales tzdata \
+    # Security
+    openssl \
+    # System libraries
+    libicu72 libssl3 libgdiplus libc6-dev \
+    libfontconfig1 libfreetype6 libgomp1 \
+    # Hardware acceleration
+    vainfo intel-media-va-driver-non-free \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/* \
+    && locale-gen en_US.UTF-8
+
+# Set locale and timezone
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    TZ=UTC
+
+# Download s6-overlay
+FROM base-system as s6-downloader
+ARG S6_OVERLAY_VERSION
+ARG TARGETARCH
+
+RUN case ${TARGETARCH} in \
+        "amd64") S6_ARCH="x86_64" ;; \
+        "arm64") S6_ARCH="aarch64" ;; \
+        "arm") S6_ARCH="armhf" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget -q "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
+         "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" && \
+    mkdir -p /s6-overlay && \
+    tar -C /s6-overlay -Jxpf s6-overlay-noarch.tar.xz && \
+    tar -C /s6-overlay -Jxpf s6-overlay-${S6_ARCH}.tar.xz
+
+# Infrastructure services stage
+FROM base-system as infrastructure-stage
+
+# Install PostgreSQL
+COPY --from=postgres-base /usr/lib/postgresql /usr/lib/postgresql
+COPY --from=postgres-base /usr/share/postgresql /usr/share/postgresql
+COPY --from=postgres-base /usr/bin/postgres /usr/bin/
+COPY --from=postgres-base /usr/bin/pg_* /usr/bin/
+COPY --from=postgres-base /usr/bin/initdb /usr/bin/
+COPY --from=postgres-base /usr/bin/createdb /usr/bin/
+
+# Install Redis
+RUN apt-get update && apt-get install -y --no-install-recommends redis-server && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install RabbitMQ
+RUN curl -1sLf 'https://keys.openpgp.org/vks/v1/by-fingerprint/0A9AF2115F4687BD29803A206B73A36E6026DFCA' | \
+    gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg > /dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-erlang/ubuntu jammy main" | \
+    tee /etc/apt/sources.list.d/rabbitmq.list && \
+    echo "deb [signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-server/ubuntu jammy main" | \
+    tee -a /etc/apt/sources.list.d/rabbitmq.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends rabbitmq-server && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Elasticsearch
+RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | \
+    gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | \
+    tee /etc/apt/sources.list.d/elastic-8.x.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends elasticsearch && \
+    rm -rf /var/lib/apt/lists/*
+
+# Media servers stage
+FROM base-system as media-servers-stage
+
+# Install Jellyfin
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | \
+    gpg --dearmor -o /etc/apt/keyrings/jellyfin.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/debian $(lsb_release -cs) main" > \
+    /etc/apt/sources.list.d/jellyfin.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        jellyfin jellyfin-web jellyfin-ffmpeg6 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install Plex
+RUN wget -q https://downloads.plex.tv/plex-media-server-new/1.40.4.8679-424562606/debian/plexmediaserver_1.40.4.8679-424562606_amd64.deb && \
+    dpkg -i plexmediaserver_*.deb || true && \
+    apt-get update && \
+    apt-get install -f -y && \
+    rm -rf /var/lib/apt/lists/* plexmediaserver_*.deb
+
+# Install Emby (community version)
+RUN wget -q https://github.com/MediaBrowser/Emby.Releases/releases/download/4.8.8.0/emby-server-deb_4.8.8.0_amd64.deb && \
+    dpkg -i emby-server-deb_*.deb || true && \
+    apt-get update && \
+    apt-get install -f -y && \
+    rm -rf /var/lib/apt/lists/* emby-server-deb_*.deb
+
+# *arr stack stage
+FROM base-system as arr-stack-stage
+ARG TARGETARCH
+
+# Download *arr applications
+RUN case ${TARGETARCH} in \
+        "amd64") ARR_ARCH="x64" ;; \
+        "arm64") ARR_ARCH="arm64" ;; \
+        "arm") ARR_ARCH="arm" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    mkdir -p /opt/arr-apps && \
+    # Download Sonarr
+    SONARR_VERSION="4.0.15.2941" && \
+    wget -q "https://github.com/Sonarr/Sonarr/releases/download/v${SONARR_VERSION}/Sonarr.main.${SONARR_VERSION}.linux-${ARR_ARCH}.tar.gz" && \
+    tar -xzf "Sonarr.main.${SONARR_VERSION}.linux-${ARR_ARCH}.tar.gz" -C /opt/arr-apps && \
+    mv /opt/arr-apps/Sonarr /opt/arr-apps/sonarr && \
+    # Download Radarr  
+    RADARR_VERSION="5.27.2.10142" && \
+    wget -q "https://github.com/Radarr/Radarr/releases/download/v${RADARR_VERSION}/Radarr.master.${RADARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" && \
+    tar -xzf "Radarr.master.${RADARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" -C /opt/arr-apps && \
+    mv /opt/arr-apps/Radarr /opt/arr-apps/radarr && \
+    # Download Lidarr
+    LIDARR_VERSION="2.10.2.5182" && \
+    wget -q "https://github.com/Lidarr/Lidarr/releases/download/v${LIDARR_VERSION}/Lidarr.master.${LIDARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" && \
+    tar -xzf "Lidarr.master.${LIDARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" -C /opt/arr-apps && \
+    mv /opt/arr-apps/Lidarr /opt/arr-apps/lidarr && \
+    # Download Readarr
+    READARR_VERSION="0.4.8.2822" && \
+    wget -q "https://github.com/Readarr/Readarr/releases/download/v${READARR_VERSION}/Readarr.develop.${READARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" && \
+    tar -xzf "Readarr.develop.${READARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" -C /opt/arr-apps && \
+    mv /opt/arr-apps/Readarr /opt/arr-apps/readarr && \
+    # Download Prowlarr
+    PROWLARR_VERSION="2.0.2.5116" && \
+    wget -q "https://github.com/Prowlarr/Prowlarr/releases/download/v${PROWLARR_VERSION}/Prowlarr.master.${PROWLARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" && \
+    tar -xzf "Prowlarr.master.${PROWLARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" -C /opt/arr-apps && \
+    mv /opt/arr-apps/Prowlarr /opt/arr-apps/prowlarr && \
+    # Download Bazarr
+    git clone https://github.com/morpheus65535/bazarr.git /opt/arr-apps/bazarr && \
+    # Cleanup
+    rm -f *.tar.gz
+
+# Download clients stage  
+FROM base-system as download-clients-stage
+
+# Install qBittorrent-nox
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends qbittorrent-nox && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Transmission
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends transmission-daemon transmission-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install SABnzbd
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends sabnzbdplus && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download NZBGet
+RUN wget -q https://github.com/nzbgetcom/nzbget/releases/download/v24.3/nzbget-24.3-linux.run && \
+    chmod +x nzbget-24.3-linux.run && \
+    ./nzbget-24.3-linux.run --destdir /opt/nzbget && \
+    rm nzbget-24.3-linux.run
+
+# Platform services stage (Traefik, etc)
+FROM base-system as platform-stage
+
+# Install Traefik
+RUN wget -q https://github.com/traefik/traefik/releases/download/v3.0.4/traefik_v3.0.4_linux_amd64.tar.gz && \
+    tar -xzf traefik_*.tar.gz && \
+    mv traefik /usr/local/bin/ && \
+    rm traefik_*.tar.gz
+
+# Install Node.js for various services
+COPY --from=node-base /usr/local /usr/local
+COPY --from=node-base /opt /opt
+
+# Request services stage
+FROM platform-stage as request-services-stage
+
+# Download and build Overseerr
+RUN git clone https://github.com/sct/overseerr.git /opt/overseerr && \
+    cd /opt/overseerr && \
+    npm ci --only=production && \
+    npm run build
+
+# Download and build Jellyseerr  
+RUN git clone https://github.com/Fallenbagel/jellyseerr.git /opt/jellyseerr && \
+    cd /opt/jellyseerr && \
+    npm ci --only=production && \
+    npm run build
+
+# Download Ombi
+RUN wget -q https://github.com/Ombi-app/Ombi/releases/download/v4.43.5/linux-x64.tar.gz && \
+    tar -xzf linux-x64.tar.gz -C /opt && \
+    mv /opt/Ombi /opt/ombi && \
+    rm linux-x64.tar.gz
+
+# AI services stage
+FROM python-base as ai-services-stage
+
+# Install AI/ML dependencies
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+    transformers \
+    scikit-learn \
+    numpy pandas \
+    opencv-python \
+    Pillow \
+    aiohttp \
+    fastapi \
+    uvicorn \
+    asyncio \
+    sqlalchemy \
+    psycopg2-binary \
+    redis \
+    elasticsearch
+
+# Copy AI service implementations
+COPY ai-services/ /opt/ai-services/
+
+# Monitoring stage
+FROM base-system as monitoring-stage
+
+# Install Prometheus
+RUN wget -q https://github.com/prometheus/prometheus/releases/download/v2.54.1/prometheus-2.54.1.linux-amd64.tar.gz && \
+    tar -xzf prometheus-*.tar.gz && \
+    mv prometheus-*/prometheus /usr/local/bin/ && \
+    mv prometheus-*/promtool /usr/local/bin/ && \
+    rm -rf prometheus-*
+
+# Install Grafana
+RUN wget -q https://dl.grafana.com/oss/release/grafana_11.2.2_amd64.deb && \
+    dpkg -i grafana_*.deb || true && \
+    apt-get update && \
+    apt-get install -f -y && \
+    rm -rf /var/lib/apt/lists/* grafana_*.deb
+
+# Download Uptime Kuma
+RUN git clone https://github.com/louislam/uptime-kuma.git /opt/uptime-kuma && \
+    cd /opt/uptime-kuma && \
+    npm ci --only=production
+
+# Management tools stage
+FROM base-system as management-tools-stage
+
+# Download Tautulli
+RUN git clone https://github.com/Tautulli/Tautulli.git /opt/tautulli
+
+# Setup Organizr
+RUN git clone https://github.com/causefx/Organizr.git /opt/organizr
+
+# Setup Heimdall
+RUN git clone https://github.com/linuxserver/Heimdall.git /opt/heimdall
+
+# Final assembly stage
+FROM base-system
+
+# Copy s6-overlay
+COPY --from=s6-downloader /s6-overlay /
+
+# Copy infrastructure services
+COPY --from=infrastructure-stage /usr/lib/postgresql /usr/lib/postgresql
+COPY --from=infrastructure-stage /usr/share/postgresql /usr/share/postgresql  
+COPY --from=infrastructure-stage /usr/bin/postgres /usr/bin/
+COPY --from=infrastructure-stage /usr/bin/pg_* /usr/bin/
+COPY --from=infrastructure-stage /usr/bin/initdb /usr/bin/
+COPY --from=infrastructure-stage /usr/bin/createdb /usr/bin/
+COPY --from=infrastructure-stage /usr/bin/redis-server /usr/bin/
+COPY --from=infrastructure-stage /etc/redis /etc/redis
+COPY --from=infrastructure-stage /usr/lib/rabbitmq /usr/lib/rabbitmq
+COPY --from=infrastructure-stage /usr/sbin/rabbitmq-server /usr/sbin/
+COPY --from=infrastructure-stage /usr/share/elasticsearch /usr/share/elasticsearch
+COPY --from=infrastructure-stage /usr/bin/elasticsearch* /usr/bin/
+
+# Copy media servers
+COPY --from=media-servers-stage /usr/bin/jellyfin /usr/bin/
+COPY --from=media-servers-stage /usr/share/jellyfin /usr/share/jellyfin
+COPY --from=media-servers-stage /usr/lib/jellyfin-ffmpeg6 /usr/lib/jellyfin-ffmpeg6
+COPY --from=media-servers-stage /usr/lib/plexmediaserver /usr/lib/plexmediaserver
+COPY --from=media-servers-stage /usr/bin/emby* /usr/bin/
+COPY --from=media-servers-stage /opt/emby-server /opt/emby-server
+
+# Copy *arr applications
+COPY --from=arr-stack-stage /opt/arr-apps /opt/
+
+# Copy download clients
+COPY --from=download-clients-stage /usr/bin/qbittorrent-nox /usr/bin/
+COPY --from=download-clients-stage /usr/bin/transmission-daemon /usr/bin/
+COPY --from=download-clients-stage /usr/bin/sabnzbdplus /usr/bin/
+COPY --from=download-clients-stage /opt/nzbget /opt/nzbget
+
+# Copy platform services
+COPY --from=platform-stage /usr/local/bin/traefik /usr/local/bin/
+COPY --from=platform-stage /usr/local /usr/local
+
+# Copy request services  
+COPY --from=request-services-stage /opt/overseerr /opt/overseerr
+COPY --from=request-services-stage /opt/jellyseerr /opt/jellyseerr
+COPY --from=request-services-stage /opt/ombi /opt/ombi
+
+# Copy AI services
+COPY --from=ai-services-stage /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=ai-services-stage /opt/ai-services /opt/ai-services
+
+# Copy monitoring
+COPY --from=monitoring-stage /usr/local/bin/prometheus /usr/local/bin/
+COPY --from=monitoring-stage /usr/local/bin/promtool /usr/local/bin/
+COPY --from=monitoring-stage /usr/sbin/grafana-server /usr/sbin/
+COPY --from=monitoring-stage /usr/share/grafana /usr/share/grafana
+COPY --from=monitoring-stage /opt/uptime-kuma /opt/uptime-kuma
+
+# Copy management tools
+COPY --from=management-tools-stage /opt/tautulli /opt/tautulli
+COPY --from=management-tools-stage /opt/organizr /opt/organizr
+COPY --from=management-tools-stage /opt/heimdall /opt/heimdall
+
+# Create necessary users
+RUN groupadd -r media && \
+    useradd -r -g media -d /config -s /bin/bash media && \
+    groupadd -r postgres && \
+    useradd -r -g postgres -d /var/lib/postgresql -s /bin/bash postgres && \
+    groupadd -r redis && \
+    useradd -r -g redis -d /var/lib/redis -s /bin/bash redis && \
+    groupadd -r rabbitmq && \
+    useradd -r -g rabbitmq -d /var/lib/rabbitmq -s /bin/bash rabbitmq && \
+    groupadd -r elasticsearch && \
+    useradd -r -g elasticsearch -d /usr/share/elasticsearch -s /bin/bash elasticsearch
+
+# Create directory structure
+RUN mkdir -p \
+    # Configuration directories
+    /config/{jellyfin,plex,emby,sonarr,radarr,lidarr,readarr,prowlarr,bazarr} \
+    /config/{qbittorrent,transmission,sabnzbd,nzbget} \
+    /config/{overseerr,jellyseerr,ombi} \
+    /config/{tautulli,organizr,heimdall} \
+    /config/{prometheus,grafana,uptime-kuma} \
+    /config/{traefik,auth-service} \
+    /config/ai-services \
+    # Data directories
+    /data/media/{movies,tv,music,books,comics,audiobooks,photos} \
+    /data/downloads/{complete,incomplete,torrents,usenet} \
+    # Database directories
+    /var/lib/{postgresql,redis,rabbitmq,elasticsearch} \
+    # Log directories
+    /var/log/{media-services,ai-services,infrastructure} \
+    # Cache directories
+    /var/cache/{jellyfin,plex,emby} \
+    # Temporary directories
+    /tmp/{transcodes,processing}
+
+# Copy s6 service structure
+COPY architecture/s6-overlay-structure.sh /tmp/s6-setup.sh
+RUN bash /tmp/s6-setup.sh && rm /tmp/s6-setup.sh
+
+# Copy Traefik configuration
+COPY architecture/traefik-configuration.yml /etc/traefik/traefik.yml
+RUN mkdir -p /etc/traefik/dynamic
+
+# Create authentication service
+COPY auth-service/ /opt/auth-service/
+RUN cd /opt/auth-service && npm ci --only=production
+
+# Set permissions
+RUN chown -R media:media /config /data /var/cache \
+    && chown -R postgres:postgres /var/lib/postgresql \
+    && chown -R redis:redis /var/lib/redis \
+    && chown -R rabbitmq:rabbitmq /var/lib/rabbitmq \
+    && chown -R elasticsearch:elasticsearch /var/lib/elasticsearch \
+    && chmod -R 755 /config /data \
+    && chmod +x /etc/s6-overlay/s6-rc.d/*/run \
+    && chmod +x /etc/s6-overlay/s6-rc.d/*/finish
+
+# Environment variables
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_VERBOSITY=1 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    PUID=1000 \
+    PGID=1000 \
+    TZ=UTC \
+    # Database settings
+    POSTGRES_USER=postgres \
+    POSTGRES_PASSWORD=postgres \
+    REDIS_PASSWORD="" \
+    # Media server settings
+    JELLYFIN_PublishedServerUrl=http://localhost:8096 \
+    PLEX_CLAIM="" \
+    # Network settings
+    ADVERTISE_IP=http://localhost \
+    # AI settings
+    AI_SAFETY_ENABLED=true \
+    CONTENT_MODERATION_ENABLED=true \
+    RECOMMENDATIONS_ENABLED=true \
+    SOCIAL_INTEGRATION_ENABLED=false
+
+# Expose ports
+# Infrastructure: PostgreSQL, Redis, RabbitMQ, Elasticsearch
+EXPOSE 5432 6379 5672 15672 9200
+# Platform: Traefik, Auth Service
+EXPOSE 80 443 8080 8000
+# Media Servers: Jellyfin, Plex, Emby
+EXPOSE 8096 8920 32400 8097
+# *arr Stack: Sonarr, Radarr, Lidarr, Readarr, Prowlarr, Bazarr
+EXPOSE 8989 7878 8686 8787 9696 6767
+# Download Clients: qBittorrent, Transmission, SABnzbd, NZBGet
+EXPOSE 8080 6881 9091 8081 6789
+# Request Services: Overseerr, Jellyseerr, Ombi
+EXPOSE 5055 5056 3579
+# AI Services
+EXPOSE 8901 8902 8903 8904
+# Management Tools: Tautulli, Organizr, Heimdall
+EXPOSE 8181 8083 8082
+# Monitoring: Prometheus, Grafana, Uptime Kuma
+EXPOSE 9090 3000 3001
+
+# Volume mounts
+VOLUME ["/config", "/data"]
+
+# Health check
+COPY healthcheck.sh /usr/local/bin/healthcheck
+RUN chmod +x /usr/local/bin/healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=300s --retries=3 \
+    CMD /usr/local/bin/healthcheck
+
+# Labels
+LABEL maintainer="Comprehensive Media Server Architecture" \
+      version="2.0.0" \
+      description="Single container with 30+ media services, AI features, and comprehensive monitoring" \
+      org.opencontainers.image.source="https://github.com/media-server/comprehensive-single"
+
+# Working directory
+WORKDIR /config
+
+# Entrypoint
+ENTRYPOINT ["/init"]
+
+# Usage instructions
+# Build: docker build -f Dockerfile.comprehensive-single -t comprehensive-media-server .
+# Run: docker run -d --name media-server \
+#        -p 80:80 -p 443:443 -p 8096:8096 -p 32400:32400 \
+#        -v ./config:/config -v ./data:/data \
+#        -e PUID=1000 -e PGID=1000 -e TZ=America/New_York \
+#        --restart unless-stopped \
+#        comprehensive-media-server
+#
+# Access:
+# - Main Dashboard: https://localhost/
+# - Jellyfin: https://localhost/jellyfin
+# - Plex: https://localhost/plex
+# - Sonarr: https://localhost/sonarr
+# - Traefik Dashboard: https://localhost/traefik

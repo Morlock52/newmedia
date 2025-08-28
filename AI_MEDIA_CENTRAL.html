@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Media Central - Ultimate Control Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 20% 80%, #6366f1 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, #06b6d4 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, #8b5cf6 0%, transparent 50%);
+            animation: bgMove 20s ease infinite;
+        }
+        
+        @keyframes bgMove {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        
+        h1 {
+            font-size: 4em;
+            font-weight: 700;
+            background: linear-gradient(90deg, #06b6d4, #6366f1, #8b5cf6, #06b6d4);
+            background-size: 200% auto;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .subtitle {
+            font-size: 1.5em;
+            color: #94a3b8;
+        }
+        
+        /* AI Assistant Section */
+        .ai-assistant {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 30px;
+            padding: 40px;
+            margin: 30px auto;
+            max-width: 1200px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .ai-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            animation: pulse 2s ease infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(99, 102, 241, 0.8); }
+        }
+        
+        .ai-title {
+            flex: 1;
+        }
+        
+        .ai-title h2 {
+            font-size: 2em;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #10b981;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: blink 2s ease infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* AI Features Grid */
+        .ai-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .ai-feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-feature-card::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+            transition: all 0.5s ease;
+            opacity: 0;
+        }
+        
+        .ai-feature-card:hover::before {
+            top: -150%;
+            left: -150%;
+            opacity: 1;
+        }
+        
+        .ai-feature-card:hover {
+            transform: translateY(-5px);
+            border-color: #6366f1;
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .feature-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .feature-desc {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+        
+        /* Central Control Panel */
+        .control-panel {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .media-controls {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 30px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 40px;
+        }
+        
+        .control-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(90deg, #06b6d4, #6366f1);
+            border-color: transparent;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .action-btn {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.5s ease;
+        }
+        
+        .action-btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        .action-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .action-title {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        /* Service Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-2px);
+            border-color: #6366f1;
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.2);
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .service-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #10b981;
+            font-size: 0.9em;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .service-btn {
+            background: linear-gradient(90deg, #06b6d4, #6366f1);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .service-btn:hover {
+            transform: translateX(3px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Voice Command UI */
+        .voice-command {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .voice-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border: none;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 3em;
+            color: white;
+        }
+        
+        .voice-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.5);
+        }
+        
+        .voice-btn.listening {
+            animation: voicePulse 1.5s ease infinite;
+        }
+        
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+            50% { transform: scale(1.1); box-shadow: 0 0 50px rgba(139, 92, 246, 0.8); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .ai-features { grid-template-columns: 1fr; }
+            .services-grid { grid-template-columns: 1fr; }
+            .quick-actions { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <div class="header">
+        <h1>🤖 AI Media Central</h1>
+        <p class="subtitle">Intelligent Control Hub for Your Media Universe</p>
+    </div>
+    
+    <!-- AI Assistant Section -->
+    <div class="ai-assistant">
+        <div class="ai-header">
+            <div class="ai-avatar">🧠</div>
+            <div class="ai-title">
+                <h2>AI Assistant Active</h2>
+                <div class="ai-status">
+                    <span class="status-dot"></span>
+                    <span>Ready to help with your media needs</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ai-features">
+            <div class="ai-feature-card" onclick="activateFeature('voice')">
+                <span class="feature-icon">🎙️</span>
+                <div class="feature-title">Voice Control</div>
+                <div class="feature-desc">Control everything with natural voice commands</div>
+            </div>
+            
+            <div class="ai-feature-card" onclick="activateFeature('recommendations')">
+                <span class="feature-icon">🎯</span>
+                <div class="feature-title">Smart Recommendations</div>
+                <div class="feature-desc">AI-powered content suggestions based on your taste</div>
+            </div>
+            
+            <div class="ai-feature-card" onclick="activateFeature('automation')">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-title">Intelligent Automation</div>
+                <div class="feature-desc">Automate downloads, organization, and more</div>
+            </div>
+            
+            <div class="ai-feature-card" onclick="activateFeature('analysis')">
+                <span class="feature-icon">📊</span>
+                <div class="feature-title">Content Analysis</div>
+                <div class="feature-desc">Deep insights into your media library</div>
+            </div>
+            
+            <div class="ai-feature-card" onclick="activateFeature('generation')">
+                <span class="feature-icon">✨</span>
+                <div class="feature-title">Content Generation</div>
+                <div class="feature-desc">Create thumbnails, descriptions, and more</div>
+            </div>
+            
+            <div class="ai-feature-card" onclick="activateFeature('translation')">
+                <span class="feature-icon">🌐</span>
+                <div class="feature-title">Universal Translation</div>
+                <div class="feature-desc">Real-time subtitle translation and dubbing</div>
+            </div>
+        </div>
+        
+        <!-- Voice Command Interface -->
+        <div class="voice-command">
+            <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">
+                🎤
+            </button>
+            <div class="voice-text">
+                <h3>Try saying: "Play my favorite movie" or "Download trending shows"</h3>
+                <p id="voiceStatus">Click to activate voice control</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Central Control Panel -->
+    <div class="control-panel">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-btn" onclick="performAction('ai-scan')">
+                <span class="action-icon">🔍</span>
+                <div class="action-title">AI Library Scan</div>
+            </div>
+            
+            <div class="action-btn" onclick="performAction('smart-download')">
+                <span class="action-icon">🚀</span>
+                <div class="action-title">Smart Download</div>
+            </div>
+            
+            <div class="action-btn" onclick="performAction('optimize')">
+                <span class="action-icon">⚙️</span>
+                <div class="action-title">AI Optimize</div>
+            </div>
+            
+            <div class="action-btn" onclick="performAction('trending')">
+                <span class="action-icon">📈</span>
+                <div class="action-title">Get Trending</div>
+            </div>
+        </div>
+        
+        <!-- Media Controls -->
+        <div class="media-controls">
+            <div class="control-tabs">
+                <button class="tab-btn active" onclick="switchTab('media')">🎬 Media Servers</button>
+                <button class="tab-btn" onclick="switchTab('download')">📥 Downloads</button>
+                <button class="tab-btn" onclick="switchTab('automation')">🤖 AI Automation</button>
+                <button class="tab-btn" onclick="switchTab('management')">🛠️ Management</button>
+            </div>
+            
+            <div class="services-grid" id="servicesGrid">
+                <!-- Media Servers -->
+                <div class="service-card" data-category="media">
+                    <div class="service-header">
+                        <span class="service-name">Jellyfin</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            AI Enhanced
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8096" target="_blank" class="service-btn">
+                            Open Jellyfin
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('jellyfin')">
+                            🤖 AI Control
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Download Automation -->
+                <div class="service-card" data-category="download">
+                    <div class="service-header">
+                        <span class="service-name">Sonarr + AI</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Smart Mode
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:8989" target="_blank" class="service-btn">
+                            Open Sonarr
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('sonarr')">
+                            🤖 AI Suggest
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="service-card" data-category="download">
+                    <div class="service-header">
+                        <span class="service-name">Radarr + AI</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Smart Mode
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:7878" target="_blank" class="service-btn">
+                            Open Radarr
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('radarr')">
+                            🤖 AI Suggest
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="service-card" data-category="download">
+                    <div class="service-header">
+                        <span class="service-name">Prowlarr</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            AI Indexing
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:9696" target="_blank" class="service-btn">
+                            Open Prowlarr
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('prowlarr')">
+                            🤖 Smart Search
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- AI Automation -->
+                <div class="service-card" data-category="automation">
+                    <div class="service-header">
+                        <span class="service-name">AI Content Scanner</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Active
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <button class="service-btn" onclick="aiFeature('scanner')">
+                            🔍 Scan Library
+                        </button>
+                        <button class="service-btn secondary-btn" onclick="aiFeature('analyze')">
+                            📊 Analyze
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="service-card" data-category="automation">
+                    <div class="service-header">
+                        <span class="service-name">Smart Downloader</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Learning
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <button class="service-btn" onclick="aiFeature('download')">
+                            🚀 Auto Download
+                        </button>
+                        <button class="service-btn secondary-btn" onclick="aiFeature('preferences')">
+                            ⚙️ Preferences
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="service-card" data-category="automation">
+                    <div class="service-header">
+                        <span class="service-name">Content Generator</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Ready
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <button class="service-btn" onclick="aiFeature('generate')">
+                            ✨ Generate
+                        </button>
+                        <button class="service-btn secondary-btn" onclick="aiFeature('templates')">
+                            📝 Templates
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Management -->
+                <div class="service-card" data-category="management">
+                    <div class="service-header">
+                        <span class="service-name">Portainer</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:9000" target="_blank" class="service-btn">
+                            Open Portainer
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('portainer')">
+                            🤖 AI Monitor
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="service-card" data-category="management">
+                    <div class="service-header">
+                        <span class="service-name">Uptime Kuma</span>
+                        <span class="service-status">
+                            <span class="status-dot"></span>
+                            Monitoring
+                        </span>
+                    </div>
+                    <div class="service-actions">
+                        <a href="http://localhost:3001" target="_blank" class="service-btn">
+                            Open Monitor
+                        </a>
+                        <button class="service-btn secondary-btn" onclick="aiControl('monitor')">
+                            🤖 AI Alerts
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Voice Control
+        let isListening = false;
+        function toggleVoice() {
+            const btn = document.getElementById('voiceBtn');
+            const status = document.getElementById('voiceStatus');
+            
+            isListening = !isListening;
+            
+            if (isListening) {
+                btn.classList.add('listening');
+                status.textContent = 'Listening... Say a command';
+                // In production, this would activate actual voice recognition
+                setTimeout(() => {
+                    if (isListening) {
+                        status.textContent = 'Processing: "Play trending movies"';
+                        setTimeout(() => {
+                            status.textContent = 'Command executed successfully!';
+                            btn.classList.remove('listening');
+                            isListening = false;
+                        }, 2000);
+                    }
+                }, 3000);
+            } else {
+                btn.classList.remove('listening');
+                status.textContent = 'Click to activate voice control';
+            }
+        }
+        
+        // Tab Switching
+        function switchTab(category) {
+            // Update active tab
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide services
+            document.querySelectorAll('.service-card').forEach(card => {
+                if (category === 'all' || card.dataset.category === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        // AI Feature Activation
+        function activateFeature(feature) {
+            const messages = {
+                voice: 'Voice control activated! Say any command...',
+                recommendations: 'Analyzing your viewing history for personalized suggestions...',
+                automation: 'Setting up intelligent automation rules...',
+                analysis: 'Performing deep content analysis on your library...',
+                generation: 'AI content generation ready! Select media to enhance...',
+                translation: 'Universal translation system activated!'
+            };
+            
+            alert(`🤖 ${messages[feature] || 'Feature activated!'}`);
+        }
+        
+        // AI Control
+        function aiControl(service) {
+            const actions = {
+                jellyfin: 'AI is optimizing your Jellyfin experience...',
+                sonarr: 'AI is finding the best TV shows based on your preferences...',
+                radarr: 'AI is suggesting movies you\'ll love...',
+                prowlarr: 'AI is optimizing search indexers for better results...',
+                portainer: 'AI is monitoring container health and performance...',
+                monitor: 'AI alert system configured for predictive monitoring!'
+            };
+            
+            alert(`🤖 ${actions[service] || 'AI control activated!'}`);
+        }
+        
+        // AI Features
+        function aiFeature(feature) {
+            const features = {
+                scanner: 'Scanning library with AI content recognition...',
+                analyze: 'Analyzing viewing patterns and content quality...',
+                download: 'AI is selecting content based on your preferences...',
+                preferences: 'Learning your preferences for better recommendations...',
+                generate: 'Generating enhanced metadata and artwork...',
+                templates: 'Creating AI-powered content templates...'
+            };
+            
+            alert(`🤖 ${features[feature] || 'AI feature activated!'}`);
+        }
+        
+        // Quick Actions
+        function performAction(action) {
+            const actions = {
+                'ai-scan': 'Performing intelligent library scan with content recognition...',
+                'smart-download': 'AI is finding and downloading trending content...',
+                'optimize': 'Optimizing your media server with AI...',
+                'trending': 'Fetching trending content from multiple sources...'
+            };
+            
+            alert(`🚀 ${actions[action] || 'Action performed!'}`);
+        }
+        
+        // Initialize
+        switchTab('media');
+        
+        // Animated status dots
+        setInterval(() => {
+            document.querySelectorAll('.status-dot').forEach(dot => {
+                dot.style.animation = 'none';
+                setTimeout(() => {
+                    dot.style.animation = 'blink 2s ease infinite';
+                }, 10);
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

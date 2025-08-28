@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Enhanced Media Server Dashboard</title>
+    <meta name="description" content="Advanced AI-powered media server with content moderation, ethical recommendations, and social integration">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
+    <style>
+        /* Modern Dark Theme with AI-inspired Design */
+        :root {
+            --primary-bg: #0a0a0f;
+            --secondary-bg: #1a1a2e;
+            --accent-bg: #16213e;
+            --ai-primary: #00d4aa;
+            --ai-secondary: #0099cc;
+            --ai-accent: #7b68ee;
+            --warning: #ff6b6b;
+            --success: #51cf66;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-muted: #606060;
+            --border: #333333;
+            --shadow: rgba(0, 212, 170, 0.1);
+            --gradient-primary: linear-gradient(135deg, #00d4aa, #0099cc);
+            --gradient-danger: linear-gradient(135deg, #ff6b6b, #ff8787);
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(123, 104, 238, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0, 153, 204, 0.1) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+        
+        @keyframes bgFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(1deg); }
+        }
+        
+        /* Header */
+        .header {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 212, 170, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0); }
+        }
+        
+        .status-indicators {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-online {
+            background: rgba(81, 207, 102, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-primary);
+            opacity: 0.5;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px var(--shadow);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--gradient-primary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* AI Analysis Section */
+        .ai-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .analysis-item {
+            background: var(--accent-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .analysis-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .analysis-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .analysis-score {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .score-high { color: var(--success); }
+        .score-medium { color: var(--ai-secondary); }
+        .score-low { color: var(--warning); }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+        
+        .progress-high { background: var(--gradient-primary); }
+        .progress-medium { background: linear-gradient(90deg, var(--ai-secondary), var(--ai-accent)); }
+        .progress-low { background: var(--gradient-danger); }
+        
+        /* Content Moderation */
+        .moderation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .moderation-btn {
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(0, 153, 204, 0.2);
+            border: 1px solid var(--ai-secondary);
+            color: var(--ai-secondary);
+        }
+        
+        .btn-warning {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+        
+        .moderation-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Content Input */
+        .content-input-area {
+            margin: 1.5rem 0;
+        }
+        
+        .content-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            background: var(--accent-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        .content-textarea:focus {
+            outline: none;
+            border-color: var(--ai-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+        
+        .content-textarea::placeholder {
+            color: var(--text-muted);
+        }
+        
+        /* Recommendations */
+        .recommendations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .recommendation-item {
+            background: var(--accent-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .recommendation-item:hover {
+            border-color: var(--ai-primary);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+        
+        .rec-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 0.8rem;
+        }
+        
+        .rec-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .rec-score {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .rec-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .rec-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .rec-tag {
+            background: rgba(123, 104, 238, 0.2);
+            color: var(--ai-accent);
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(123, 104, 238, 0.3);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .sidebar .card {
+            padding: 1.5rem;
+        }
+        
+        /* Live Feed */
+        .live-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .feed-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s ease;
+        }
+        
+        .feed-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .feed-item:last-child {
+            border-bottom: none;
+        }
+        
+        .feed-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .feed-content {
+            flex: 1;
+        }
+        
+        .feed-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+        
+        .feed-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .feed-time {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .stat-item {
+            background: var(--accent-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--ai-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Social Media Integration */
+        .social-platforms {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .platform-item {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            padding: 1rem;
+            background: var(--accent-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .platform-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .platform-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .youtube { background: #ff0000; }
+        .twitter { background: #1da1f2; }
+        .reddit { background: #ff4500; }
+        
+        .platform-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .platform-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .connected {
+            background: rgba(81, 207, 102, 0.2);
+            color: var(--success);
+        }
+        
+        .disconnected {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--warning);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--secondary-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: color 0.3s ease, background 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            color: var(--text-primary);
+            background: var(--accent-bg);
+        }
+        
+        /* Loading States */
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid var(--ai-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .ai-analysis {
+                grid-template-columns: 1fr;
+            }
+            
+            .moderation-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Dark scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--accent-bg);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--ai-primary);
+        }
+        
+        /* Animations for content updates */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: slideInUp 0.5s ease-out;
+        }
+        
+        /* Status indicators */
+        .processing {
+            background: linear-gradient(90deg, var(--ai-primary), var(--ai-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 2s ease-in-out infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="ai-icon">🧠</div>
+                AI Media Server
+            </div>
+            <div class="status-indicators">
+                <div class="status-badge status-online">
+                    <div class="status-dot"></div>
+                    AI Systems Online
+                </div>
+                <div class="status-badge status-warning">
+                    <div class="status-dot"></div>
+                    <span id="active-connections">0</span> Active
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <main class="main-content">
+            <!-- AI Analysis Dashboard -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">🔍</div>
+                        AI Content Analysis
+                    </h2>
+                </div>
+                
+                <div class="ai-analysis">
+                    <div class="analysis-item">
+                        <div class="analysis-header">
+                            <div class="analysis-title">Content Safety Score</div>
+                            <div class="analysis-score score-high">
+                                <span id="safety-score">98.5%</span>
+                                ✓
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-high" style="width: 98.5%"></div>
+                        </div>
+                        <p>All content passes AI safety filters with high confidence</p>
+                    </div>
+                    
+                    <div class="analysis-item">
+                        <div class="analysis-header">
+                            <div class="analysis-title">Recommendation Quality</div>
+                            <div class="analysis-score score-medium">
+                                <span id="rec-quality">87.3%</span>
+                                ◐
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-medium" style="width: 87.3%"></div>
+                        </div>
+                        <p>Ethical AI recommendations with diversity optimization</p>
+                    </div>
+                    
+                    <div class="analysis-item">
+                        <div class="analysis-header">
+                            <div class="analysis-title">Social Media Safety</div>
+                            <div class="analysis-score score-high">
+                                <span id="social-safety">94.7%</span>
+                                ✓
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-high" style="width: 94.7%"></div>
+                        </div>
+                        <p>Safe social media integration with content filtering</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Content Moderation -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">🛡️</div>
+                        Real-Time Content Moderation
+                    </h2>
+                </div>
+                
+                <div class="content-input-area">
+                    <textarea 
+                        id="content-input" 
+                        class="content-textarea" 
+                        placeholder="Enter content to analyze for safety, appropriateness, and compliance..."
+                    ></textarea>
+                </div>
+                
+                <div class="moderation-controls">
+                    <button class="moderation-btn btn-primary" onclick="analyzeContent()">
+                        <span>🧠</span> AI Analysis
+                    </button>
+                    <button class="moderation-btn btn-secondary" onclick="checkSafety()">
+                        <span>🔍</span> Safety Check
+                    </button>
+                    <button class="moderation-btn btn-warning" onclick="flagContent()">
+                        <span>⚠️</span> Flag Content
+                    </button>
+                </div>
+                
+                <div id="moderation-results" class="moderation-results" style="display: none;">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+            
+            <!-- AI Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">🎯</div>
+                        Ethical AI Recommendations
+                    </h2>
+                </div>
+                
+                <div class="recommendations-list" id="recommendations-list">
+                    <!-- Recommendations will be populated here -->
+                </div>
+                
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button class="moderation-btn btn-primary" onclick="refreshRecommendations()">
+                        <span>🔄</span> Refresh Recommendations
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <aside class="sidebar">
+            <!-- Live Activity Feed -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon">📡</div>
+                        Live AI Activity
+                    </h3>
+                </div>
+                
+                <div class="live-feed" id="live-feed">
+                    <!-- Live feed items will be populated here -->
+                </div>
+            </div>
+            
+            <!-- System Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon">📊</div>
+                        AI Statistics
+                    </h3>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="content-analyzed">2,847</div>
+                        <div class="stat-label">Content Analyzed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="threats-blocked">12</div>
+                        <div class="stat-label">Threats Blocked</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="recommendations">156</div>
+                        <div class="stat-label">Recommendations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="safety-rating">99.2%</div>
+                        <div class="stat-label">Safety Rating</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Social Media Integration -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <div class="card-icon">🌐</div>
+                        Social Integration
+                    </h3>
+                </div>
+                
+                <div class="social-platforms">
+                    <div class="platform-item">
+                        <div class="platform-info">
+                            <div class="platform-icon youtube">📺</div>
+                            <div class="platform-name">YouTube</div>
+                        </div>
+                        <div class="platform-status connected">Connected</div>
+                    </div>
+                    <div class="platform-item">
+                        <div class="platform-info">
+                            <div class="platform-icon twitter">🐦</div>
+                            <div class="platform-name">Twitter</div>
+                        </div>
+                        <div class="platform-status connected">Connected</div>
+                    </div>
+                    <div class="platform-item">
+                        <div class="platform-info">
+                            <div class="platform-icon reddit">🔴</div>
+                            <div class="platform-name">Reddit</div>
+                        </div>
+                        <div class="platform-status disconnected">Filtered</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- Modal for detailed results -->
+    <div id="results-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">AI Analysis Results</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modal-body">
+                <!-- Modal content will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // AI Dashboard JavaScript
+        class AIDashboard {
+            constructor() {
+                this.wsConnection = null;
+                this.apiBaseUrl = 'http://localhost:8095/api';
+                this.isProcessing = false;
+                
+                this.initWebSocket();
+                this.loadInitialData();
+                this.startRealTimeUpdates();
+            }
+            
+            initWebSocket() {
+                try {
+                    this.wsConnection = new WebSocket('ws://localhost:8081');
+                    
+                    this.wsConnection.onopen = () => {
+                        console.log('WebSocket connected');
+                        this.updateConnectionStatus(true);
+                    };
+                    
+                    this.wsConnection.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleWebSocketMessage(data);
+                    };
+                    
+                    this.wsConnection.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        this.updateConnectionStatus(false);
+                        // Attempt reconnection after 5 seconds
+                        setTimeout(() => this.initWebSocket(), 5000);
+                    };
+                    
+                    this.wsConnection.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                    };
+                } catch (error) {
+                    console.error('WebSocket initialization failed:', error);
+                }
+            }
+            
+            updateConnectionStatus(connected) {
+                const statusIndicator = document.querySelector('.status-warning');
+                const activeConnections = document.getElementById('active-connections');
+                
+                if (connected) {
+                    statusIndicator.className = 'status-badge status-online';
+                    statusIndicator.innerHTML = '<div class="status-dot"></div> AI Systems Connected';
+                    activeConnections.textContent = '1';
+                } else {
+                    statusIndicator.className = 'status-badge status-warning';
+                    statusIndicator.innerHTML = '<div class="status-dot"></div> <span id="active-connections">0</span> Active';
+                    activeConnections.textContent = '0';
+                }
+            }
+            
+            handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'moderation_result':
+                        this.displayModerationResult(data.result);
+                        break;
+                    case 'trending_update':
+                        this.updateTrendingTopics(data.data);
+                        break;
+                    case 'live_activity':
+                        this.addLiveFeedItem(data.activity);
+                        break;
+                    case 'stats_update':
+                        this.updateStatistics(data.stats);
+                        break;
+                }
+            }
+            
+            async loadInitialData() {
+                await Promise.all([
+                    this.loadRecommendations(),
+                    this.loadStatistics(),
+                    this.loadLiveFeed()
+                ]);
+            }
+            
+            async analyzeContent() {
+                const content = document.getElementById('content-input').value.trim();
+                if (!content) {
+                    this.showNotification('Please enter content to analyze', 'warning');
+                    return;
+                }
+                
+                this.setProcessing(true);
+                
+                try {
+                    // Show immediate feedback
+                    this.addLiveFeedItem({
+                        type: 'analysis_started',
+                        title: 'AI Analysis Started',
+                        description: 'Analyzing content for safety and compliance...',
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    const response = await fetch(`${this.apiBaseUrl}/moderate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: content,
+                            contentType: 'text',
+                            platform: 'dashboard'
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    this.displayModerationResult(result);
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    this.showNotification('Analysis failed. Please try again.', 'error');
+                } finally {
+                    this.setProcessing(false);
+                }
+            }
+            
+            displayModerationResult(result) {
+                const resultsDiv = document.getElementById('moderation-results');
+                resultsDiv.style.display = 'block';
+                resultsDiv.className = 'moderation-results fade-in';
+                
+                const safetyClass = result.safetyScore > 0.8 ? 'score-high' : 
+                                  result.safetyScore > 0.5 ? 'score-medium' : 'score-low';
+                
+                const progressClass = result.safetyScore > 0.8 ? 'progress-high' : 
+                                     result.safetyScore > 0.5 ? 'progress-medium' : 'progress-low';
+                
+                resultsDiv.innerHTML = `
+                    <div class="analysis-item">
+                        <div class="analysis-header">
+                            <div class="analysis-title">AI Analysis Result</div>
+                            <div class="analysis-score ${safetyClass}">
+                                ${(result.safetyScore * 100).toFixed(1)}%
+                                ${result.isApproved ? '✓' : '⚠️'}
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${progressClass}" style="width: ${result.safetyScore * 100}%"></div>
+                        </div>
+                        <div style="margin: 1rem 0;">
+                            <strong>Status:</strong> ${result.isApproved ? 'Approved' : 'Requires Review'}
+                        </div>
+                        ${result.contentWarnings.length > 0 ? `
+                            <div style="margin: 1rem 0;">
+                                <strong>Warnings:</strong>
+                                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                                    ${result.contentWarnings.map(warning => `<li>${warning}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${result.reasoning.length > 0 ? `
+                            <div style="margin: 1rem 0;">
+                                <strong>AI Reasoning:</strong>
+                                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                                    ${result.reasoning.map(reason => `<li>${reason}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${result.suggestedActions.length > 0 ? `
+                            <div style="margin: 1rem 0;">
+                                <strong>Suggested Actions:</strong>
+                                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                                    ${result.suggestedActions.map(action => `<li>${action}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                // Update live feed
+                this.addLiveFeedItem({
+                    type: 'analysis_complete',
+                    title: 'Content Analysis Complete',
+                    description: `Safety score: ${(result.safetyScore * 100).toFixed(1)}% - ${result.isApproved ? 'Approved' : 'Flagged'}`,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Update statistics
+                this.incrementStat('content-analyzed');
+                if (!result.isApproved) {
+                    this.incrementStat('threats-blocked');
+                }
+            }
+            
+            async loadRecommendations() {
+                try {
+                    // Mock recommendations for demo
+                    const recommendations = [
+                        {
+                            title: "Educational Documentary: The Future of AI",
+                            description: "Explore the ethical implications and future potential of artificial intelligence in this comprehensive documentary.",
+                            score: 0.94,
+                            tags: ["Education", "Technology", "AI", "Documentary"],
+                            safetyScore: 0.98
+                        },
+                        {
+                            title: "Family-Friendly Animation: Space Adventures",
+                            description: "Join our heroes on an exciting journey through the cosmos in this beautifully animated series suitable for all ages.",
+                            score: 0.91,
+                            tags: ["Animation", "Family", "Adventure", "Space"],
+                            safetyScore: 1.0
+                        },
+                        {
+                            title: "Nature Photography Collection",
+                            description: "Stunning high-definition photography showcasing the beauty of our natural world and wildlife.",
+                            score: 0.88,
+                            tags: ["Nature", "Photography", "Wildlife", "Relaxation"],
+                            safetyScore: 1.0
+                        }
+                    ];
+                    
+                    this.displayRecommendations(recommendations);
+                } catch (error) {
+                    console.error('Failed to load recommendations:', error);
+                }
+            }
+            
+            displayRecommendations(recommendations) {
+                const container = document.getElementById('recommendations-list');
+                
+                container.innerHTML = recommendations.map(rec => `
+                    <div class="recommendation-item fade-in">
+                        <div class="rec-header">
+                            <div>
+                                <div class="rec-title">${rec.title}</div>
+                                <div class="rec-description">${rec.description}</div>
+                            </div>
+                            <div class="rec-score">${(rec.score * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="rec-tags">
+                            ${rec.tags.map(tag => `<span class="rec-tag">${tag}</span>`).join('')}
+                            <span class="rec-tag" style="background: rgba(81, 207, 102, 0.2); color: var(--success); border-color: var(--success);">
+                                Safety: ${(rec.safetyScore * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            async loadStatistics() {
+                // Update statistics with sample data
+                this.updateStatValue('content-analyzed', 2847);
+                this.updateStatValue('threats-blocked', 12);
+                this.updateStatValue('recommendations', 156);
+                this.updateStatValue('safety-rating', '99.2%');
+            }
+            
+            loadLiveFeed() {
+                const activities = [
+                    {
+                        type: 'content_approved',
+                        title: 'Content Approved',
+                        description: 'Educational video passed all safety checks',
+                        timestamp: new Date(Date.now() - 5 * 60000).toISOString()
+                    },
+                    {
+                        type: 'threat_blocked',
+                        title: 'Threat Blocked',
+                        description: 'Suspicious content flagged and quarantined',
+                        timestamp: new Date(Date.now() - 15 * 60000).toISOString()
+                    },
+                    {
+                        type: 'recommendation_generated',
+                        title: 'Recommendations Updated',
+                        description: 'AI generated 12 new personalized recommendations',
+                        timestamp: new Date(Date.now() - 30 * 60000).toISOString()
+                    },
+                    {
+                        type: 'social_integrated',
+                        title: 'Social Media Sync',
+                        description: 'Safe content synchronized with connected platforms',
+                        timestamp: new Date(Date.now() - 45 * 60000).toISOString()
+                    }
+                ];
+                
+                activities.forEach(activity => this.addLiveFeedItem(activity));
+            }
+            
+            addLiveFeedItem(activity) {
+                const feed = document.getElementById('live-feed');
+                const feedItem = document.createElement('div');
+                feedItem.className = 'feed-item fade-in';
+                
+                const iconMap = {
+                    content_approved: '✅',
+                    threat_blocked: '🛡️',
+                    recommendation_generated: '🎯',
+                    social_integrated: '🌐',
+                    analysis_started: '🔍',
+                    analysis_complete: '🧠'
+                };
+                
+                const icon = iconMap[activity.type] || '📡';
+                const timeAgo = this.timeAgo(new Date(activity.timestamp));
+                
+                feedItem.innerHTML = `
+                    <div class="feed-icon">${icon}</div>
+                    <div class="feed-content">
+                        <div class="feed-title">${activity.title}</div>
+                        <div class="feed-description">${activity.description}</div>
+                        <div class="feed-time">${timeAgo}</div>
+                    </div>
+                `;
+                
+                feed.insertBefore(feedItem, feed.firstChild);
+                
+                // Keep only last 10 items
+                while (feed.children.length > 10) {
+                    feed.removeChild(feed.lastChild);
+                }
+            }
+            
+            updateStatValue(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                }
+            }
+            
+            incrementStat(id) {
+                const element = document.getElementById(id);
+                if (element) {
+                    const current = parseInt(element.textContent) || 0;
+                    element.textContent = current + 1;
+                }
+            }
+            
+            setProcessing(processing) {
+                this.isProcessing = processing;
+                const buttons = document.querySelectorAll('.moderation-btn');
+                
+                buttons.forEach(btn => {
+                    if (processing) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<div class="spinner"></div> Processing...';
+                        btn.classList.add('processing');
+                    } else {
+                        btn.disabled = false;
+                        btn.classList.remove('processing');
+                        // Restore original content based on button
+                        if (btn.textContent.includes('Processing')) {
+                            if (btn.classList.contains('btn-primary')) {
+                                btn.innerHTML = '<span>🧠</span> AI Analysis';
+                            } else if (btn.classList.contains('btn-secondary')) {
+                                btn.innerHTML = '<span>🔍</span> Safety Check';
+                            } else if (btn.classList.contains('btn-warning')) {
+                                btn.innerHTML = '<span>⚠️</span> Flag Content';
+                            }
+                        }
+                    }
+                });
+            }
+            
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: var(--glass);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 1rem 1.5rem;
+                    color: var(--text-primary);
+                    backdrop-filter: blur(20px);
+                    z-index: 10000;
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+            
+            timeAgo(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                
+                let interval = Math.floor(seconds / 31536000);
+                if (interval > 1) return interval + " years ago";
+                
+                interval = Math.floor(seconds / 2592000);
+                if (interval > 1) return interval + " months ago";
+                
+                interval = Math.floor(seconds / 86400);
+                if (interval > 1) return interval + " days ago";
+                
+                interval = Math.floor(seconds / 3600);
+                if (interval > 1) return interval + " hours ago";
+                
+                interval = Math.floor(seconds / 60);
+                if (interval > 1) return interval + " minutes ago";
+                
+                return "Just now";
+            }
+            
+            startRealTimeUpdates() {
+                // Update statistics every 30 seconds
+                setInterval(() => {
+                    if (!this.isProcessing) {
+                        this.loadStatistics();
+                    }
+                }, 30000);
+                
+                // Update AI analysis scores periodically
+                setInterval(() => {
+                    this.updateAIScores();
+                }, 60000);
+            }
+            
+            updateAIScores() {
+                // Simulate minor fluctuations in AI scores
+                const safetyScore = 98.5 + (Math.random() - 0.5) * 2;
+                const recQuality = 87.3 + (Math.random() - 0.5) * 5;
+                const socialSafety = 94.7 + (Math.random() - 0.5) * 3;
+                
+                document.getElementById('safety-score').textContent = safetyScore.toFixed(1) + '%';
+                document.getElementById('rec-quality').textContent = recQuality.toFixed(1) + '%';
+                document.getElementById('social-safety').textContent = socialSafety.toFixed(1) + '%';
+            }
+        }
+        
+        // Global functions for button clicks
+        let dashboard;
+        
+        window.onload = () => {
+            dashboard = new AIDashboard();
+        };
+        
+        function analyzeContent() {
+            dashboard.analyzeContent();
+        }
+        
+        function checkSafety() {
+            dashboard.analyzeContent(); // Same as analyze for demo
+        }
+        
+        function flagContent() {
+            const content = document.getElementById('content-input').value.trim();
+            if (!content) {
+                dashboard.showNotification('Please enter content to flag', 'warning');
+                return;
+            }
+            
+            dashboard.showNotification('Content flagged for manual review', 'info');
+            dashboard.addLiveFeedItem({
+                type: 'threat_blocked',
+                title: 'Content Flagged',
+                description: 'Content manually flagged for review',
+                timestamp: new Date().toISOString()
+            });
+            dashboard.incrementStat('threats-blocked');
+        }
+        
+        function refreshRecommendations() {
+            dashboard.loadRecommendations();
+            dashboard.showNotification('Recommendations refreshed', 'success');
+        }
+        
+        function closeModal() {
+            document.getElementById('results-modal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('results-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Add notification animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    opacity: 0;
+                    transform: translateX(100%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+            
+            @keyframes slideOutRight {
+                from {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(100%);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

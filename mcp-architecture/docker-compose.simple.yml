@@ -1,0 +1,130 @@
+version: '3.8'
+
+# Simplified Ultimate Media Server 2025
+# Running essential services with MCP integration
+
+services:
+  # MCP Dashboard and Server
+  mcp-dashboard:
+    image: node:18-alpine
+    container_name: ultimate-mcp-dashboard
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "8090:8090"  # Dashboard
+      - "3000:3000"  # MCP Server
+    environment:
+      - NODE_ENV=production
+    command: >
+      sh -c "
+        npm install &&
+        node ultimate-single-container-mcp.js &
+        cd public &&
+        npx http-server -p 8090 -a 0.0.0.0 --cors
+      "
+    restart: unless-stopped
+    networks:
+      - mediaserver
+
+  # Jellyfin - Media Server
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - jellyfin-config:/config
+      - ./media:/media
+    networks:
+      - mediaserver
+    restart: unless-stopped
+
+  # Sonarr - TV Show Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - sonarr-config:/config
+      - ./media/tv:/tv
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    restart: unless-stopped
+
+  # Radarr - Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - radarr-config:/config
+      - ./media/movies:/movies
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    restart: unless-stopped
+
+  # Prowlarr - Indexer Management
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    ports:
+      - "9696:9696"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - prowlarr-config:/config
+    networks:
+      - mediaserver
+    restart: unless-stopped
+
+  # qBittorrent - Download Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    restart: unless-stopped
+
+volumes:
+  node_modules:
+  jellyfin-config:
+  sonarr-config:
+  radarr-config:
+  prowlarr-config:
+  qbittorrent-config:
+
+networks:
+  mediaserver:
+    driver: bridge

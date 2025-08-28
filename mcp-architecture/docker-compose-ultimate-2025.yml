@@ -1,0 +1,725 @@
+version: '3.8'
+
+# Ultimate Media Server 2025 - Complete Ecosystem
+# Includes: Media Servers, Content Management, Download Clients, 
+# Indexers, Request Management, Analytics, Dashboards, and MCP Suite
+
+services:
+  # MediaServer MCP Suite - Enhanced with 15+ Service Support
+  mediaserver-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mediaserver-mcp-suite-ultimate
+    restart: unless-stopped
+    ports:
+      - "8090:8090"   # Main dashboard and API
+      - "3001:3001"   # Enhanced Unified MCP Server
+    environment:
+      - NODE_ENV=production
+      - PORT=8090
+      - LOG_LEVEL=info
+      
+      # OpenAI Configuration (Required for AI features)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=o1-mini
+      
+      # Core Media Servers
+      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - PLEX_URL=http://plex:32400
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - EMBY_URL=http://emby:8097
+      - EMBY_API_KEY=${EMBY_API_KEY}
+      
+      # Content Management (*arr Suite)
+      - SONARR_URL=http://sonarr:8989
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - RADARR_URL=http://radarr:7878
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - LIDARR_URL=http://lidarr:8686
+      - LIDARR_API_KEY=${LIDARR_API_KEY}
+      - READARR_URL=http://readarr:8787
+      - READARR_API_KEY=${READARR_API_KEY}
+      - BAZARR_URL=http://bazarr:6767
+      - BAZARR_API_KEY=${BAZARR_API_KEY}
+      
+      # Indexers & Search
+      - PROWLARR_URL=http://prowlarr:9696
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - JACKETT_URL=http://jackett:9117
+      - JACKETT_API_KEY=${JACKETT_API_KEY}
+      - FLARESOLVERR_URL=http://flaresolverr:8191
+      
+      # Download Clients
+      - QBITTORRENT_URL=http://qbittorrent:8080
+      - QBITTORRENT_USERNAME=admin
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - TRANSMISSION_URL=http://transmission:9091
+      - TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME}
+      - TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD}
+      - DELUGE_URL=http://deluge:8112
+      - DELUGE_PASSWORD=${DELUGE_PASSWORD}
+      - NZBGET_URL=http://nzbget:6789
+      - NZBGET_USERNAME=${NZBGET_USERNAME:-nzbget}
+      - NZBGET_PASSWORD=${NZBGET_PASSWORD:-tegbzn6789}
+      - SABNZBD_URL=http://sabnzbd:8085
+      - SABNZBD_API_KEY=${SABNZBD_API_KEY}
+      
+      # Request & Analytics
+      - OVERSEERR_URL=http://overseerr:5055
+      - OVERSEERR_API_KEY=${OVERSEERR_API_KEY}
+      - REQUESTRR_URL=http://requestrr:4545
+      - REQUESTRR_API_KEY=${REQUESTRR_API_KEY}
+      - TAUTULLI_URL=http://tautulli:8181
+      - TAUTULLI_API_KEY=${TAUTULLI_API_KEY}
+      
+      # Dashboards
+      - HOMEPAGE_URL=http://homepage:3000
+      - ORGANIZR_URL=http://organizr:8081
+      - ORGANIZR_API_KEY=${ORGANIZR_API_KEY}
+      
+    volumes:
+      - mcp-logs:/app/logs
+      - mcp-data:/app/data
+    networks:
+      - mediaserver
+    depends_on:
+      - jellyfin
+      - sonarr
+      - radarr
+      - prowlarr
+      - qbittorrent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # === MEDIA SERVERS ===
+  
+  # Jellyfin - Open Source Media Server
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    ports:
+      - "8096:8096"
+      - "8920:8920" # HTTPS
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - JELLYFIN_PublishedServerUrl=http://jellyfin:8096
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      - ./media:/media:ro
+      - ./downloads:/downloads:ro
+    networks:
+      - mediaserver
+    devices:
+      - /dev/dri:/dev/dri # Hardware acceleration (Intel)
+    profiles:
+      - jellyfin
+
+  # Plex Media Server
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    ports:
+      - "32400:32400"
+      - "1900:1900/udp"
+      - "3005:3005"
+      - "5353:5353/udp"
+      - "8324:8324"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - plex-config:/config
+      - ./media:/media:ro
+      - ./downloads:/downloads:ro
+    networks:
+      - mediaserver
+    devices:
+      - /dev/dri:/dev/dri # Hardware acceleration
+    profiles:
+      - plex
+
+  # Emby Media Server
+  emby:
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    restart: unless-stopped
+    ports:
+      - "8097:8096"
+      - "8921:8920" # HTTPS
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - emby-config:/config
+      - ./media:/media:ro
+      - ./downloads:/downloads:ro
+    networks:
+      - mediaserver
+    devices:
+      - /dev/dri:/dev/dri # Hardware acceleration
+    profiles:
+      - emby
+
+  # === CONTENT MANAGEMENT ===
+
+  # Sonarr - TV Show Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - sonarr-config:/config
+      - ./media/tv:/tv
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Radarr - Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - radarr-config:/config
+      - ./media/movies:/movies
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Lidarr - Music Management
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - lidarr-config:/config
+      - ./media/music:/music
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    profiles:
+      - music
+
+  # Readarr - Book Management
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - readarr-config:/config
+      - ./media/books:/books
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    profiles:
+      - books
+
+  # Bazarr - Subtitle Management
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    ports:
+      - "6767:6767"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - bazarr-config:/config
+      - ./media/movies:/movies
+      - ./media/tv:/tv
+    networks:
+      - mediaserver
+    profiles:
+      - subtitles
+
+  # === INDEXERS & SEARCH ===
+
+  # Prowlarr - Indexer Management
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    ports:
+      - "9696:9696"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - prowlarr-config:/config
+    networks:
+      - mediaserver
+
+  # Jackett - Torrent Indexer Proxy
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    restart: unless-stopped
+    ports:
+      - "9117:9117"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - jackett-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    profiles:
+      - legacy-indexers
+
+  # FlareSolverr - Cloudflare Solver
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    ports:
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+      - TZ=${TZ:-UTC}
+    networks:
+      - mediaserver
+    profiles:
+      - cloudflare-solver
+
+  # === DOWNLOAD CLIENTS ===
+
+  # qBittorrent - Torrent Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Transmission - Alternative Torrent Client
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - TRANSMISSION_WEB_HOME=/transmission-web-control/
+      - USER=${TRANSMISSION_USERNAME:-admin}
+      - PASS=${TRANSMISSION_PASSWORD:-admin}
+    volumes:
+      - transmission-config:/config
+      - ./downloads:/downloads
+      - ./watch:/watch
+    networks:
+      - mediaserver
+    profiles:
+      - transmission
+
+  # Deluge - Another Torrent Client Option
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    restart: unless-stopped
+    ports:
+      - "8112:8112"
+      - "6881:6881"
+      - "6881:6881/udp"
+      - "58846:58846"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - deluge-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    profiles:
+      - deluge
+
+  # NZBGet - Usenet Downloader
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    restart: unless-stopped
+    ports:
+      - "6789:6789"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - nzbget-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+    profiles:
+      - usenet
+
+  # SABnzbd - Alternative Usenet Downloader
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - sabnzbd-config:/config
+      - ./downloads:/downloads
+      - ./incomplete-downloads:/incomplete-downloads
+    networks:
+      - mediaserver
+    profiles:
+      - usenet
+
+  # === REQUEST MANAGEMENT ===
+
+  # Overseerr - Request Management for Plex/Jellyfin
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    ports:
+      - "5055:5055"
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ:-UTC}
+      - PORT=5055
+    volumes:
+      - overseerr-config:/app/config
+    networks:
+      - mediaserver
+    profiles:
+      - requests
+
+  # Requestrr - Discord/Chatbot Request System
+  requestrr:
+    image: darkalfx/requestrr:latest
+    container_name: requestrr
+    restart: unless-stopped
+    ports:
+      - "4545:4545"
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - requestrr-config:/root/config
+    networks:
+      - mediaserver
+    profiles:
+      - requests
+
+  # === ANALYTICS & MONITORING ===
+
+  # Tautulli - Plex Analytics
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    restart: unless-stopped
+    ports:
+      - "8181:8181"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - tautulli-config:/config
+    networks:
+      - mediaserver
+    profiles:
+      - analytics
+
+  # === DASHBOARDS & MANAGEMENT ===
+
+  # Homepage - Modern Dashboard
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - homepage-config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Docker integration
+    networks:
+      - mediaserver
+    profiles:
+      - dashboard
+
+  # Organizr - Classic Dashboard
+  organizr:
+    image: organizr/organizr:latest
+    container_name: organizr
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - organizr-config:/config
+    networks:
+      - mediaserver
+    profiles:
+      - dashboard
+
+  # === NETWORKING & SECURITY ===
+
+  # Gluetun VPN (Optional - for secure downloading)
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8888:8888/tcp" # HTTP proxy
+      - "8388:8388/tcp" # Shadowsocks
+      - "8388:8388/udp" # Shadowsocks
+    volumes:
+      - gluetun-config:/gluetun
+    environment:
+      # VPN Configuration - Update with your VPN provider
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-surfshark}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_REGIONS=${VPN_REGIONS:-United States}
+      - DOT=off
+    networks:
+      - mediaserver
+    profiles:
+      - vpn
+
+  # Watchtower - Auto Updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400 # 24 hours
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_REVIVE_STOPPED=false
+      - WATCHTOWER_NOTIFICATIONS=slack
+      - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=${SLACK_WEBHOOK_URL}
+    networks:
+      - mediaserver
+    profiles:
+      - auto-update
+
+volumes:
+  # MCP Suite
+  mcp-logs:
+    driver: local
+  mcp-data:
+    driver: local
+    
+  # Media Servers
+  jellyfin-config:
+    driver: local
+  jellyfin-cache:
+    driver: local
+  plex-config:
+    driver: local
+  emby-config:
+    driver: local
+    
+  # Content Management
+  sonarr-config:
+    driver: local
+  radarr-config:
+    driver: local
+  lidarr-config:
+    driver: local
+  readarr-config:
+    driver: local
+  bazarr-config:
+    driver: local
+    
+  # Indexers
+  prowlarr-config:
+    driver: local
+  jackett-config:
+    driver: local
+    
+  # Download Clients
+  qbittorrent-config:
+    driver: local
+  transmission-config:
+    driver: local
+  deluge-config:
+    driver: local
+  nzbget-config:
+    driver: local
+  sabnzbd-config:
+    driver: local
+    
+  # Request Management
+  overseerr-config:
+    driver: local
+  requestrr-config:
+    driver: local
+    
+  # Analytics
+  tautulli-config:
+    driver: local
+    
+  # Dashboards
+  homepage-config:
+    driver: local
+  organizr-config:
+    driver: local
+    
+  # Networking
+  gluetun-config:
+    driver: local
+
+networks:
+  mediaserver:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# === USAGE INSTRUCTIONS ===
+#
+# 1. Basic Setup (Core Services):
+#    docker-compose up -d
+#
+# 2. With Plex instead of Jellyfin:
+#    docker-compose --profile plex up -d
+#
+# 3. With Music Management:
+#    docker-compose --profile music up -d
+#
+# 4. With Book Management:
+#    docker-compose --profile books up -d
+#
+# 5. With Subtitles:
+#    docker-compose --profile subtitles up -d
+#
+# 6. With VPN Protection:
+#    docker-compose --profile vpn up -d
+#
+# 7. With Request Management:
+#    docker-compose --profile requests up -d
+#
+# 8. With Analytics:
+#    docker-compose --profile analytics up -d
+#
+# 9. With Dashboard:
+#    docker-compose --profile dashboard up -d
+#
+# 10. Complete Setup (All Services):
+#     docker-compose --profile plex --profile music --profile books --profile subtitles --profile requests --profile analytics --profile dashboard up -d
+#
+# === CONFIGURATION STEPS ===
+#
+# 1. Copy .env.example to .env and configure your settings
+# 2. Create media directories: mkdir -p media/{movies,tv,music,books} downloads incomplete-downloads watch
+# 3. Start with core services first, then add profiles as needed
+# 4. Access services through their web interfaces to complete setup
+# 5. Get API keys from each service and update your .env file
+# 6. Restart MCP suite: docker-compose restart mediaserver-mcp
+# 7. Access the enhanced dashboard at http://localhost:8090
+#
+# === SERVICE ACCESS URLS ===
+#
+# MCP Dashboard: http://localhost:8090
+# Jellyfin: http://localhost:8096
+# Plex: http://localhost:32400
+# Emby: http://localhost:8097
+# Sonarr: http://localhost:8989
+# Radarr: http://localhost:7878
+# Lidarr: http://localhost:8686
+# Readarr: http://localhost:8787
+# Bazarr: http://localhost:6767
+# Prowlarr: http://localhost:9696
+# Jackett: http://localhost:9117
+# qBittorrent: http://localhost:8080
+# Transmission: http://localhost:9091
+# Deluge: http://localhost:8112
+# NZBGet: http://localhost:6789
+# SABnzbd: http://localhost:8085
+# Overseerr: http://localhost:5055
+# Requestrr: http://localhost:4545
+# Tautulli: http://localhost:8181
+# Homepage: http://localhost:3000
+# Organizr: http://localhost:8081

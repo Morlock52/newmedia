@@ -1,0 +1,30 @@
+#!/command/with-contenv bash
+# AI Assistant service runner
+
+set -e
+
+echo "Starting AI Assistant..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/ai-assistant
+
+# Set proper ownership
+chown -R media:media /config/ai-assistant
+
+# Set environment
+export NODE_ENV=production
+export PORT=8090
+export OLLAMA_HOST=http://localhost:11434
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export JELLYFIN_URL=http://localhost:8096
+export SONARR_URL=http://localhost:8989
+export RADARR_URL=http://localhost:7878
+export PROWLARR_URL=http://localhost:9696
+
+# Wait for dependencies
+sleep 10
+
+# Run AI Assistant
+cd /opt/ai-assistant
+exec s6-setuidgid media node dist/index.js

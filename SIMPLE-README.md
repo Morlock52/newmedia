@@ -81,4 +81,52 @@ chmod +x deploy-arm64-media-apps.sh
 ---
 
 **Created by**: Multi-Agent AI Consensus  
-**Last Updated**: August 1, 2025
+**Last Updated**: August 27, 2025
+
+## 🌐 Publish the Static Site (GitHub Pages)
+
+This repository includes a GitHub Actions workflow that publishes the static site (index.html and other HTML files) to GitHub Pages.
+
+Steps:
+1. Push this repository to GitHub.
+2. In GitHub, go to Settings -> Pages, and set Source to "GitHub Actions" (if not already).
+3. Ensure your default branch is `main` or `master` (the workflow supports both).
+4. Push any change to trigger the deployment. After it completes, your site will be available at the repository's Pages URL.
+
+Notes:
+- The workflow deploys the repository root as the site. If you prefer a `docs/` folder or a subfolder, update `.github/workflows/deploy-pages.yml` `path` accordingly.
+- All links should be relative (they are, in most cases). If you use absolute paths, ensure they resolve on Pages.
+
+## ✅ Markdown Formatting & Pre-commit Hooks
+
+Consistent Markdown formatting is configured via Prettier and markdownlint.
+
+Quick setup:
+```bash
+pip install pre-commit  # or brew install pre-commit
+pre-commit install
+# On first run, pre-commit will download hooks
+pre-commit run --all-files
+```
+
+What’s configured:
+- `.pre-commit-config.yaml` with:
+  - Trailing whitespace and EOF fixes
+  - Prettier for `.md` and `.yml` files
+  - markdownlint rules (configured in `.markdownlint.json`)
+- `.prettierrc.json` for formatting settings
+- CI workflow `.github/workflows/markdown-quality.yml` to enforce checks on PRs
+
+
+## 🖥️ VPS Docker Deployment
+
+A production-ready Docker Compose setup for a VPS with Traefik + HTTPS is included in `vps-deploy/`.
+
+Quick start on your VPS:
+```bash
+cd vps-deploy
+cp .env.example .env  # edit DOMAIN, ACME_EMAIL, MEDIA_PATH, DOWNLOADS_PATH
+docker compose up -d
+```
+
+See `vps-deploy/README.md` for details.

@@ -1,0 +1,522 @@
+version: '3.9'
+
+# Ultimate Media Server 2025 - Single Container Edition (FIXED)
+# Complete media server stack with 30+ services in one container
+# Optimized for performance, security, and ease of deployment - August 2025
+
+services:
+  ultimate-media-server-2025-fixed:
+    build:
+      context: .
+      dockerfile: Dockerfile.ultimate-single-container-2025-fixed
+      args:
+        - BUILDKIT_PROGRESS=plain
+        - DOCKER_BUILDKIT=1
+        - TARGETPLATFORM=linux/amd64
+      target: base
+    image: ultimate-media-server:2025-single-fixed
+    container_name: ultimate-media-server-2025-fixed
+    hostname: ${HOSTNAME:-media-server-fixed}
+    restart: unless-stopped
+    
+    # Enhanced Security Configuration
+    cap_add:
+      - NET_ADMIN              # For VPN and network management
+      - SYS_MODULE             # For kernel module loading if needed
+      - CHOWN                  # For file ownership management
+      - FOWNER                 # For file operations
+      - DAC_OVERRIDE           # For permission management
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined    # Required for some media operations
+      - seccomp:unconfined     # Required for some containerized services
+    read_only: false           # Required for configuration changes
+    
+    # Hardware Acceleration (Intel QuickSync, NVIDIA, AMD)
+    devices:
+      - /dev/dri:/dev/dri      # Intel/AMD hardware acceleration
+      # Uncomment for NVIDIA GPU support:
+      # - /dev/nvidia0:/dev/nvidia0
+      # - /dev/nvidiactl:/dev/nvidiactl
+      # - /dev/nvidia-modeset:/dev/nvidia-modeset
+      # - /dev/nvidia-uvm:/dev/nvidia-uvm
+      # - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+    
+    # Optimized Resource Management for 2025
+    deploy:
+      resources:
+        limits:
+          cpus: '${CONTAINER_CPU_LIMIT:-16.0}'
+          memory: ${CONTAINER_MEMORY_LIMIT:-32G}
+        reservations:
+          cpus: '${CONTAINER_CPU_RESERVATION:-4.0}'
+          memory: ${CONTAINER_MEMORY_RESERVATION:-8G}
+    
+    # Comprehensive Environment Configuration
+    environment:
+      # === SYSTEM SETTINGS ===
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - UMASK=${UMASK:-002}
+      - HOSTNAME=${HOSTNAME:-media-server-fixed}
+      
+      # === SECURITY CONFIGURATION ===
+      - SECURE_MODE=${SECURE_MODE:-true}
+      - API_KEY=${API_KEY:-ultimate_media_server_api_key_2025}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-change-this}
+      - SESSION_SECRET=${SESSION_SECRET:-your-session-secret-change-this}
+      - DISABLE_TELEMETRY=${DISABLE_TELEMETRY:-true}
+      - DISABLE_ANALYTICS=${DISABLE_ANALYTICS:-true}
+      
+      # === DATABASE CONFIGURATION ===
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-media_server_postgres_2025}
+      - POSTGRES_DB=${POSTGRES_DB:-mediaserver}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS:-200}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-media_server_redis_2025}
+      - REDIS_MAXMEMORY=${REDIS_MAXMEMORY:-1024mb}
+      - REDIS_MAXMEMORY_POLICY=${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+      
+      # === SERVICE URLS (Internal Communication) ===
+      - JELLYFIN_URL=http://localhost:8096
+      - JELLYFIN_PUBLISHED_SERVER_URL=${JELLYFIN_PUBLISHED_SERVER_URL:-http://localhost:8096}
+      - PLEX_URL=http://localhost:32400
+      - EMBY_URL=http://localhost:8097
+      
+      # === *ARR STACK CONFIGURATION ===
+      - SONARR_URL=http://localhost:8989
+      - RADARR_URL=http://localhost:7878
+      - LIDARR_URL=http://localhost:8686
+      - READARR_URL=http://localhost:8787
+      - BAZARR_URL=http://localhost:6767
+      - PROWLARR_URL=http://localhost:9696
+      
+      # === DOWNLOAD CLIENT CONFIGURATION ===
+      - QBITTORRENT_URL=http://localhost:8080
+      - QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - TRANSMISSION_URL=http://localhost:9091
+      - TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME:-admin}
+      - TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD:-admin}
+      - SABNZBD_URL=http://localhost:8085
+      - SABNZBD_USERNAME=${SABNZBD_USERNAME:-admin}
+      - SABNZBD_PASSWORD=${SABNZBD_PASSWORD:-admin}
+      - NZBGET_URL=http://localhost:6789
+      
+      # === REQUEST MANAGEMENT ===
+      - OVERSEERR_URL=http://localhost:5055
+      - JELLYSEERR_URL=http://localhost:5056
+      - OMBI_URL=http://localhost:3579
+      
+      # === AI & ML CONFIGURATION ===
+      - AI_ENABLED=${AI_ENABLED:-true}
+      - OLLAMA_HOST=http://localhost:11434
+      - OLLAMA_MODELS=${OLLAMA_MODELS_PATH:-/models/ollama}
+      - AI_ASSISTANT_URL=http://localhost:8901
+      - ENABLE_AI_RECOMMENDATIONS=${ENABLE_AI_RECOMMENDATIONS:-true}
+      - ENABLE_CONTENT_ANALYSIS=${ENABLE_CONTENT_ANALYSIS:-true}
+      - ENABLE_AI_SUBTITLES=${ENABLE_AI_SUBTITLES:-true}
+      
+      # === PERFORMANCE SETTINGS - 2025 OPTIMIZATIONS ===
+      - NODE_OPTIONS=${NODE_OPTIONS:---max-old-space-size=8192}
+      - NODE_ENV=production
+      - PYTHON_WORKERS=${PYTHON_WORKERS:-4}
+      - PYTHON_ENV=production
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+      - DOTNET_CLI_TELEMETRY_OPTOUT=1
+      
+      # === HARDWARE ACCELERATION ===
+      - ENABLE_HARDWARE_TRANSCODING=${ENABLE_HARDWARE_TRANSCODING:-true}
+      - ENABLE_4K_TRANSCODING=${ENABLE_4K_TRANSCODING:-true}
+      - ENABLE_HDR_TRANSCODING=${ENABLE_HDR_TRANSCODING:-false}
+      - ENABLE_AV1_ENCODING=${ENABLE_AV1_ENCODING:-true}
+      - TRANSCODING_THREADS=${TRANSCODING_THREADS:-auto}
+      - VAAPI_DEVICE=/dev/dri/renderD128
+      - ENABLE_INTEL_QUICKSYNC=${ENABLE_INTEL_QUICKSYNC:-true}
+      - ENABLE_VAAPI=${ENABLE_VAAPI:-true}
+      
+      # === FEATURE FLAGS - AUGUST 2025 ===
+      - ENABLE_MONITORING=${ENABLE_MONITORING:-true}
+      - ENABLE_BACKUP=${ENABLE_BACKUP:-true}
+      - ENABLE_VPN=${ENABLE_VPN:-false}
+      - ENABLE_HEALTH_CHECKS=${ENABLE_HEALTH_CHECKS:-true}
+      - ENABLE_METRICS_COLLECTION=${ENABLE_METRICS_COLLECTION:-true}
+      - ENABLE_INTRO_DETECTION=${ENABLE_INTRO_DETECTION:-true}
+      
+      # === EXTERNAL API INTEGRATIONS ===
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - TVDB_API_KEY=${TVDB_API_KEY:-}
+      - FANART_API_KEY=${FANART_API_KEY:-}
+      - OMDB_API_KEY=${OMDB_API_KEY:-}
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
+      - MUSICBRAINZ_API_KEY=${MUSICBRAINZ_API_KEY:-}
+      
+      # === NOTIFICATION SETTINGS - ENHANCED ===
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - DISCORD_USERNAME=${DISCORD_USERNAME:-Ultimate Media Server}
+      - DISCORD_ENABLE_RICH_MESSAGES=${DISCORD_ENABLE_RICH_MESSAGES:-true}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - SLACK_CHANNEL=${SLACK_CHANNEL:-#media-server}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
+      - EMAIL_SMTP_SERVER=${EMAIL_SMTP_SERVER:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - EMAIL_TO=${EMAIL_TO:-}
+      - EMAIL_TLS=${EMAIL_TLS:-true}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - PUSHBULLET_API_KEY=${PUSHBULLET_API_KEY:-}
+      - NTFY_URL=${NTFY_URL:-}
+      
+      # === LOGGING AND DEBUGGING ===
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - VERBOSE_LOGGING=${VERBOSE_LOGGING:-false}
+      - ENABLE_DEBUG_API=${ENABLE_DEBUG_API:-false}
+    
+    # Comprehensive Port Mappings - August 2025 Layout
+    ports:
+      # === PRIMARY ACCESS ===
+      - "${MAIN_PORT:-80}:80"                    # Main dashboard via Traefik
+      - "${HTTPS_PORT:-443}:443"                 # HTTPS access
+      - "${TRAEFIK_DASHBOARD_PORT:-8088}:8080"   # Traefik dashboard
+      
+      # === MEDIA SERVERS ===
+      - "${JELLYFIN_PORT:-8096}:8096"            # Jellyfin
+      - "${PLEX_PORT:-32400}:32400"              # Plex
+      - "${EMBY_PORT:-8097}:8097"                # Emby
+      
+      # Plex additional ports for full functionality
+      - "1900:1900/udp"                          # DLNA
+      - "3005:3005"                              # Plex Companion
+      - "5353:5353/udp"                          # Bonjour/Avahi
+      - "8324:8324"                              # Roku
+      - "32410:32410/udp"                        # GDM discovery
+      - "32412:32412/udp"                        # GDM discovery
+      - "32413:32413/udp"                        # GDM discovery
+      - "32414:32414/udp"                        # GDM discovery
+      - "32469:32469"                            # Plex DLNA
+      
+      # === *ARR SUITE ===
+      - "${SONARR_PORT:-8989}:8989"              # Sonarr
+      - "${RADARR_PORT:-7878}:7878"              # Radarr
+      - "${LIDARR_PORT:-8686}:8686"              # Lidarr
+      - "${READARR_PORT:-8787}:8787"             # Readarr
+      - "${BAZARR_PORT:-6767}:6767"              # Bazarr
+      - "${PROWLARR_PORT:-9696}:9696"            # Prowlarr
+      
+      # === DOWNLOAD CLIENTS ===
+      - "${QBITTORRENT_PORT:-8080}:8080"         # qBittorrent
+      - "6881:6881"                              # qBittorrent peer port
+      - "6881:6881/udp"                          # qBittorrent peer port UDP
+      - "${TRANSMISSION_PORT:-9091}:9091"        # Transmission
+      - "${SABNZBD_PORT:-8085}:8085"             # SABnzbd
+      - "${NZBGET_PORT:-6789}:6789"              # NZBGet
+      
+      # === REQUEST MANAGEMENT ===
+      - "${OVERSEERR_PORT:-5055}:5055"           # Overseerr
+      - "${JELLYSEERR_PORT:-5056}:5056"          # Jellyseerr
+      - "${OMBI_PORT:-3579}:3579"                # Ombi
+      
+      # === DASHBOARDS & UI ===
+      - "${HOMEPAGE_PORT:-3000}:3000"            # Homepage
+      - "${HOMARR_PORT:-7575}:7575"              # Homarr
+      - "${ORGANIZR_PORT:-8181}:8181"            # Organizr
+      - "${TAUTULLI_PORT:-8182}:8182"            # Tautulli
+      
+      # === CONTENT LIBRARIES ===
+      - "${CALIBRE_WEB_PORT:-8083}:8083"         # Calibre-Web
+      - "${AUDIOBOOKSHELF_PORT:-13378}:13378"    # Audiobookshelf
+      - "${NAVIDROME_PORT:-4533}:4533"           # Navidrome
+      - "${PHOTOPRISM_PORT:-2342}:2342"          # PhotoPrism
+      - "${IMMICH_PORT:-2283}:2283"              # Immich
+      - "${PAPERLESS_PORT:-8010}:8010"           # Paperless-ngx
+      - "${NEXTCLOUD_PORT:-8084}:8084"           # Nextcloud
+      - "${KOMGA_PORT:-8090}:8090"               # Komga
+      
+      # === UTILITIES ===
+      - "${VAULTWARDEN_PORT:-8085}:8085"         # Vaultwarden
+      - "${PIHOLE_PORT:-8053}:8053"              # Pi-hole web
+      - "53:53/tcp"                              # Pi-hole DNS
+      - "53:53/udp"                              # Pi-hole DNS UDP
+      - "${ADGUARD_PORT:-8054}:8054"             # AdGuard Home
+      - "${SYNCTHING_PORT:-8384}:8384"           # Syncthing
+      - "22000:22000"                            # Syncthing sync
+      - "21027:21027/udp"                        # Syncthing discovery
+      - "${FILEBROWSER_PORT:-8086}:8086"         # FileBrowser
+      - "${CODE_SERVER_PORT:-8443}:8443"         # Code Server
+      - "${GITEA_PORT:-3002}:3002"               # Gitea
+      - "2222:22"                                # Gitea SSH
+      
+      # === MONITORING & ANALYTICS ===
+      - "${PROMETHEUS_PORT:-9090}:9090"          # Prometheus
+      - "${GRAFANA_PORT:-3001}:3000"             # Grafana (mapped to 3001 externally)
+      - "${UPTIME_KUMA_PORT:-3002}:3001"         # Uptime Kuma (mapped to 3002)
+      - "${PORTAINER_PORT:-9000}:9000"           # Portainer
+      - "9443:9443"                              # Portainer HTTPS
+      - "${NETDATA_PORT:-19999}:19999"           # Netdata
+      - "${GLANCES_PORT:-61208}:61208"           # Glances
+      - "${SCRUTINY_PORT:-8082}:8082"            # Scrutiny
+      
+      # === AI SERVICES ===
+      - "${AI_ASSISTANT_PORT:-8901}:8901"        # AI Assistant API
+      - "${AI_WEBSOCKET_PORT:-8902}:8902"        # AI WebSocket
+      - "${OLLAMA_PORT:-11434}:11434"            # Ollama
+      
+      # === MANAGEMENT & APIs ===
+      - "${NGINX_PROXY_MANAGER_PORT:-81}:81"     # Nginx Proxy Manager
+      - "${YACHT_PORT:-8001}:8001"               # Yacht
+      
+      # === DATABASE PORTS (for external access if needed) ===
+      # - "${POSTGRES_PORT:-5432}:5432"          # PostgreSQL (uncomment if needed)
+      # - "${REDIS_PORT:-6379}:6379"             # Redis (uncomment if needed)
+    
+    # Optimized Volume Mappings with Better Organization
+    volumes:
+      # === CONFIGURATION PERSISTENCE ===
+      - "${CONFIG_PATH:-./config}:/config"
+      - "${DATA_PATH:-./data}:/data"
+      - "${LOGS_PATH:-./logs}:/logs"
+      - "${BACKUPS_PATH:-./backups}:/backups"
+      
+      # === MEDIA LIBRARIES - Organized by Type ===
+      - "${MOVIES_PATH:-./media/movies}:/data/media/movies"
+      - "${TV_PATH:-./media/tv}:/data/media/tv"
+      - "${MUSIC_PATH:-./media/music}:/data/media/music"
+      - "${BOOKS_PATH:-./media/books}:/data/media/books"
+      - "${AUDIOBOOKS_PATH:-./media/audiobooks}:/data/media/audiobooks"
+      - "${PHOTOS_PATH:-./media/photos}:/data/media/photos"
+      - "${DOCUMENTS_PATH:-./media/documents}:/data/media/documents"
+      - "${COMICS_PATH:-./media/comics}:/data/media/comics"
+      
+      # === DOWNLOAD DIRECTORIES - Enhanced Organization ===
+      - "${DOWNLOADS_PATH:-./downloads}:/data/downloads"
+      - "${COMPLETE_PATH:-./downloads/complete}:/data/downloads/complete"
+      - "${INCOMPLETE_PATH:-./downloads/incomplete}:/data/downloads/incomplete"
+      - "${WATCH_PATH:-./watch}:/data/downloads/watch"
+      - "${TORRENTS_PATH:-./downloads/torrents}:/data/downloads/torrents"
+      - "${USENET_PATH:-./downloads/usenet}:/data/downloads/usenet"
+      
+      # === AI MODEL STORAGE ===
+      - "${AI_MODELS_PATH:-./models}:/models"
+      - "${OLLAMA_MODELS_PATH:-./models/ollama}:/models/ollama"
+      - "${WHISPER_MODELS_PATH:-./models/whisper}:/models/whisper"
+      - "${STABLE_DIFFUSION_MODELS_PATH:-./models/stable-diffusion}:/models/stable-diffusion"
+      
+      # === DATABASE STORAGE ===
+      - "${POSTGRES_DATA_PATH:-./data/databases/postgres}:/data/databases/postgres"
+      - "${REDIS_DATA_PATH:-./data/databases/redis}:/data/databases/redis"
+      - "${GRAFANA_DATA_PATH:-./data/databases/grafana}:/data/databases/grafana"
+      
+      # === SYSTEM INTEGRATION ===
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"  # For Portainer and container management
+      
+      # === HARDWARE ACCELERATION SUPPORT ===
+      # GPU support (uncomment if using NVIDIA)
+      # - "/usr/local/nvidia:/usr/local/nvidia:ro"
+      
+      # === OPTIONAL EXTERNAL MOUNTS ===
+      # - "${NFS_MOUNT:-}:/mnt/nfs"                      # NFS shares
+      # - "${SMB_MOUNT:-}:/mnt/smb"                      # SMB shares
+      # - "${CLOUD_MOUNT:-}:/mnt/cloud"                 # Cloud storage
+    
+    # Network Configuration - Optimized for 2025
+    networks:
+      - media-network
+    
+    # DNS Configuration with Redundancy
+    dns:
+      - 1.1.1.1                    # Cloudflare DNS
+      - 1.0.0.1                    # Cloudflare DNS secondary
+      - 8.8.8.8                    # Google DNS
+      - 8.8.4.4                    # Google DNS secondary
+      # - 127.0.0.1                # Use internal Pi-hole (uncomment if enabled)
+    
+    # Enhanced Health Check
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 2m
+      timeout: 60s
+      retries: 3
+      start_period: 15m            # Increased for complex initialization
+    
+    # Service Dependencies (none - self-contained)
+    depends_on: []
+    
+    # Comprehensive Labels for Management and Monitoring
+    labels:
+      # === CONTAINER IDENTIFICATION ===
+      - "com.ultimate-media-server.version=2025.08.09-fixed"
+      - "com.ultimate-media-server.description=Complete media server stack - Production Ready"
+      - "com.ultimate-media-server.maintainer=DevOps Team"
+      - "com.ultimate-media-server.services=30+"
+      - "com.ultimate-media-server.type=all-in-one"
+      
+      # === TRAEFIK ROUTING (if using external Traefik) ===
+      - "traefik.enable=true"
+      - "traefik.docker.network=media-network"
+      
+      # Main dashboard routing
+      - "traefik.http.routers.media-dashboard.rule=Host(`${DOMAIN:-media.local}`)"
+      - "traefik.http.routers.media-dashboard.entrypoints=web"
+      - "traefik.http.services.media-dashboard.loadbalancer.server.port=80"
+      
+      # Service-specific routing
+      - "traefik.http.routers.jellyfin.rule=Host(`${DOMAIN:-media.local}`) && PathPrefix(`/jellyfin`)"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.http.routers.sonarr.rule=Host(`${DOMAIN:-media.local}`) && PathPrefix(`/sonarr`)"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.routers.radarr.rule=Host(`${DOMAIN:-media.local}`) && PathPrefix(`/radarr`)"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      
+      # === HOMEPAGE INTEGRATION ===
+      - "homepage.group=Media Server"
+      - "homepage.name=Ultimate Media Server 2025 Fixed"
+      - "homepage.icon=server.png"
+      - "homepage.href=http://${DOMAIN:-localhost}"
+      - "homepage.description=Complete media server with 30+ services - Fixed Edition"
+      - "homepage.weight=1"
+      
+      # === BACKUP CONFIGURATION ===
+      - "backup.enable=true"
+      - "backup.priority=high"
+      - "backup.frequency=daily"
+      - "backup.include=/config,/data/databases"
+      
+      # === MONITORING CONFIGURATION ===
+      - "monitor.enable=true"
+      - "monitor.type=media-server"
+      - "monitor.critical=true"
+      - "monitor.healthcheck=/app/healthcheck.sh"
+      
+      # === SECURITY LABELS ===
+      - "security.scan=enabled"
+      - "security.level=high"
+      - "security.updates=auto"
+    
+    # Optimized Logging Configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "${LOG_MAX_SIZE:-100m}"
+        max-file: "${LOG_MAX_FILES:-3}"
+        labels: "com.ultimate-media-server"
+        tag: "ultimate-media-server-2025-fixed"
+    
+    # System Optimizations for Performance
+    sysctls:
+      - net.core.rmem_max=16777216
+      - net.core.wmem_max=16777216
+      - net.ipv4.tcp_rmem=4096 87380 16777216
+      - net.ipv4.tcp_wmem=4096 65536 16777216
+      - net.ipv4.tcp_congestion_control=bbr
+      - fs.inotify.max_user_watches=1048576
+      - fs.inotify.max_user_instances=1024
+      - vm.max_map_count=262144
+    
+    # Additional service configurations
+    tmpfs:
+      - /tmp:size=2G,uid=1000,gid=1000,noexec,nosuid,nodev
+      - /var/tmp:size=1G,uid=1000,gid=1000,noexec,nosuid,nodev
+
+# ===============================================================================
+# NETWORK CONFIGURATION - OPTIMIZED 2025
+# ===============================================================================
+
+networks:
+  media-network:
+    name: ultimate-media-network-2025-fixed
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: media-br0-fixed
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+      com.docker.network.mtu: "${NETWORK_MTU:-1500}"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
+          ip_range: 172.31.1.0/24
+    labels:
+      - "com.ultimate-media-server.network=true"
+      - "com.ultimate-media-server.network.purpose=single-container-fixed"
+      - "com.ultimate-media-server.network.version=2025.08.09"
+
+# ===============================================================================
+# VOLUME DEFINITIONS - ENHANCED ORGANIZATION
+# ===============================================================================
+
+volumes:
+  # Configuration volume with optimization
+  media-config-fixed:
+    name: ultimate-media-config-2025-fixed
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_PATH:-./config}
+    labels:
+      - "com.ultimate-media-server.volume.type=config"
+      - "com.ultimate-media-server.volume.critical=true"
+      - "com.ultimate-media-server.volume.backup=daily"
+      
+  # Data volume for databases and application data
+  media-data-fixed:
+    name: ultimate-media-data-2025-fixed
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+    labels:
+      - "com.ultimate-media-server.volume.type=data"
+      - "com.ultimate-media-server.volume.critical=true"
+      - "com.ultimate-media-server.volume.backup=daily"
+      
+  # AI models volume with caching optimization
+  ai-models-fixed:
+    name: ultimate-media-ai-models-2025-fixed
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AI_MODELS_PATH:-./models}
+    labels:
+      - "com.ultimate-media-server.volume.type=ai-models"
+      - "com.ultimate-media-server.volume.critical=false"
+      - "com.ultimate-media-server.volume.backup=weekly"
+      
+  # Media library volume (can be separate storage)
+  media-library-fixed:
+    name: ultimate-media-library-2025-fixed
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MEDIA_ROOT_PATH:-./media}
+    labels:
+      - "com.ultimate-media-server.volume.type=media-library"
+      - "com.ultimate-media-server.volume.critical=false"
+      - "com.ultimate-media-server.volume.backup=optional"
+
+# ===============================================================================
+# SECRETS MANAGEMENT (Optional - for production deployments)
+# ===============================================================================
+
+# Uncomment and configure for production use
+# secrets:
+#   postgres_password:
+#     file: ./secrets/postgres_password.txt
+#   redis_password:
+#     file: ./secrets/redis_password.txt
+#   api_key:
+#     file: ./secrets/api_key.txt
+#   jwt_secret:
+#     file: ./secrets/jwt_secret.txt

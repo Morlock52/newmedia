@@ -1,0 +1,774 @@
+# Traefik v3.0 Configuration for Single Container Media Server
+# API Gateway and Service Discovery for 30+ Services
+
+global:
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+  debug: false
+  insecure: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        options: modern@file
+
+  # Direct service access ports
+  jellyfin-direct:
+    address: ":8096"
+  
+  plex-direct:
+    address: ":32400"
+    
+  traefik-api:
+    address: ":8080"
+
+# Certificate management
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@localhost
+      storage: /etc/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Dynamic configuration providers
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+    
+  http:
+    endpoint: "http://localhost:8000/traefik/config"
+    pollInterval: "30s"
+    pollTimeout: "5s"
+
+# Logging
+log:
+  level: INFO
+  format: json
+  filePath: "/var/log/traefik/traefik.log"
+
+accessLog:
+  format: json
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+  filters:
+    statusCodes: ["400-499", "500-599"]
+    retryAttempts: true
+    minDuration: "10ms"
+
+# Metrics for Prometheus
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRouterLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Rate limiting and circuit breaker
+serversTransport:
+  insecureSkipVerify: true
+  
+# Health checks
+ping:
+  entryPoint: "traefik-api"
+
+---
+# Dynamic Configuration File: /etc/traefik/dynamic/services.yml
+
+http:
+  # Middleware definitions
+  middlewares:
+    # Authentication middleware
+    auth-forward:
+      forwardAuth:
+        address: "http://localhost:8000/auth/verify"
+        authRequestHeaders:
+          - "X-Forwarded-User"
+          - "X-Forwarded-Groups"
+          - "X-Forwarded-Name"
+          - "X-Forwarded-Email"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Name"
+          - "X-User-Groups"
+
+    # CORS headers
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+        accessControlAllowOriginList:
+          - "http://localhost"
+          - "https://localhost"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+
+    # Rate limiting
+    api-rate-limit:
+      rateLimit:
+        burst: 100
+        period: "1m"
+        average: 50
+
+    ai-rate-limit:
+      rateLimit:
+        burst: 10
+        period: "1m"
+        average: 5
+
+    # Circuit breaker  
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.3 || ResponseCodeRatio(500, 600, 0, 600) > 0.3"
+        checkPeriod: "3s"
+        fallbackDuration: "10s"
+        recoveryDuration: "10s"
+
+    # Compression
+    compression:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"
+
+  # Router definitions
+  routers:
+    # Main dashboard/homepage
+    homepage:
+      rule: "Host(`localhost`) && PathPrefix(`/`)"
+      service: homepage-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Media Servers
+    jellyfin:
+      rule: "Host(`localhost`) && PathPrefix(`/jellyfin`)"
+      service: jellyfin-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    jellyfin-direct:
+      rule: "Host(`jellyfin.local`) || HostRegexp(`{subdomain:jellyfin.*}.localhost`)"
+      service: jellyfin-service
+      entryPoints:
+        - jellyfin-direct
+      middlewares:
+        - auth-forward
+        - cors-headers
+
+    plex:
+      rule: "Host(`localhost`) && PathPrefix(`/plex`)"
+      service: plex-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    plex-direct:
+      rule: "Host(`plex.local`) || HostRegexp(`{subdomain:plex.*}.localhost`)"
+      service: plex-service
+      entryPoints:
+        - plex-direct
+      middlewares:
+        - auth-forward
+        - cors-headers
+
+    emby:
+      rule: "Host(`localhost`) && PathPrefix(`/emby`)"
+      service: emby-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # *arr Stack Services
+    sonarr:
+      rule: "Host(`localhost`) && PathPrefix(`/sonarr`)"
+      service: sonarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    radarr:
+      rule: "Host(`localhost`) && PathPrefix(`/radarr`)"
+      service: radarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    lidarr:
+      rule: "Host(`localhost`) && PathPrefix(`/lidarr`)"
+      service: lidarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    readarr:
+      rule: "Host(`localhost`) && PathPrefix(`/readarr`)"
+      service: readarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    prowlarr:
+      rule: "Host(`localhost`) && PathPrefix(`/prowlarr`)"
+      service: prowlarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    bazarr:
+      rule: "Host(`localhost`) && PathPrefix(`/bazarr`)"
+      service: bazarr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - api-rate-limit
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Download Clients
+    qbittorrent:
+      rule: "Host(`localhost`) && PathPrefix(`/qbittorrent`)"
+      service: qbittorrent-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    transmission:
+      rule: "Host(`localhost`) && PathPrefix(`/transmission`)"
+      service: transmission-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    sabnzbd:
+      rule: "Host(`localhost`) && PathPrefix(`/sabnzbd`)"
+      service: sabnzbd-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    nzbget:
+      rule: "Host(`localhost`) && PathPrefix(`/nzbget`)"
+      service: nzbget-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Request Services
+    overseerr:
+      rule: "Host(`localhost`) && PathPrefix(`/overseerr`)"
+      service: overseerr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    jellyseerr:
+      rule: "Host(`localhost`) && PathPrefix(`/jellyseerr`)"
+      service: jellyseerr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    ombi:
+      rule: "Host(`localhost`) && PathPrefix(`/ombi`)"
+      service: ombi-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # AI Services
+    ai-api:
+      rule: "Host(`localhost`) && PathPrefix(`/ai`)"
+      service: ai-gateway-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - ai-rate-limit
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Management Tools
+    tautulli:
+      rule: "Host(`localhost`) && PathPrefix(`/tautulli`)"
+      service: tautulli-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    organizr:
+      rule: "Host(`localhost`) && PathPrefix(`/organizr`)"
+      service: organizr-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    heimdall:
+      rule: "Host(`localhost`) && PathPrefix(`/heimdall`)"
+      service: heimdall-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Monitoring Services
+    prometheus:
+      rule: "Host(`localhost`) && PathPrefix(`/prometheus`)"
+      service: prometheus-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    grafana:
+      rule: "Host(`localhost`) && PathPrefix(`/grafana`)"
+      service: grafana-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - cors-headers
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    uptime-kuma:
+      rule: "Host(`localhost`) && PathPrefix(`/uptime`)"
+      service: uptime-kuma-service
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+        - compression
+      tls:
+        certResolver: letsencrypt
+
+    # Traefik Dashboard
+    traefik-dashboard:
+      rule: "Host(`localhost`) && PathPrefix(`/traefik`)"
+      service: api@internal
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth-forward
+        - security-headers
+      tls:
+        certResolver: letsencrypt
+
+  # Service definitions
+  services:
+    # Media Servers
+    jellyfin-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8096"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+          scheme: "http"
+
+    plex-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:32400"
+        healthCheck:
+          path: "/identity"
+          interval: "30s"
+          timeout: "5s"
+          scheme: "http"
+
+    emby-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8097"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+          scheme: "http"
+
+    # *arr Stack Services
+    sonarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8989"
+        healthCheck:
+          path: "/ping"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    radarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:7878"
+        healthCheck:
+          path: "/ping"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    lidarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8686"
+        healthCheck:
+          path: "/ping"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    readarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8787"
+        healthCheck:
+          path: "/ping"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    prowlarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:9696"
+        healthCheck:
+          path: "/ping"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    bazarr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:6767"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    # Download Clients
+    qbittorrent-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8080"
+        healthCheck:
+          path: "/api/v2/app/version"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    transmission-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:9091"
+        healthCheck:
+          path: "/transmission/rpc"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    sabnzbd-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8081"
+        healthCheck:
+          path: "/api"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    nzbget-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:6789"
+        healthCheck:
+          path: "/jsonrpc"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    # Request Services
+    overseerr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:5055"
+        healthCheck:
+          path: "/api/v1/status"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    jellyseerr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:5056"
+        healthCheck:
+          path: "/api/v1/status"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    ombi-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3579"
+        healthCheck:
+          path: "/api/v1/Status"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    # AI Services Gateway
+    ai-gateway-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8900"
+        healthCheck:
+          path: "/v1/health"
+          interval: "30s"
+          timeout: "5s"
+          scheme: "http"
+
+    # Management Tools
+    tautulli-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8181"
+        healthCheck:
+          path: "/api/v2"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    organizr-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8083"
+        healthCheck:
+          path: "/api/v2/status"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    heimdall-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8082"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    # Monitoring Services
+    prometheus-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:9090"
+        healthCheck:
+          path: "/-/healthy"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    grafana-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3000"
+        healthCheck:
+          path: "/api/health"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    uptime-kuma-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:3001"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+    homepage-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:7575"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "3s"
+          scheme: "http"
+
+# TLS Options
+tls:
+  options:
+    modern:
+      minVersion: "VersionTLS12"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - CurveP521
+        - CurveP384
+      sniStrict: true

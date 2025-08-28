@@ -1,0 +1,662 @@
+version: '3.9'
+
+# Ultimate Performance Media Server Stack 2025
+# Optimized for sub-second page loads, efficient media streaming, and minimal resource usage
+# Features: CDN integration, advanced caching, GPU acceleration, real-time monitoring
+
+x-performance-defaults: &performance-defaults
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  restart: unless-stopped
+  deploy:
+    update_config:
+      parallelism: 2
+      delay: 10s
+      order: stop-first
+    resources:
+      limits:
+        cpus: '4.0'
+        memory: 8G
+      reservations:
+        cpus: '0.5'
+        memory: 512M
+
+x-cache-headers: &cache-headers
+  X-Content-Type-Options: "nosniff"
+  X-Frame-Options: "SAMEORIGIN"
+  X-XSS-Protection: "1; mode=block"
+  Cache-Control: "public, max-age=31536000, immutable"
+  
+networks:
+  media_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 9000  # Jumbo frames for better throughput
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+  
+  cache_network:
+    driver: bridge
+    internal: true
+    
+  monitoring_network:
+    driver: bridge
+    internal: true
+
+volumes:
+  # Performance-optimized volume configuration
+  varnish_cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=4g,uid=1000,gid=1000
+  
+  redis_cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=2g,uid=1000,gid=1000
+      
+  nginx_cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=2g,uid=1000,gid=1000
+  
+  # Persistent volumes with SSD optimization
+  jellyfin_config:
+    driver: local
+    driver_opts:
+      o: noatime,nodiratime
+  
+  plex_config:
+    driver: local
+    driver_opts:
+      o: noatime,nodiratime
+      
+  prometheus_data:
+    driver: local
+  
+  grafana_data:
+    driver: local
+  
+  loki_data:
+    driver: local
+    
+services:
+  # =========================
+  # High-Performance Edge Gateway
+  # =========================
+  
+  nginx_edge:
+    image: nginx:alpine
+    container_name: nginx_edge
+    <<: *performance-defaults
+    volumes:
+      - ./config/nginx/edge-optimized.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/var/cache/nginx
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3 QUIC
+    networks:
+      - media_network
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =========================
+  # Varnish Cache Layer
+  # =========================
+  
+  varnish:
+    image: varnish:7.4-alpine
+    container_name: varnish
+    <<: *performance-defaults
+    volumes:
+      - ./config/varnish/default.vcl:/etc/varnish/default.vcl:ro
+      - varnish_cache:/var/lib/varnish
+    ports:
+      - "6081:6081"
+    networks:
+      - media_network
+      - cache_network
+    environment:
+      - VARNISH_SIZE=4G
+      - VARNISH_HTTP_RESP_HDR_LEN=65536
+      - VARNISH_HTTP_RESP_SIZE=98304
+    command: |
+      -a :6081
+      -f /etc/varnish/default.vcl
+      -s malloc,4G
+      -p thread_pools=4
+      -p thread_pool_min=100
+      -p thread_pool_max=4000
+      -p thread_pool_timeout=120
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 5G
+        reservations:
+          cpus: '1.0'
+          memory: 4G
+
+  # =========================
+  # Redis Cache with Persistence
+  # =========================
+  
+  redis_cache:
+    image: redis:7-alpine
+    container_name: redis_cache
+    <<: *performance-defaults
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+      --appendfsync everysec
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+    volumes:
+      - redis_cache:/data
+      - ./config/redis/redis-performance.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - cache_network
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =========================
+  # GPU-Accelerated Jellyfin
+  # =========================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    <<: *performance-defaults
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAIN:-localhost}
+      # Performance optimizations
+      - JELLYFIN_FFmpeg__analyzeduration=200000000
+      - JELLYFIN_FFmpeg__probesize=1000000000
+      - JELLYFIN_FFmpeg__threads=0
+      # Hardware acceleration
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - jellyfin_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - /dev/shm:/transcodes  # RAM disk for transcoding
+      - ./cache/jellyfin:/cache
+    devices:
+      - /dev/dri:/dev/dri  # Intel/AMD GPU
+    runtime: nvidia  # NVIDIA GPU (if available)
+    networks:
+      - media_network
+    ports:
+      - "8096:8096"
+      - "8920:8920"  # HTTPS
+      - "7359:7359/udp"  # Discovery
+      - "1900:1900/udp"  # DLNA
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =========================
+  # Optimized Plex Server
+  # =========================
+  
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    <<: *performance-defaults
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+      # Performance settings
+      - TRANSCODE_PER_SEGMENT=1
+      - PLEX_PREFERENCE_1="TranscoderQuality=2"
+      - PLEX_PREFERENCE_2="TranscoderTempDirectory=/transcode"
+      - PLEX_PREFERENCE_3="TranscoderH264Preset=fast"
+    volumes:
+      - plex_config:/config
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - /dev/shm:/transcode  # RAM disk
+      - ./cache/plex:/cache
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - media_network
+    ports:
+      - "32400:32400"
+      - "1901:1900/udp"
+      - "3005:3005"
+      - "5353:5353/udp"
+      - "8324:8324"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
+      - "32469:32469"
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+  # =========================
+  # CDN Integration Service
+  # =========================
+  
+  cloudflare_tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare_tunnel
+    <<: *performance-defaults
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - media_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # =========================
+  # Optimized Database
+  # =========================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    <<: *performance-defaults
+    environment:
+      - POSTGRES_DB=${DB_NAME:-mediaserver}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./config/postgres/postgresql-performance.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres
+      -c shared_buffers=1GB
+      -c effective_cache_size=3GB
+      -c maintenance_work_mem=256MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=32MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_worker_processes=8
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=8
+      -c max_parallel_maintenance_workers=4
+    networks:
+      - media_network
+    ports:
+      - "5432:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================
+  # Performance Monitoring Stack
+  # =========================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    <<: *performance-defaults
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=50GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--query.max-concurrency=50'
+      - '--query.timeout=2m'
+    volumes:
+      - ./config/prometheus/prometheus-performance.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring_network
+      - media_network
+    ports:
+      - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    <<: *performance-defaults
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,redis-datasource
+      - GF_RENDERING_SERVER_URL=http://grafana-renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=${DB_USER:-postgres}
+      - GF_DATABASE_PASSWORD=${DB_PASSWORD:-postgres}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - monitoring_network
+      - media_network
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Node Exporter for system metrics
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    <<: *performance-defaults
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - monitoring_network
+    ports:
+      - "9100:9100"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    <<: *performance-defaults
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring_network
+    ports:
+      - "8080:8080"
+    privileged: true
+    devices:
+      - /dev/kmsg
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    <<: *performance-defaults
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./config/loki/loki-performance.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring_network
+    ports:
+      - "3100:3100"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Promtail for log collection
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    <<: *performance-defaults
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./config/promtail/promtail-performance.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # =========================
+  # API Performance Gateway
+  # =========================
+  
+  kong:
+    image: kong:3.4-alpine
+    container_name: kong
+    <<: *performance-defaults
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=postgres
+      - KONG_PG_DATABASE=kong
+      - KONG_PG_USER=${DB_USER:-postgres}
+      - KONG_PG_PASSWORD=${DB_PASSWORD:-postgres}
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_PROXY_LISTEN=0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+    networks:
+      - media_network
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # =========================
+  # Optimized Arr Stack
+  # =========================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    <<: *performance-defaults
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sonarr:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    networks:
+      - media_network
+    ports:
+      - "8989:8989"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    <<: *performance-defaults
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/radarr:/config
+      - ${MEDIA_PATH:-./media}:/media
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+    networks:
+      - media_network
+    ports:
+      - "7878:7878"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # =========================
+  # Performance Auto-Scaler
+  # =========================
+  
+  autoscaler:
+    build:
+      context: ./performance-monitoring
+      dockerfile: docker/Dockerfile.optimizer
+    container_name: autoscaler
+    <<: *performance-defaults
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PROMETHEUS_URL=http://prometheus:9090
+      - SCALING_RULES_PATH=/config/scaling-rules.yml
+      - CHECK_INTERVAL=30s
+      - COOLDOWN_PERIOD=300s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/autoscaler:/config:ro
+    networks:
+      - monitoring_network
+      - media_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M

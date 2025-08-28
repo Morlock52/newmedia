@@ -1,0 +1,716 @@
+# Infrastructure Services for Ultimate Media Server Stack
+# Advanced monitoring, security, and networking infrastructure
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-security-opt: &security-opt
+  security_opt:
+    - no-new-privileges:true
+
+# Network Configuration for Infrastructure Services
+networks:
+  # Monitoring network - isolated for observability services
+  monitoring-net:
+    name: monitoring-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: monitoring-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.33.0.0/16
+          gateway: 172.33.0.1
+    labels:
+      - "com.media-server.network.tier=monitoring"
+
+  # Security network - auth and proxy services
+  security-net:
+    name: security-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: security-br0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.mtu: "1500"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.35.0.0/16
+          gateway: 172.35.0.1
+    labels:
+      - "com.media-server.network.tier=security"
+
+  # VPN network - secure tunnel for downloads
+  vpn-net:
+    name: vpn-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: vpn-br0
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.mtu: "1436"  # Optimized for VPN overhead
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.32.0.0/16
+          gateway: 172.32.0.1
+    labels:
+      - "com.media-server.network.tier=vpn"
+
+  # Media network - connects to main services
+  media-net:
+    external: true
+
+  # Downloads network - isolated download services
+  downloads-net:
+    external: true
+
+volumes:
+  # Monitoring data
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  
+  # Auth and security data
+  authelia-data:
+    driver: local
+  traefik-data:
+    driver: local
+  gluetun-data:
+    driver: local
+  
+  # Transcoding and media processing
+  fileflows-data:
+    driver: local
+  tdarr-data:
+    driver: local
+  
+  # Uptime monitoring
+  uptime-kuma-data:
+    driver: local
+
+services:
+  # ==================== REVERSE PROXY & LOAD BALANCER ====================
+  
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    <<: *restart-policy
+    <<: *security-opt
+    command:
+      - --api.dashboard=true
+      - --api.debug=true
+      - --log.level=INFO
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.metrics.address=:8080
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addentrypointslabels=true
+      - --metrics.prometheus.addserviceslabels=true
+      - --accesslog=true
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
+    environment:
+      <<: *common-variables
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-data:/letsencrypt
+      - ./traefik:/etc/traefik:ro
+    networks:
+      - security-net
+      - media-net
+      - monitoring-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=authelia@docker"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ==================== 2FA AUTHENTICATION ====================
+  
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    <<: *restart-policy
+    <<: *security-opt
+    environment:
+      <<: *common-variables
+      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
+      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+      AUTHELIA_NOTIFIER_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      AUTHELIA_DUO_API_SECRET_KEY: ${DUO_SECRET_KEY:-}
+    volumes:
+      - authelia-data:/config
+      - ./authelia:/config/configuration.yml:ro
+      - ./authelia/users_database.yml:/config/users_database.yml:ro
+    networks:
+      - security-net
+      - media-net
+    expose:
+      - 9091
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.${DOMAIN:-localhost}"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== VPN CONTAINER ====================
+  
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    <<: *restart-policy
+    cap_add:
+      - NET_ADMIN
+    environment:
+      <<: *common-variables
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-nordvpn}
+      VPN_TYPE: ${VPN_TYPE:-openvpn}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_COUNTRY:-Switzerland}
+      FIREWALL: "on"
+      FIREWALL_OUTBOUND_SUBNETS: "172.30.0.0/16,172.31.0.0/16,172.33.0.0/16"
+      DOT: "off"
+      BLOCK_MALICIOUS: "on"
+      BLOCK_ADS: "on"
+      BLOCK_SURVEILLANCE: "on"
+      UNBLOCK: ${VPN_UNBLOCK:-}
+      HTTPPROXY: "on"
+      HTTPPROXY_LOG: "on"
+      SHADOWSOCKS: "on"
+      HEALTH_VPN_DURATION_INITIAL: "20s"
+      HEALTH_VPN_DURATION_ADDITION: "5s"
+    volumes:
+      - gluetun-data:/gluetun
+    ports:
+      - "8888:8888/tcp"   # HTTP proxy
+      - "8388:8388/tcp"   # Shadowsocks
+      - "8388:8388/udp"   # Shadowsocks
+      - "8080:8080"       # qBittorrent web UI (VPN protected)
+      - "9091:9091"       # Transmission web UI (VPN protected)
+    networks:
+      - vpn-net
+      - downloads-net
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gluetun.rule=Host(`vpn.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.gluetun.middlewares=authelia@docker"
+      - "traefik.http.services.gluetun.loadbalancer.server.port=8000"
+
+  # ==================== PROMETHEUS MONITORING STACK ====================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    <<: *restart-policy
+    <<: *security-opt
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=50GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.external-url=http://prometheus.${DOMAIN:-localhost}'
+      - '--log.level=info'
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring-net
+      - media-net
+      - security-net
+      - vpn-net
+    expose:
+      - 9090
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    <<: *restart-policy
+    <<: *security-opt
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://alertmanager.${DOMAIN:-localhost}'
+      - '--log.level=info'
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager-data:/alertmanager
+    networks:
+      - monitoring-net
+    expose:
+      - 9093
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.alertmanager.middlewares=authelia@docker"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    <<: *restart-policy
+    <<: *security-opt
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.cpu'
+      - '--collector.diskstats'
+      - '--collector.filesystem'
+      - '--collector.loadavg'
+      - '--collector.meminfo'
+      - '--collector.netdev'
+      - '--collector.time'
+      - '--collector.uname'
+      - '--collector.systemd'
+      - '--collector.processes'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - monitoring-net
+    expose:
+      - 9100
+    pid: host
+
+  # cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    <<: *restart-policy
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring-net
+    expose:
+      - 8080
+    command:
+      - '--housekeeping_interval=30s'
+      - '--max_housekeeping_interval=35s'
+      - '--event_storage_event_limit=default=0'
+      - '--event_storage_age_limit=default=0'
+      - '--disable_metrics=disk,tcp,udp,percpu,sched,process'
+      - '--docker_only'
+
+  # ==================== GRAFANA VISUALIZATION ====================
+  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    <<: *restart-policy
+    <<: *security-opt
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      <<: *common-variables
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_DOMAIN: grafana.${DOMAIN:-localhost}
+      GF_SERVER_ROOT_URL: http://grafana.${DOMAIN:-localhost}
+      GF_SECURITY_COOKIE_SECURE: "false"
+      GF_SECURITY_COOKIE_SAMESITE: "lax"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel,grafana-polystat-panel
+      GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: "/var/lib/grafana/dashboards/media-server-overview.json"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring-net
+    expose:
+      - 3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.grafana.middlewares=authelia@docker"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== UPTIME MONITORING ====================
+  
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    <<: *restart-policy
+    <<: *security-opt
+    environment:
+      <<: *common-variables
+      UPTIME_KUMA_PORT: 3001
+      UPTIME_KUMA_HOST: 0.0.0.0
+    volumes:
+      - uptime-kuma-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring-net
+      - media-net
+    expose:
+      - 3001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`uptime.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.uptime-kuma.middlewares=authelia@docker"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== GPU TRANSCODING & MEDIA PROCESSING ====================
+  
+  fileflows:
+    image: revenz/fileflows:latest
+    container_name: fileflows
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+      TempPathHost: /temp
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    volumes:
+      - fileflows-data:/app/Data
+      - ./media:/media
+      - ./downloads:/downloads
+      - /tmp/fileflows:/temp
+      - /dev/dri:/dev/dri  # Intel hardware acceleration
+    networks:
+      - media-net
+    expose:
+      - 5000
+    devices:
+      - /dev/dri:/dev/dri  # Intel Quick Sync
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fileflows.rule=Host(`fileflows.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.fileflows.middlewares=authelia@docker"
+      - "traefik.http.services.fileflows.loadbalancer.server.port=5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/status"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+      TZ: ${TZ}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      UMASK_SET: 002
+      serverIP: 0.0.0.0
+      serverPort: 8266
+      webUIPort: 8265
+      internalNode: true
+      inContainer: true
+      ffmpegVersion: 6
+      nodeName: MainNode
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    volumes:
+      - tdarr-data:/app/server
+      - ./tdarr/configs:/app/configs
+      - ./tdarr/logs:/app/logs
+      - ./media:/media
+      - ./downloads:/downloads
+      - /tmp/tdarr:/temp
+      - /dev/dri:/dev/dri
+    networks:
+      - media-net
+    expose:
+      - 8265
+      - 8266
+    devices:
+      - /dev/dri:/dev/dri
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tdarr.rule=Host(`tdarr.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.tdarr.middlewares=authelia@docker"
+      - "traefik.http.services.tdarr.loadbalancer.server.port=8265"
+
+  # ==================== WEBHOOK SERVICES ====================
+  
+  webhook-manager:
+    image: adnanh/webhook:latest
+    container_name: webhook-manager
+    <<: *restart-policy
+    <<: *security-opt
+    command: ["-verbose", "-hotreload", "-hooks=/etc/webhook/hooks.json"]
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./webhooks:/etc/webhook:ro
+      - ./scripts:/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - media-net
+    expose:
+      - 9000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webhooks.rule=Host(`webhooks.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.webhooks.middlewares=authelia@docker"
+      - "traefik.http.services.webhooks.loadbalancer.server.port=9000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/hooks/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== LOG AGGREGATION ====================
+  
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    <<: *restart-policy
+    <<: *security-opt
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command: -config.file=/etc/loki/loki-config.yaml
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./loki:/etc/loki:ro
+      - ./loki-data:/loki
+    networks:
+      - monitoring-net
+    expose:
+      - 3100
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    <<: *restart-policy
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail:/etc/promtail:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring-net
+
+  # ==================== NETWORK MONITORING ====================
+  
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    <<: *restart-policy
+    <<: *security-opt
+    command:
+      - '--config.file=/etc/blackbox_exporter/config.yml'
+    volumes:
+      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - monitoring-net
+      - media-net
+    expose:
+      - 9115
+
+  # ==================== PERFORMANCE MONITORING ====================
+  
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    <<: *restart-policy
+    <<: *security-opt
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    networks:
+      - monitoring-net
+      - media-net
+    expose:
+      - 9121
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    <<: *restart-policy
+    <<: *security-opt
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres?sslmode=disable"
+    networks:
+      - monitoring-net
+      - media-net
+    expose:
+      - 9187
+
+  # ==================== SECURITY MONITORING ====================
+  
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    <<: *restart-policy
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      <<: *common-variables
+      F2B_LOG_LEVEL: INFO
+      F2B_DB_PURGE_AGE: 1d
+    volumes:
+      - ./fail2ban:/data
+      - /var/log:/var/log:ro
+    networks:
+      - security-net
+    healthcheck:
+      test: ["CMD", "fail2ban-client", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== BACKUP & RECOVERY ====================
+  
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    <<: *restart-policy
+    <<: *security-opt
+    environment:
+      <<: *common-variables
+      CLI_ARGS: --webservice-interface=any --webservice-port=8200
+    volumes:
+      - ./duplicati-config:/config
+      - ./duplicati-backups:/backups
+      - ./:/source:ro
+    networks:
+      - media-net
+    expose:
+      - 8200
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.duplicati.middlewares=authelia@docker"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+
+# Health check for entire infrastructure stack
+  healthcheck-infrastructure:
+    image: alpine:latest
+    container_name: healthcheck-infrastructure
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./scripts:/scripts:ro
+    networks:
+      - monitoring-net
+      - security-net
+      - media-net
+    command: >
+      sh -c "
+        apk add --no-cache curl wget &&
+        while true; do
+          /scripts/infrastructure-health-check.sh
+          sleep 300
+        done
+      "
+    healthcheck:
+      test: ["CMD", "sh", "/scripts/infrastructure-health-check.sh"]
+      interval: 5m
+      timeout: 30s
+      retries: 3
+      start_period: 2m

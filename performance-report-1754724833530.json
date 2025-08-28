@@ -1,0 +1,507 @@
+{
+  "timestamp": "2025-08-09T07:33:44.282Z",
+  "systemInfo": {
+    "memory": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                9059.\nPages active:                            158982.\nPages inactive:                          147134.\nPages speculative:                        11171.\nPages throttled:                              0.\nPages wired down:                        201233.\nPages purgeable:                           1011.\n\"Translation faults\":                 250652540.\nPages copy-on-write:                    8243227.\nPages zero filled:                     76294585.\nPages reactivated:                     77895848.\nPages purged:                          19892651.\nFile-backed pages:                       123686.\nAnonymous pages:                         193601.\nPages stored in compressor:             1752773.\nPages occupied by compressor:            470376.\nDecompressions:                        92121812.\nCompressions:                         102260942.\nPageins:                               34640377.\nPageouts:                                371201.\nSwapins:                               20435746.\nSwapouts:                              22397134.",
+    "cpu": "Apple M2",
+    "disk": "Filesystem                                                      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk3s1s1                                                 926Gi    11Gi    73Gi    14%    446k  763M    0%   /\ndevfs                                                          292Ki   292Ki     0Bi   100%    1.0k     0  100%   /dev\n/dev/disk3s6                                                   926Gi    10Gi    73Gi    13%      10  763M    0%   /System/Volumes/VM\n/dev/disk3s2                                                   926Gi   7.3Gi    73Gi    10%    1.3k  763M    0%   /System/Volumes/Preboot\n/dev/disk3s4                                                   926Gi   3.6Mi    73Gi     1%      69  764M    0%   /System/Volumes/Update\n/dev/disk1s2                                                   500Mi   6.0Mi   482Mi     2%       1  4.9M    0%   /System/Volumes/xarts\n/dev/disk1s1                                                   500Mi   5.8Mi   482Mi     2%      30  4.9M    0%   /System/Volumes/iSCPreboot\n/dev/disk1s3                                                   500Mi   1.5Mi   482Mi     1%      70  4.9M    0%   /System/Volumes/Hardware\n/dev/disk3s5                                                   926Gi   824Gi    73Gi    92%    9.2M  763M    1%   /System/Volumes/Data\nmap auto_home                                                    0Bi     0Bi     0Bi   100%       0     0     -   /System/Volumes/Data/home\n/Users/morlock/Downloads/Visual Studio Code - Insiders-2.app   926Gi   823Gi    82Gi    91%    9.1M  864M    1%   /private/var/folders/1r/bcbd_djx78v5k7hbfvlc0lmc0000gn/T/AppTranslocation/BE54FCA4-E717-4719-BE61-FBAF87681A1E\n/dev/disk4s1                                                   411Mi   264Mi   148Mi    65%     262  4.3G    0%   /Volumes/Notion Installer\n/dev/disk6s1                                                    16Gi    16Gi   469Mi    98%    524k  4.8M   10%   /Library/Developer/CoreSimulator/Volumes/iOS_21F79\n/dev/disk8s1                                                   8.0Gi   7.8Gi   239Mi    98%      13  2.4M    0%   /Library/Developer/CoreSimulator/Cryptex/Images/bundle/SimRuntimeBundle-FB680DB9-3168-4DAC-8746-EE3CDB51B6FF\n/dev/disk10s1                                                   18Gi    17Gi   461Mi    98%    444k  4.7M    9%   /Library/Developer/CoreSimulator/Volumes/iOS_22A3351\n/dev/disk12s1                                                  8.2Gi   8.0Gi   245Mi    98%      13  2.5M    0%   /Library/Developer/CoreSimulator/Cryptex/Images/bundle/SimRuntimeBundle-F83B711E-821B-4462-AFCC-1042178C2FBE\n/dev/disk14s1                                                   18Gi    18Gi   467Mi    98%    452k  4.8M    9%   /Library/Developer/CoreSimulator/Volumes/iOS_22B81\n/dev/disk16s1                                                  8.4Gi   8.1Gi   248Mi    98%      13  2.5M    0%   /Library/Developer/CoreSimulator/Cryptex/Images/bundle/SimRuntimeBundle-F7443C2F-E361-47F6-B494-7BBEF79EF89A\n/dev/disk18s1                                                   18Gi    18Gi   472Mi    98%    459k  4.8M    9%   /Library/Developer/CoreSimulator/Volumes/iOS_22C150\n/dev/disk20s1                                                  9.7Gi   9.3Gi   305Mi    97%    340k  3.1M   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_21T214\n/dev/disk21s1                                                  8.0Gi   7.9Gi   110Mi    99%      15  4.3G    0%   /Library/Developer/CoreSimulator/Cryptex/Images/bundle/SimRuntimeBundle-EA739457-5156-434F-8221-8498E948DD06\n/dev/disk23s1                                                   18Gi    17Gi   465Mi    98%    474k  4.8M    9%   /Library/Developer/CoreSimulator/Volumes/iOS_22A5282m\n/dev/disk25s1                                                  8.5Gi   8.2Gi   257Mi    98%    216k  2.6M    8%   /Library/Developer/CoreSimulator/Volumes/tvOS_21K364\n/dev/disk27s1                                                   16Gi    15Gi   471Mi    98%    498k  4.8M    9%   /Library/Developer/CoreSimulator/Volumes/iOS_21A342\n/dev/disk29s1                                                  8.7Gi   8.4Gi   283Mi    97%    222k  2.9M    7%   /Library/Developer/CoreSimulator/Volumes/tvOS_21L224\n/dev/disk31s1                                                   16Gi    16Gi   467Mi    98%    507k  4.8M   10%   /Library/Developer/CoreSimulator/Volumes/iOS_21C62\n/dev/disk33s1                                                  4.0Gi   3.6Gi   375Mi    91%    212k  3.8M    5%   /Library/Developer/CoreSimulator/Volumes/tvOS_21J353\n/dev/disk35s1                                                  9.5Gi   9.2Gi   279Mi    98%    332k  2.9M   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_21S364\n/dev/disk37s1                                                   16Gi    16Gi   460Mi    98%    521k  4.7M   10%   /Library/Developer/CoreSimulator/Volumes/iOS_21E213\n/dev/disk39s1                                                  4.3Gi   4.0Gi   279Mi    94%    328k  2.9M   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_21R355",
+    "docker": {
+      "version": "Docker version 28.3.2, build 578ccf607d",
+      "info": {
+        "ID": "ea66dd7a-757a-4b46-a74a-2ac34a057905",
+        "Containers": 3,
+        "ContainersRunning": 3,
+        "ContainersPaused": 0,
+        "ContainersStopped": 0,
+        "Images": 109,
+        "Driver": "overlayfs",
+        "DriverStatus": [
+          [
+            "driver-type",
+            "io.containerd.snapshotter.v1"
+          ]
+        ],
+        "Plugins": {
+          "Volume": [
+            "local"
+          ],
+          "Network": [
+            "bridge",
+            "host",
+            "ipvlan",
+            "macvlan",
+            "null",
+            "overlay"
+          ],
+          "Authorization": null,
+          "Log": [
+            "awslogs",
+            "fluentd",
+            "gcplogs",
+            "gelf",
+            "journald",
+            "json-file",
+            "local",
+            "splunk",
+            "syslog"
+          ]
+        },
+        "MemoryLimit": true,
+        "SwapLimit": true,
+        "CpuCfsPeriod": true,
+        "CpuCfsQuota": true,
+        "CPUShares": true,
+        "CPUSet": true,
+        "PidsLimit": true,
+        "IPv4Forwarding": true,
+        "Debug": false,
+        "NFd": 89,
+        "OomKillDisable": false,
+        "NGoroutines": 131,
+        "SystemTime": "2025-08-09T07:33:46.934948883Z",
+        "LoggingDriver": "json-file",
+        "CgroupDriver": "cgroupfs",
+        "CgroupVersion": "2",
+        "NEventsListener": 14,
+        "KernelVersion": "6.10.14-linuxkit",
+        "OperatingSystem": "Docker Desktop",
+        "OSVersion": "",
+        "OSType": "linux",
+        "Architecture": "aarch64",
+        "IndexServerAddress": "https://index.docker.io/v1/",
+        "RegistryConfig": {
+          "IndexConfigs": {
+            "docker.io": {
+              "Mirrors": [],
+              "Name": "docker.io",
+              "Official": true,
+              "Secure": true
+            },
+            "hubproxy.docker.internal:5555": {
+              "Mirrors": [],
+              "Name": "hubproxy.docker.internal:5555",
+              "Official": false,
+              "Secure": false
+            }
+          },
+          "InsecureRegistryCIDRs": [
+            "::1/128",
+            "127.0.0.0/8"
+          ],
+          "Mirrors": null
+        },
+        "NCPU": 8,
+        "MemTotal": 8218316800,
+        "GenericResources": null,
+        "DockerRootDir": "/var/lib/docker",
+        "HttpProxy": "http.docker.internal:3128",
+        "HttpsProxy": "http.docker.internal:3128",
+        "NoProxy": "hubproxy.docker.internal",
+        "Name": "docker-desktop",
+        "Labels": [
+          "com.docker.desktop.address=unix:///Users/morlock/Library/Containers/com.docker.docker/Data/docker-cli.sock"
+        ],
+        "ExperimentalBuild": false,
+        "ServerVersion": "28.3.2",
+        "Runtimes": {
+          "io.containerd.runc.v2": {
+            "path": "runc",
+            "status": {
+              "org.opencontainers.runtime-spec.features": "{\"ociVersionMin\":\"1.0.0\",\"ociVersionMax\":\"1.2.0\",\"hooks\":[\"prestart\",\"createRuntime\",\"createContainer\",\"startContainer\",\"poststart\",\"poststop\"],\"mountOptions\":[\"async\",\"atime\",\"bind\",\"defaults\",\"dev\",\"diratime\",\"dirsync\",\"exec\",\"iversion\",\"lazytime\",\"loud\",\"mand\",\"noatime\",\"nodev\",\"nodiratime\",\"noexec\",\"noiversion\",\"nolazytime\",\"nomand\",\"norelatime\",\"nostrictatime\",\"nosuid\",\"nosymfollow\",\"private\",\"ratime\",\"rbind\",\"rdev\",\"rdiratime\",\"relatime\",\"remount\",\"rexec\",\"rnoatime\",\"rnodev\",\"rnodiratime\",\"rnoexec\",\"rnorelatime\",\"rnostrictatime\",\"rnosuid\",\"rnosymfollow\",\"ro\",\"rprivate\",\"rrelatime\",\"rro\",\"rrw\",\"rshared\",\"rslave\",\"rstrictatime\",\"rsuid\",\"rsymfollow\",\"runbindable\",\"rw\",\"shared\",\"silent\",\"slave\",\"strictatime\",\"suid\",\"symfollow\",\"sync\",\"tmpcopyup\",\"unbindable\"],\"linux\":{\"namespaces\":[\"cgroup\",\"ipc\",\"mount\",\"network\",\"pid\",\"time\",\"user\",\"uts\"],\"capabilities\":[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\"CAP_FOWNER\",\"CAP_FSETID\",\"CAP_KILL\",\"CAP_SETGID\",\"CAP_SETUID\",\"CAP_SETPCAP\",\"CAP_LINUX_IMMUTABLE\",\"CAP_NET_BIND_SERVICE\",\"CAP_NET_BROADCAST\",\"CAP_NET_ADMIN\",\"CAP_NET_RAW\",\"CAP_IPC_LOCK\",\"CAP_IPC_OWNER\",\"CAP_SYS_MODULE\",\"CAP_SYS_RAWIO\",\"CAP_SYS_CHROOT\",\"CAP_SYS_PTRACE\",\"CAP_SYS_PACCT\",\"CAP_SYS_ADMIN\",\"CAP_SYS_BOOT\",\"CAP_SYS_NICE\",\"CAP_SYS_RESOURCE\",\"CAP_SYS_TIME\",\"CAP_SYS_TTY_CONFIG\",\"CAP_MKNOD\",\"CAP_LEASE\",\"CAP_AUDIT_WRITE\",\"CAP_AUDIT_CONTROL\",\"CAP_SETFCAP\",\"CAP_MAC_OVERRIDE\",\"CAP_MAC_ADMIN\",\"CAP_SYSLOG\",\"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"],\"cgroup\":{\"v1\":true,\"v2\":true,\"systemd\":true,\"systemdUser\":true,\"rdma\":true},\"seccomp\":{\"enabled\":true,\"actions\":[\"SCMP_ACT_ALLOW\",\"SCMP_ACT_ERRNO\",\"SCMP_ACT_KILL\",\"SCMP_ACT_KILL_PROCESS\",\"SCMP_ACT_KILL_THREAD\",\"SCMP_ACT_LOG\",\"SCMP_ACT_NOTIFY\",\"SCMP_ACT_TRACE\",\"SCMP_ACT_TRAP\"],\"operators\":[\"SCMP_CMP_EQ\",\"SCMP_CMP_GE\",\"SCMP_CMP_GT\",\"SCMP_CMP_LE\",\"SCMP_CMP_LT\",\"SCMP_CMP_MASKED_EQ\",\"SCMP_CMP_NE\"],\"archs\":[\"SCMP_ARCH_AARCH64\",\"SCMP_ARCH_ARM\",\"SCMP_ARCH_MIPS\",\"SCMP_ARCH_MIPS64\",\"SCMP_ARCH_MIPS64N32\",\"SCMP_ARCH_MIPSEL\",\"SCMP_ARCH_MIPSEL64\",\"SCMP_ARCH_MIPSEL64N32\",\"SCMP_ARCH_PPC\",\"SCMP_ARCH_PPC64\",\"SCMP_ARCH_PPC64LE\",\"SCMP_ARCH_RISCV64\",\"SCMP_ARCH_S390\",\"SCMP_ARCH_S390X\",\"SCMP_ARCH_X32\",\"SCMP_ARCH_X86\",\"SCMP_ARCH_X86_64\"],\"knownFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"],\"supportedFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"]},\"apparmor\":{\"enabled\":true},\"selinux\":{\"enabled\":true},\"intelRdt\":{\"enabled\":true},\"mountExtensions\":{\"idmap\":{\"enabled\":true}}},\"annotations\":{\"io.github.seccomp.libseccomp.version\":\"2.5.4\",\"org.opencontainers.runc.checkpoint.enabled\":\"true\",\"org.opencontainers.runc.commit\":\"v1.2.5-0-g59923ef\",\"org.opencontainers.runc.version\":\"1.2.5\"},\"potentiallyUnsafeConfigAnnotations\":[\"bundle\",\"org.systemd.property.\",\"org.criu.config\"]}"
+            }
+          },
+          "runc": {
+            "path": "runc",
+            "status": {
+              "org.opencontainers.runtime-spec.features": "{\"ociVersionMin\":\"1.0.0\",\"ociVersionMax\":\"1.2.0\",\"hooks\":[\"prestart\",\"createRuntime\",\"createContainer\",\"startContainer\",\"poststart\",\"poststop\"],\"mountOptions\":[\"async\",\"atime\",\"bind\",\"defaults\",\"dev\",\"diratime\",\"dirsync\",\"exec\",\"iversion\",\"lazytime\",\"loud\",\"mand\",\"noatime\",\"nodev\",\"nodiratime\",\"noexec\",\"noiversion\",\"nolazytime\",\"nomand\",\"norelatime\",\"nostrictatime\",\"nosuid\",\"nosymfollow\",\"private\",\"ratime\",\"rbind\",\"rdev\",\"rdiratime\",\"relatime\",\"remount\",\"rexec\",\"rnoatime\",\"rnodev\",\"rnodiratime\",\"rnoexec\",\"rnorelatime\",\"rnostrictatime\",\"rnosuid\",\"rnosymfollow\",\"ro\",\"rprivate\",\"rrelatime\",\"rro\",\"rrw\",\"rshared\",\"rslave\",\"rstrictatime\",\"rsuid\",\"rsymfollow\",\"runbindable\",\"rw\",\"shared\",\"silent\",\"slave\",\"strictatime\",\"suid\",\"symfollow\",\"sync\",\"tmpcopyup\",\"unbindable\"],\"linux\":{\"namespaces\":[\"cgroup\",\"ipc\",\"mount\",\"network\",\"pid\",\"time\",\"user\",\"uts\"],\"capabilities\":[\"CAP_CHOWN\",\"CAP_DAC_OVERRIDE\",\"CAP_DAC_READ_SEARCH\",\"CAP_FOWNER\",\"CAP_FSETID\",\"CAP_KILL\",\"CAP_SETGID\",\"CAP_SETUID\",\"CAP_SETPCAP\",\"CAP_LINUX_IMMUTABLE\",\"CAP_NET_BIND_SERVICE\",\"CAP_NET_BROADCAST\",\"CAP_NET_ADMIN\",\"CAP_NET_RAW\",\"CAP_IPC_LOCK\",\"CAP_IPC_OWNER\",\"CAP_SYS_MODULE\",\"CAP_SYS_RAWIO\",\"CAP_SYS_CHROOT\",\"CAP_SYS_PTRACE\",\"CAP_SYS_PACCT\",\"CAP_SYS_ADMIN\",\"CAP_SYS_BOOT\",\"CAP_SYS_NICE\",\"CAP_SYS_RESOURCE\",\"CAP_SYS_TIME\",\"CAP_SYS_TTY_CONFIG\",\"CAP_MKNOD\",\"CAP_LEASE\",\"CAP_AUDIT_WRITE\",\"CAP_AUDIT_CONTROL\",\"CAP_SETFCAP\",\"CAP_MAC_OVERRIDE\",\"CAP_MAC_ADMIN\",\"CAP_SYSLOG\",\"CAP_WAKE_ALARM\",\"CAP_BLOCK_SUSPEND\",\"CAP_AUDIT_READ\",\"CAP_PERFMON\",\"CAP_BPF\",\"CAP_CHECKPOINT_RESTORE\"],\"cgroup\":{\"v1\":true,\"v2\":true,\"systemd\":true,\"systemdUser\":true,\"rdma\":true},\"seccomp\":{\"enabled\":true,\"actions\":[\"SCMP_ACT_ALLOW\",\"SCMP_ACT_ERRNO\",\"SCMP_ACT_KILL\",\"SCMP_ACT_KILL_PROCESS\",\"SCMP_ACT_KILL_THREAD\",\"SCMP_ACT_LOG\",\"SCMP_ACT_NOTIFY\",\"SCMP_ACT_TRACE\",\"SCMP_ACT_TRAP\"],\"operators\":[\"SCMP_CMP_EQ\",\"SCMP_CMP_GE\",\"SCMP_CMP_GT\",\"SCMP_CMP_LE\",\"SCMP_CMP_LT\",\"SCMP_CMP_MASKED_EQ\",\"SCMP_CMP_NE\"],\"archs\":[\"SCMP_ARCH_AARCH64\",\"SCMP_ARCH_ARM\",\"SCMP_ARCH_MIPS\",\"SCMP_ARCH_MIPS64\",\"SCMP_ARCH_MIPS64N32\",\"SCMP_ARCH_MIPSEL\",\"SCMP_ARCH_MIPSEL64\",\"SCMP_ARCH_MIPSEL64N32\",\"SCMP_ARCH_PPC\",\"SCMP_ARCH_PPC64\",\"SCMP_ARCH_PPC64LE\",\"SCMP_ARCH_RISCV64\",\"SCMP_ARCH_S390\",\"SCMP_ARCH_S390X\",\"SCMP_ARCH_X32\",\"SCMP_ARCH_X86\",\"SCMP_ARCH_X86_64\"],\"knownFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"],\"supportedFlags\":[\"SECCOMP_FILTER_FLAG_TSYNC\",\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\",\"SECCOMP_FILTER_FLAG_LOG\"]},\"apparmor\":{\"enabled\":true},\"selinux\":{\"enabled\":true},\"intelRdt\":{\"enabled\":true},\"mountExtensions\":{\"idmap\":{\"enabled\":true}}},\"annotations\":{\"io.github.seccomp.libseccomp.version\":\"2.5.4\",\"org.opencontainers.runc.checkpoint.enabled\":\"true\",\"org.opencontainers.runc.commit\":\"v1.2.5-0-g59923ef\",\"org.opencontainers.runc.version\":\"1.2.5\"},\"potentiallyUnsafeConfigAnnotations\":[\"bundle\",\"org.systemd.property.\",\"org.criu.config\"]}"
+            }
+          }
+        },
+        "DefaultRuntime": "runc",
+        "Swarm": {
+          "NodeID": "",
+          "NodeAddr": "",
+          "LocalNodeState": "inactive",
+          "ControlAvailable": false,
+          "Error": "",
+          "RemoteManagers": null
+        },
+        "LiveRestoreEnabled": false,
+        "Isolation": "",
+        "InitBinary": "docker-init",
+        "ContainerdCommit": {
+          "ID": "05044ec0a9a75232cad458027ca83437aae3f4da"
+        },
+        "RuncCommit": {
+          "ID": "v1.2.5-0-g59923ef"
+        },
+        "InitCommit": {
+          "ID": "de40ad0"
+        },
+        "SecurityOptions": [
+          "name=seccomp,profile=builtin",
+          "name=cgroupns"
+        ],
+        "FirewallBackend": {
+          "Driver": "iptables"
+        },
+        "CDISpecDirs": [
+          "/etc/cdi",
+          "/var/run/cdi"
+        ],
+        "DiscoveredDevices": [
+          {
+            "Source": "cdi",
+            "ID": "docker.com/gpu=webgpu"
+          }
+        ],
+        "Containerd": {
+          "Address": "/run/containerd/containerd.sock",
+          "Namespaces": {
+            "Containers": "moby",
+            "Plugins": "plugins.moby"
+          }
+        },
+        "Warnings": [
+          "WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set"
+        ],
+        "ClientInfo": {
+          "Debug": false,
+          "Platform": {
+            "Name": "Docker Engine - Community"
+          },
+          "Version": "28.3.2",
+          "DefaultAPIVersion": "1.51",
+          "GitCommit": "578ccf607d",
+          "GoVersion": "go1.24.5",
+          "Os": "darwin",
+          "Arch": "arm64",
+          "BuildTime": "Wed Jul  9 12:04:02 2025",
+          "Context": "desktop-linux",
+          "Plugins": [
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v1.9.9",
+              "ShortDescription": "Docker AI Agent - Ask Gordon",
+              "Name": "ai",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-ai"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.25.0-desktop.1",
+              "ShortDescription": "Docker Buildx",
+              "Name": "buildx",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-buildx"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.4.2",
+              "ShortDescription": "Docker Cloud",
+              "Name": "cloud",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-cloud"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v2.38.2-desktop.1",
+              "ShortDescription": "Docker Compose",
+              "Name": "compose",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-compose"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "0.0.41",
+              "ShortDescription": "Get a shell into any image or container",
+              "Name": "debug",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-debug"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.1.11",
+              "ShortDescription": "Docker Desktop commands",
+              "Name": "desktop",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-desktop"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.2.29",
+              "ShortDescription": "Manages Docker extensions",
+              "Name": "extension",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-extension"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v1.4.0",
+              "ShortDescription": "Creates Docker-related starter files for your project",
+              "Name": "init",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-init"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.9.9",
+              "ShortDescription": "Docker MCP Plugin",
+              "Name": "mcp",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-mcp"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v0.1.33",
+              "ShortDescription": "Docker Model Runner (EXPERIMENTAL)",
+              "Name": "model",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-model"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Anchore Inc.",
+              "Version": "0.6.0",
+              "ShortDescription": "View the packaged-based Software Bill Of Materials (SBOM) for an image",
+              "URL": "https://github.com/docker/sbom-cli-plugin",
+              "Name": "sbom",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-sbom"
+            },
+            {
+              "SchemaVersion": "0.1.0",
+              "Vendor": "Docker Inc.",
+              "Version": "v1.18.2",
+              "ShortDescription": "Docker Scout",
+              "Name": "scout",
+              "Path": "/Users/morlock/.docker/cli-plugins/docker-scout"
+            }
+          ],
+          "Warnings": null
+        }
+      }
+    },
+    "nodeVersion": "v24.2.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "containerStartup": {
+    "error": "Command failed: docker-compose up -d --no-recreate\ntime=\"2025-08-09T03:33:48-04:00\" level=warning msg=\"/Users/morlock/fun/newmedia/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\n immich-server Pulling \n paperless-ngx Pulling \n readarr Pulling \n immich-machine-learning Pulling \n photoprism Pulling \n calibre-web Pulling \n airsonic-advanced Pulling \n immich-microservices Pulling \n glances Pulling \n nextcloud Pulling \n readarr Error no matching manifest for linux/arm64/v8 in the manifest list entries: no match for platform in manifest: not found\n photoprism  Interrupted\n airsonic-advanced  Interrupted\n calibre-web  Interrupted\nError response from daemon: no matching manifest for linux/arm64/v8 in the manifest list entries: no match for platform in manifest: not found\n",
+    "message": "Failed to start container stack"
+  },
+  "memoryUsage": {
+    "containers": {},
+    "totalUsage": "0 B",
+    "timestamp": "2025-08-09T07:33:51.646Z"
+  },
+  "cpuUtilization": {
+    "containers": {},
+    "totalUsage": "0.00%",
+    "timestamp": "2025-08-09T07:33:52.224Z"
+  },
+  "responseTimeTests": {
+    "Jellyfin": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:8096/health"
+    },
+    "Sonarr": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:8989/ping"
+    },
+    "Radarr": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:7878/ping"
+    },
+    "Prowlarr": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:9696/ping"
+    },
+    "qBittorrent": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:8080/api/v2/app/version"
+    },
+    "Plex": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:32400/identity"
+    },
+    "Dashboard": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:3000"
+    },
+    "API Server": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:3002/health"
+    },
+    "Portainer": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:9000"
+    },
+    "Grafana": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:3000"
+    },
+    "Prometheus": {
+      "responseTime": -1,
+      "error": "",
+      "available": false,
+      "url": "http://localhost:9090"
+    }
+  },
+  "diskIOTests": {
+    "writeTime": 614,
+    "readTime": 243,
+    "testSize": "100MB",
+    "diskStats": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk3s5   926Gi   824Gi    73Gi    92%    9.2M  763M    1%   /System/Volumes/Data",
+    "writeSpeed": "162.87 MB/s",
+    "readSpeed": "411.52 MB/s"
+  },
+  "networkTests": {
+    "networkInfo": "NAME                                                             DRIVER    SCOPE\nbridge                                                           bridge    local\ndocker_labs-ai-tools-for-devs-desktop-extension_default          bridge    local\nhost                                                             host      local\nnone                                                             null      local\nportainer_portainer-docker-extension-desktop-extension_default   bridge    local",
+    "connectivityTests": {},
+    "timestamp": "2025-08-09T07:33:53.530Z"
+  },
+  "bottlenecks": [
+    {
+      "type": "AVAILABILITY",
+      "service": "Jellyfin",
+      "severity": "CRITICAL",
+      "description": "Service Jellyfin is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Sonarr",
+      "severity": "CRITICAL",
+      "description": "Service Sonarr is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Radarr",
+      "severity": "CRITICAL",
+      "description": "Service Radarr is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Prowlarr",
+      "severity": "CRITICAL",
+      "description": "Service Prowlarr is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "qBittorrent",
+      "severity": "CRITICAL",
+      "description": "Service qBittorrent is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Plex",
+      "severity": "CRITICAL",
+      "description": "Service Plex is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Dashboard",
+      "severity": "CRITICAL",
+      "description": "Service Dashboard is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "API Server",
+      "severity": "CRITICAL",
+      "description": "Service API Server is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Portainer",
+      "severity": "CRITICAL",
+      "description": "Service Portainer is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Grafana",
+      "severity": "CRITICAL",
+      "description": "Service Grafana is not responding"
+    },
+    {
+      "type": "AVAILABILITY",
+      "service": "Prometheus",
+      "severity": "CRITICAL",
+      "description": "Service Prometheus is not responding"
+    }
+  ],
+  "recommendations": [
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Jellyfin container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Sonarr container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Radarr container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Prowlarr container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check qBittorrent container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Plex container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Dashboard container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check API Server container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Portainer container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Grafana container health and logs"
+    },
+    {
+      "category": "Service Health",
+      "priority": "CRITICAL",
+      "suggestion": "Check Prometheus container health and logs"
+    }
+  ]
+}

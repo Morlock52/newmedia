@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ruv-swarm": {
+      "command": "node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/bulletproof-mcp.js"],
+      "env": {
+        "MCP_DEBUG": "0"
+      }
+    }
+  }
+}

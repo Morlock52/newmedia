@@ -1,0 +1,383 @@
+/* Cyberpunk Notification System Styles */
+
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 420px;
+  pointer-events: none;
+}
+
+.notification-container > * {
+  pointer-events: auto;
+}
+
+/* Base notification styles */
+.cyberpunk-notification {
+  position: relative;
+  margin-bottom: 15px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(10, 10, 30, 0.95) 100%);
+  border: 2px solid;
+  border-radius: 0;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+  transform-style: preserve-3d;
+  animation: holographicPulse 4s ease-in-out infinite;
+}
+
+/* Notification type colors */
+.notification-success {
+  border-color: #00ff00;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 0, 0.4),
+    inset 0 0 20px rgba(0, 255, 0, 0.1);
+}
+
+.notification-error {
+  border-color: #ff0040;
+  box-shadow: 
+    0 0 30px rgba(255, 0, 64, 0.4),
+    inset 0 0 20px rgba(255, 0, 64, 0.1);
+}
+
+.notification-warning {
+  border-color: #ffff00;
+  box-shadow: 
+    0 0 30px rgba(255, 255, 0, 0.4),
+    inset 0 0 20px rgba(255, 255, 0, 0.1);
+}
+
+.notification-info {
+  border-color: #00ffff;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.4),
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+.notification-download {
+  border-color: #ff00ff;
+  box-shadow: 
+    0 0 30px rgba(255, 0, 255, 0.4),
+    inset 0 0 20px rgba(255, 0, 255, 0.1);
+}
+
+.notification-media {
+  border-color: #00ff88;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 136, 0.4),
+    inset 0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+/* Holographic background effect */
+.holographic-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 255, 0.03) 2px,
+      rgba(0, 255, 255, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 0, 255, 0.03) 2px,
+      rgba(255, 0, 255, 0.03) 4px
+    );
+  pointer-events: none;
+  animation: holographicShift 10s linear infinite;
+}
+
+/* Glitch effect */
+.glitch-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glitch-effect::before,
+.glitch-effect::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  font-weight: bold;
+  font-size: 16px;
+  color: transparent;
+}
+
+.glitch-effect::before {
+  animation: glitch-1 0.5s infinite;
+  color: #00ffff;
+  z-index: -1;
+}
+
+.glitch-effect::after {
+  animation: glitch-2 0.5s infinite;
+  color: #ff00ff;
+  z-index: -1;
+}
+
+/* Notification content */
+.notification-content {
+  position: relative;
+  z-index: 2;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.notification-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  filter: drop-shadow(0 0 10px currentColor);
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+.notification-text {
+  flex: 1;
+}
+
+.notification-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.8),
+    0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.notification-service {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: rgba(0, 255, 255, 0.2);
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #00ffff;
+}
+
+.notification-close {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.notification-close:hover {
+  background: rgba(255, 0, 0, 0.2);
+  border-color: #ff0040;
+  color: #ff0040;
+  transform: rotate(90deg);
+}
+
+.notification-message {
+  margin: 0 0 12px 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff);
+  background-size: 200% 100%;
+  animation: gradientShift 2s linear infinite;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Actions */
+.notification-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cyberpunk-button {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #00ffff;
+  color: #00ffff;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.cyberpunk-button:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.5),
+    inset 0 0 10px rgba(0, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.cyberpunk-button:hover::before {
+  left: 100%;
+}
+
+/* Timestamp */
+.notification-timestamp {
+  text-align: right;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Decorative corners */
+.cyber-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: 2px solid;
+  border-color: inherit;
+}
+
+.cyber-corner.top-left {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.cyber-corner.top-right {
+  top: -2px;
+  right: -2px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.cyber-corner.bottom-left {
+  bottom: -2px;
+  left: -2px;
+  border-right: none;
+  border-top: none;
+}
+
+.cyber-corner.bottom-right {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Scan line effect */
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.8), transparent);
+  animation: scanLine 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes holographicPulse {
+  0%, 100% { transform: perspective(100px) rotateX(0deg); }
+  50% { transform: perspective(100px) rotateX(1deg); }
+}
+
+@keyframes holographicShift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(4px, 4px); }
+}
+
+@keyframes glitch-1 {
+  0%, 100% { clip-path: inset(0 0 100% 0); transform: translate(0); }
+  20% { clip-path: inset(20% 0 30% 0); transform: translate(-2px, 2px); }
+  40% { clip-path: inset(50% 0 20% 0); transform: translate(2px, -2px); }
+  60% { clip-path: inset(70% 0 10% 0); transform: translate(-1px, 1px); }
+  80% { clip-path: inset(90% 0 5% 0); transform: translate(1px, -1px); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { clip-path: inset(0 0 100% 0); transform: translate(0); }
+  20% { clip-path: inset(10% 0 80% 0); transform: translate(2px, -1px); }
+  40% { clip-path: inset(30% 0 50% 0); transform: translate(-2px, 1px); }
+  60% { clip-path: inset(60% 0 20% 0); transform: translate(1px, -2px); }
+  80% { clip-path: inset(80% 0 10% 0); transform: translate(-1px, 2px); }
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes scanLine {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .notification-container {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+  
+  .cyberpunk-notification {
+    padding: 15px;
+  }
+}

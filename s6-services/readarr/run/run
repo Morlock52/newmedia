@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+# Readarr service runner
+
+set -e
+
+echo "Starting Readarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/readarr
+
+# Set proper ownership
+chown -R media:media /config/readarr
+
+# Set environment
+export HOME="/config/readarr"
+export XDG_CONFIG_HOME="/config/readarr"
+
+# Run Readarr
+exec s6-setuidgid media /opt/readarr/Readarr \
+    -nobrowser \
+    -data=/config/readarr

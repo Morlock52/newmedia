@@ -1,0 +1,55 @@
+# Users Database for Authelia
+# Configure users, passwords, and groups for media server access
+
+users:
+  # Admin user - full access to all services
+  admin:
+    displayname: "Administrator"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$YourHashedPasswordHere"  # Change this!
+    email: admin@example.com
+    groups:
+      - admins
+      - power_users
+      - users
+
+  # Power user - can manage media and downloads
+  poweruser:
+    displayname: "Power User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$YourHashedPasswordHere"  # Change this!
+    email: poweruser@example.com
+    groups:
+      - power_users
+      - users
+
+  # Regular user - can access media and make requests
+  user:
+    displayname: "Regular User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$YourHashedPasswordHere"  # Change this!
+    email: user@example.com
+    groups:
+      - users
+
+  # Guest user - limited access to dashboards and media
+  guest:
+    displayname: "Guest User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$YourHashedPasswordHere"  # Change this!
+    email: guest@example.com
+    groups:
+      - guests
+
+# Group definitions (referenced in access control)
+# Groups are automatically defined by their usage in the users section above
+# Available groups:
+# - admins: Full system access, 2FA required for sensitive services
+# - power_users: Media management and download access, 2FA for management tools
+# - users: Media consumption and request access, 1FA sufficient
+# - guests: Limited dashboard and media access only
+
+# To generate a password hash, use the authelia command:
+# authelia hash-password 'your-password-here'
+# Or use online Argon2 generators with these parameters:
+# - Memory: 64 MB (65536 KB)
+# - Iterations: 3
+# - Parallelism: 4
+# - Salt length: 16
+# - Hash length: 32

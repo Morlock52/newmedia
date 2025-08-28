@@ -1,0 +1,283 @@
+```mermaid
+graph TB
+    %% Infrastructure Layer (Tier 1)
+    subgraph "Tier 1: Infrastructure Services"
+        postgres[(PostgreSQL<br/>:5432)]
+        redis[(Redis<br/>:6379)]
+        rabbitmq[(RabbitMQ<br/>:5672)]
+        elasticsearch[(Elasticsearch<br/>:9200)]
+    end
+
+    %% Platform Layer (Tier 2) 
+    subgraph "Tier 2: Platform Services"
+        traefik[Traefik Gateway<br/>:80/:443]
+        auth[Auth Service<br/>:8000]
+        dns[Internal DNS<br/>:53]
+    end
+
+    %% Media Core Layer (Tier 3)
+    subgraph "Tier 3: Media Server Core"
+        jellyfin[Jellyfin<br/>:8096]
+        plex[Plex<br/>:32400] 
+        emby[Emby<br/>:8097]
+    end
+
+    %% Management Layer (Tier 4A)
+    subgraph "Tier 4A: *arr Stack"
+        sonarr[Sonarr<br/>:8989]
+        radarr[Radarr<br/>:7878]
+        lidarr[Lidarr<br/>:8686]
+        readarr[Readarr<br/>:8787]
+        prowlarr[Prowlarr<br/>:9696]
+        bazarr[Bazarr<br/>:6767]
+    end
+
+    %% Download Layer (Tier 4B)
+    subgraph "Tier 4B: Download Clients"
+        qbit[qBittorrent<br/>:8080]
+        transmission[Transmission<br/>:9091]
+        sabnzbd[SABnzbd<br/>:8081]
+        nzbget[NZBGet<br/>:6789]
+    end
+
+    %% Request Layer (Tier 5A)
+    subgraph "Tier 5A: Request Services"
+        overseerr[Overseerr<br/>:5055]
+        jellyseerr[Jellyseerr<br/>:5056]
+        ombi[Ombi<br/>:3579]
+    end
+
+    %% AI Layer (Tier 5B)
+    subgraph "Tier 5B: AI Services"
+        ai_safety[AI Safety System<br/>:8901]
+        content_mod[Content Moderation<br/>:8902]
+        recommend[Recommendation Engine<br/>:8903]
+        social_ai[Social Media AI<br/>:8904]
+    end
+
+    %% Management Dashboard Layer (Tier 5C)
+    subgraph "Tier 5C: Management Tools"
+        tautulli[Tautulli<br/>:8181]
+        organizr[Organizr<br/>:8083]
+        heimdall[Heimdall<br/>:8082]
+    end
+
+    %% Monitoring Layer (Tier 6)
+    subgraph "Tier 6: Monitoring & Observability"
+        prometheus[Prometheus<br/>:9090]
+        grafana[Grafana<br/>:3000]
+        uptime[Uptime Kuma<br/>:3001]
+        alertmanager[Alertmanager<br/>:9093]
+    end
+
+    %% Tier 1 Dependencies (Infrastructure has no dependencies)
+    
+    %% Tier 2 Dependencies
+    traefik --> postgres
+    traefik --> redis
+    auth --> postgres
+    auth --> redis
+    dns --> redis
+
+    %% Tier 3 Dependencies  
+    jellyfin --> postgres
+    jellyfin --> redis
+    jellyfin --> traefik
+    jellyfin --> auth
+    
+    plex --> postgres
+    plex --> redis  
+    plex --> traefik
+    plex --> auth
+    
+    emby --> postgres
+    emby --> redis
+    emby --> traefik
+    emby --> auth
+
+    %% Tier 4A Dependencies (*arr Stack)
+    sonarr --> postgres
+    sonarr --> prowlarr
+    sonarr --> qbit
+    sonarr --> transmission
+    sonarr --> traefik
+    sonarr --> auth
+    
+    radarr --> postgres
+    radarr --> prowlarr  
+    radarr --> qbit
+    radarr --> transmission
+    radarr --> traefik
+    radarr --> auth
+    
+    lidarr --> postgres
+    lidarr --> prowlarr
+    lidarr --> qbit
+    lidarr --> transmission
+    lidarr --> traefik
+    lidarr --> auth
+    
+    readarr --> postgres
+    readarr --> prowlarr
+    readarr --> qbit
+    readarr --> transmission
+    readarr --> traefik
+    readarr --> auth
+    
+    prowlarr --> postgres
+    prowlarr --> traefik
+    prowlarr --> auth
+    
+    bazarr --> postgres
+    bazarr --> sonarr
+    bazarr --> radarr
+    bazarr --> traefik
+    bazarr --> auth
+
+    %% Tier 4B Dependencies (Download Clients)
+    qbit --> redis
+    qbit --> traefik
+    qbit --> auth
+    
+    transmission --> redis
+    transmission --> traefik
+    transmission --> auth
+    
+    sabnzbd --> redis
+    sabnzbd --> traefik  
+    sabnzbd --> auth
+    
+    nzbget --> redis
+    nzbget --> traefik
+    nzbget --> auth
+
+    %% Tier 5A Dependencies (Request Services)
+    overseerr --> postgres
+    overseerr --> plex
+    overseerr --> sonarr
+    overseerr --> radarr
+    overseerr --> traefik
+    overseerr --> auth
+    
+    jellyseerr --> postgres
+    jellyseerr --> jellyfin
+    jellyseerr --> sonarr
+    jellyseerr --> radarr
+    jellyseerr --> traefik
+    jellyseerr --> auth
+    
+    ombi --> postgres
+    ombi --> plex
+    ombi --> emby
+    ombi --> traefik
+    ombi --> auth
+
+    %% Tier 5B Dependencies (AI Services)
+    ai_safety --> postgres
+    ai_safety --> redis
+    ai_safety --> elasticsearch
+    ai_safety --> traefik
+    ai_safety --> auth
+    
+    content_mod --> postgres
+    content_mod --> redis
+    content_mod --> ai_safety
+    content_mod --> traefik
+    content_mod --> auth
+    
+    recommend --> postgres
+    recommend --> redis
+    recommend --> jellyfin
+    recommend --> plex
+    recommend --> traefik
+    recommend --> auth
+    
+    social_ai --> postgres
+    social_ai --> redis
+    social_ai --> rabbitmq
+    social_ai --> traefik
+    social_ai --> auth
+
+    %% Tier 5C Dependencies (Management Tools)
+    tautulli --> postgres
+    tautulli --> plex
+    tautulli --> traefik
+    tautulli --> auth
+    
+    organizr --> postgres
+    organizr --> traefik
+    organizr --> auth
+    
+    heimdall --> traefik
+    heimdall --> auth
+
+    %% Tier 6 Dependencies (Monitoring)
+    prometheus --> redis
+    prometheus --> traefik
+    
+    grafana --> postgres
+    grafana --> prometheus
+    grafana --> traefik
+    grafana --> auth
+    
+    uptime --> postgres
+    uptime --> traefik
+    uptime --> auth
+    
+    alertmanager --> prometheus
+    alertmanager --> rabbitmq
+    alertmanager --> traefik
+
+    %% Inter-service Communication Lines
+    %% Media servers communicate with AI services
+    jellyfin -.-> ai_safety
+    jellyfin -.-> content_mod
+    jellyfin -.-> recommend
+    
+    plex -.-> ai_safety
+    plex -.-> content_mod
+    plex -.-> recommend
+    
+    %% Download completion notifications
+    qbit -.-> rabbitmq
+    transmission -.-> rabbitmq
+    sabnzbd -.-> rabbitmq
+    nzbget -.-> rabbitmq
+    
+    %% Media refresh triggers
+    rabbitmq -.-> jellyfin
+    rabbitmq -.-> plex
+    rabbitmq -.-> emby
+    
+    %% Social integration
+    social_ai -.-> rabbitmq
+    
+    %% Monitoring data collection
+    prometheus -.-> jellyfin
+    prometheus -.-> plex
+    prometheus -.-> sonarr
+    prometheus -.-> radarr
+    prometheus -.-> qbit
+    prometheus -.-> ai_safety
+
+    %% Styling
+    classDef infrastructure fill:#ff6b6b,stroke:#333,stroke-width:3px,color:#fff
+    classDef platform fill:#4ecdc4,stroke:#333,stroke-width:2px,color:#fff
+    classDef mediaCore fill:#45b7d1,stroke:#333,stroke-width:2px,color:#fff
+    classDef management fill:#96ceb4,stroke:#333,stroke-width:2px,color:#333
+    classDef download fill:#ffeaa7,stroke:#333,stroke-width:2px,color:#333
+    classDef request fill:#dda0dd,stroke:#333,stroke-width:2px,color:#333
+    classDef ai fill:#ffa07a,stroke:#333,stroke-width:2px,color:#333
+    classDef tools fill:#d1c4e9,stroke:#333,stroke-width:2px,color:#333
+    classDef monitoring fill:#a8e6cf,stroke:#333,stroke-width:2px,color:#333
+
+    class postgres,redis,rabbitmq,elasticsearch infrastructure
+    class traefik,auth,dns platform
+    class jellyfin,plex,emby mediaCore
+    class sonarr,radarr,lidarr,readarr,prowlarr,bazarr management
+    class qbit,transmission,sabnzbd,nzbget download
+    class overseerr,jellyseerr,ombi request
+    class ai_safety,content_mod,recommend,social_ai ai
+    class tautulli,organizr,heimdall tools
+    class prometheus,grafana,uptime,alertmanager monitoring
+```

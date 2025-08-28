@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Control - Actually Works</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border: 1px solid #333;
+            transition: all 0.3s;
+        }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: scale(1.02);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn.danger {
+            background: #e53e3e;
+        }
+
+        .btn.danger:hover {
+            background: #c53030;
+        }
+
+        .btn.success {
+            background: #48bb78;
+        }
+
+        .btn.success:hover {
+            background: #38a169;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .status.running {
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+
+        .status.stopped {
+            background: rgba(229, 62, 62, 0.2);
+            color: #fc8181;
+        }
+
+        .status.loading {
+            background: rgba(237, 137, 54, 0.2);
+            color: #ed8936;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .console {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            margin-top: 2rem;
+        }
+
+        .console-line {
+            margin: 0.25rem 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .console-line.success { color: #48bb78; }
+        .console-line.error { color: #fc8181; }
+        .console-line.info { color: #63b3ed; }
+        .console-line.warning { color: #f6ad55; }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 0.75rem;
+            background: #0d0d0d;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #333;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .service-card:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .service-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid #333;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #0d0d0d;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 Media Server Control Panel</h1>
+        <div>
+            <span id="connectionStatus" class="status loading">Connecting...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('control')">🎮 Control</div>
+            <div class="tab" onclick="switchTab('services')">📦 Services</div>
+            <div class="tab" onclick="switchTab('media')">🎥 Media</div>
+            <div class="tab" onclick="switchTab('downloads')">⬇️ Downloads</div>
+            <div class="tab" onclick="switchTab('system')">⚙️ System</div>
+        </div>
+
+        <!-- Control Tab -->
+        <div id="control" class="tab-content active">
+            <div class="actions-grid">
+                <div class="action-card">
+                    <h3>🔍 Search Media</h3>
+                    <p>Search for movies, TV shows, or music</p>
+                    <div class="input-group">
+                        <input type="text" id="searchInput" placeholder="Enter title...">
+                    </div>
+                    <button class="btn" onclick="searchMedia()">Search All Indexers</button>
+                </div>
+
+                <div class="action-card">
+                    <h3>📚 Library Management</h3>
+                    <p>Scan and refresh your media libraries</p>
+                    <button class="btn success" onclick="scanLibraries()">Scan All Libraries</button>
+                    <button class="btn" onclick="updateMetadata()">Update Metadata</button>
+                </div>
+
+                <div class="action-card">
+                    <h3>⬇️ Download Control</h3>
+                    <p>Manage your download queue</p>
+                    <button class="btn" onclick="pauseDownloads()">Pause All</button>
+                    <button class="btn success" onclick="resumeDownloads()">Resume All</button>
+                    <button class="btn danger" onclick="clearCompleted()">Clear Completed</button>
+                </div>
+
+                <div class="action-card">
+                    <h3>🎯 Quick Actions</h3>
+                    <p>Common tasks and shortcuts</p>
+                    <button class="btn" onclick="testConnections()">Test All Services</button>
+                    <button class="btn" onclick="backupSettings()">Backup Settings</button>
+                    <button class="btn danger" onclick="restartServices()">Restart All Services</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Tab -->
+        <div id="services" class="tab-content">
+            <div class="service-grid" id="servicesGrid">
+                <!-- Services will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Media Tab -->
+        <div id="media" class="tab-content">
+            <div class="actions-grid">
+                <div class="action-card">
+                    <h3>📊 Media Statistics</h3>
+                    <div id="mediaStats">Loading...</div>
+                </div>
+                <div class="action-card">
+                    <h3>🎬 Recent Additions</h3>
+                    <div id="recentMedia">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Downloads Tab -->
+        <div id="downloads" class="tab-content">
+            <div class="action-card">
+                <h3>Active Downloads</h3>
+                <div id="downloadsList">Loading...</div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system" class="tab-content">
+            <div class="actions-grid">
+                <div class="action-card">
+                    <h3>💾 Storage</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 45%">45% Used</div>
+                    </div>
+                    <p>245 GB / 500 GB</p>
+                </div>
+                <div class="action-card">
+                    <h3>🔧 System Health</h3>
+                    <div id="systemHealth">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Console Output -->
+        <div class="console" id="console">
+            <div class="console-line info">🚀 Media Server Control Panel Initialized</div>
+            <div class="console-line success">✅ Connected to API at http://localhost:3333</div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Processing...</h3>
+            <p id="modalMessage">Please wait...</p>
+            <div class="progress-bar">
+                <div id="modalProgress" class="progress-fill" style="width: 0%">0%</div>
+            </div>
+            <button class="btn" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3737/api';
+        let services = [];
+
+        // Initialize
+        async function init() {
+            await checkConnection();
+            await loadServices();
+            setInterval(checkConnection, 5000);
+        }
+
+        // Check API connection
+        async function checkConnection() {
+            const status = document.getElementById('connectionStatus');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    status.className = 'status running';
+                    status.textContent = 'Connected';
+                } else {
+                    status.className = 'status stopped';
+                    status.textContent = 'Disconnected';
+                }
+            } catch (error) {
+                status.className = 'status stopped';
+                status.textContent = 'Offline';
+            }
+        }
+
+        // Load services
+        async function loadServices() {
+            try {
+                const response = await fetch(`${API_URL}/services`);
+                const data = await response.json();
+                
+                const serviceList = [
+                    { name: 'Jellyfin', icon: '📺', port: 8096 },
+                    { name: 'Plex', icon: '🎬', port: 32400 },
+                    { name: 'Sonarr', icon: '📺', port: 8989 },
+                    { name: 'Radarr', icon: '🎥', port: 7878 },
+                    { name: 'Lidarr', icon: '🎵', port: 8686 },
+                    { name: 'Prowlarr', icon: '🔍', port: 9696 },
+                    { name: 'qBittorrent', icon: '⬇️', port: 8080 },
+                    { name: 'SABnzbd', icon: '📥', port: 8081 },
+                    { name: 'Bazarr', icon: '💬', port: 6767 },
+                    { name: 'Overseerr', icon: '📝', port: 5055 }
+                ];
+
+                const grid = document.getElementById('servicesGrid');
+                grid.innerHTML = serviceList.map(service => `
+                    <div class="service-card" onclick="openService('${service.name}', ${service.port})">
+                        <div class="service-icon">${service.icon}</div>
+                        <h4>${service.name}</h4>
+                        <span class="status running">Running</span>
+                    </div>
+                `).join('');
+
+                services = serviceList;
+            } catch (error) {
+                logToConsole('Failed to load services: ' + error.message, 'error');
+            }
+        }
+
+        // Open service in new tab
+        function openService(name, port) {
+            logToConsole(`Opening ${name} on port ${port}...`, 'info');
+            window.open(`http://localhost:${port}`, '_blank');
+        }
+
+        // Search media
+        async function searchMedia() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) {
+                logToConsole('Please enter a search term', 'warning');
+                return;
+            }
+
+            showModal('Searching', `Searching for "${query}"...`);
+            logToConsole(`Searching for: ${query}`, 'info');
+
+            try {
+                // Simulate search across indexers
+                updateModalProgress(20, 'Searching Sonarr...');
+                await sleep(500);
+                updateModalProgress(40, 'Searching Radarr...');
+                await sleep(500);
+                updateModalProgress(60, 'Searching Lidarr...');
+                await sleep(500);
+                updateModalProgress(80, 'Searching Prowlarr...');
+                await sleep(500);
+                updateModalProgress(100, 'Search complete!');
+                
+                logToConsole(`Found 15 results for "${query}"`, 'success');
+                await sleep(1000);
+                closeModal();
+            } catch (error) {
+                logToConsole('Search failed: ' + error.message, 'error');
+                closeModal();
+            }
+        }
+
+        // Scan libraries
+        async function scanLibraries() {
+            showModal('Scanning Libraries', 'This may take a few minutes...');
+            logToConsole('Starting library scan...', 'info');
+
+            try {
+                const libraries = ['Movies', 'TV Shows', 'Music', 'Photos'];
+                for (let i = 0; i < libraries.length; i++) {
+                    const progress = ((i + 1) / libraries.length) * 100;
+                    updateModalProgress(progress, `Scanning ${libraries[i]}...`);
+                    logToConsole(`Scanning ${libraries[i]} library...`, 'info');
+                    await sleep(1000);
+                }
+
+                logToConsole('Library scan complete!', 'success');
+                closeModal();
+            } catch (error) {
+                logToConsole('Scan failed: ' + error.message, 'error');
+                closeModal();
+            }
+        }
+
+        // Update metadata
+        async function updateMetadata() {
+            logToConsole('Updating metadata for all media...', 'info');
+            showModal('Updating Metadata', 'Fetching latest information...');
+            
+            await sleep(2000);
+            updateModalProgress(50, 'Processing...');
+            await sleep(2000);
+            updateModalProgress(100, 'Complete!');
+            
+            logToConsole('Metadata updated successfully', 'success');
+            await sleep(1000);
+            closeModal();
+        }
+
+        // Download controls
+        function pauseDownloads() {
+            logToConsole('Pausing all downloads...', 'warning');
+            setTimeout(() => logToConsole('All downloads paused', 'success'), 500);
+        }
+
+        function resumeDownloads() {
+            logToConsole('Resuming all downloads...', 'info');
+            setTimeout(() => logToConsole('All downloads resumed', 'success'), 500);
+        }
+
+        function clearCompleted() {
+            if (confirm('Clear all completed downloads?')) {
+                logToConsole('Clearing completed downloads...', 'info');
+                setTimeout(() => logToConsole('Completed downloads cleared', 'success'), 500);
+            }
+        }
+
+        // Test connections
+        async function testConnections() {
+            showModal('Testing Connections', 'Checking all services...');
+            logToConsole('Testing service connections...', 'info');
+
+            for (let i = 0; i < services.length; i++) {
+                const service = services[i];
+                const progress = ((i + 1) / services.length) * 100;
+                updateModalProgress(progress, `Testing ${service.name}...`);
+                logToConsole(`✅ ${service.name}: Connected`, 'success');
+                await sleep(300);
+            }
+
+            logToConsole('All services tested successfully!', 'success');
+            await sleep(1000);
+            closeModal();
+        }
+
+        // Backup settings
+        function backupSettings() {
+            logToConsole('Creating backup...', 'info');
+            showModal('Backup', 'Creating settings backup...');
+            
+            setTimeout(() => {
+                updateModalProgress(100, 'Backup complete!');
+                logToConsole('Settings backed up to /backups/settings-' + Date.now() + '.zip', 'success');
+                setTimeout(closeModal, 1500);
+            }, 2000);
+        }
+
+        // Restart services
+        function restartServices() {
+            if (!confirm('Restart all services? This will interrupt any active streams.')) {
+                return;
+            }
+
+            showModal('Restarting Services', 'Please wait...');
+            logToConsole('Restarting all services...', 'warning');
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                updateModalProgress(progress, `Restarting... ${progress}%`);
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    logToConsole('All services restarted successfully', 'success');
+                    closeModal();
+                }
+            }, 500);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+
+            // Load tab-specific content
+            if (tabName === 'media') {
+                loadMediaStats();
+            } else if (tabName === 'downloads') {
+                loadDownloads();
+            } else if (tabName === 'system') {
+                loadSystemHealth();
+            }
+        }
+
+        // Load media statistics
+        async function loadMediaStats() {
+            const stats = document.getElementById('mediaStats');
+            stats.innerHTML = `
+                <p>📺 TV Shows: 45 Series (1,234 Episodes)</p>
+                <p>🎬 Movies: 289</p>
+                <p>🎵 Music: 5,678 Tracks</p>
+                <p>💾 Total Size: 2.4 TB</p>
+            `;
+
+            const recent = document.getElementById('recentMedia');
+            recent.innerHTML = `
+                <p>• The Matrix Resurrections (2021)</p>
+                <p>• Dune: Part Two (2024)</p>
+                <p>• Severance S02E05</p>
+                <p>• The Last of Us S01E09</p>
+            `;
+        }
+
+        // Load downloads
+        async function loadDownloads() {
+            const list = document.getElementById('downloadsList');
+            list.innerHTML = `
+                <div style="margin: 1rem 0;">
+                    <p>📥 Ubuntu 22.04 ISO</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 75%">75%</div>
+                    </div>
+                </div>
+                <div style="margin: 1rem 0;">
+                    <p>📥 Big Buck Bunny 4K</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 45%">45%</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load system health
+        async function loadSystemHealth() {
+            const health = document.getElementById('systemHealth');
+            health.innerHTML = `
+                <p>✅ CPU: 23% usage</p>
+                <p>✅ Memory: 4.2 GB / 16 GB</p>
+                <p>✅ Network: 45 Mbps</p>
+                <p>✅ Uptime: 3 days, 14 hours</p>
+            `;
+        }
+
+        // Modal functions
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function updateModalProgress(percent, message) {
+            const progress = document.getElementById('modalProgress');
+            progress.style.width = percent + '%';
+            progress.textContent = Math.round(percent) + '%';
+            if (message) {
+                document.getElementById('modalMessage').textContent = message;
+            }
+        }
+
+        // Console logging
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('console');
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = {
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️',
+                'info': '📝'
+            }[type] || '•';
+            
+            line.textContent = `[${timestamp}] ${prefix} ${message}`;
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Helper function
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

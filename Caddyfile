@@ -1,0 +1,144 @@
+# Caddyfile for Ultimate Media Server 2025
+# Single container reverse proxy configuration
+# Enables unified access through port 80/443
+
+{
+    # Global options
+    admin off
+    persist_config off
+    auto_https off
+    
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss: *.jellyfin.org"
+    }
+}
+
+# Main domain - Dashboard
+:80 {
+    # Main dashboard
+    handle / {
+        reverse_proxy localhost:3001
+    }
+    
+    # API endpoints
+    handle /api/* {
+        reverse_proxy localhost:3002
+    }
+    
+    # Jellyfin
+    handle /jellyfin* {
+        reverse_proxy localhost:8096
+    }
+    
+    # Sonarr
+    handle /sonarr* {
+        reverse_proxy localhost:8989 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Radarr
+    handle /radarr* {
+        reverse_proxy localhost:7878 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Lidarr
+    handle /lidarr* {
+        reverse_proxy localhost:8686 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Prowlarr
+    handle /prowlarr* {
+        reverse_proxy localhost:9696 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Bazarr
+    handle /bazarr* {
+        reverse_proxy localhost:6767 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # qBittorrent
+    handle /qbittorrent* {
+        reverse_proxy localhost:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up Host {host}
+        }
+    }
+    
+    # SABnzbd
+    handle /sabnzbd* {
+        reverse_proxy localhost:8085 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Transmission
+    handle /transmission* {
+        reverse_proxy localhost:9091 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Uptime Kuma
+    handle /status* {
+        reverse_proxy localhost:3001
+    }
+    
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # Catch all - redirect to dashboard
+    handle {
+        redir / permanent
+    }
+    
+    # Enable compression
+    encode gzip
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}
+
+# HTTPS configuration (when domain is configured)
+# Replace 'yourdomain.com' with your actual domain
+# yourdomain.com {
+#     # Automatic HTTPS with Let's Encrypt
+#     tls your-email@example.com
+#     
+#     # Same routing configuration as above
+#     import :80
+# }

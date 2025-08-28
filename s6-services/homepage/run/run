@@ -1,0 +1,25 @@
+#!/command/with-contenv bash
+# Homepage dashboard runner
+
+set -e
+
+echo "Starting Homepage..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/homepage
+
+# Set proper ownership
+chown -R media:media /config/homepage
+
+# Set environment
+export NODE_ENV=production
+export HOMEPAGE_CONFIG_DIR=/config/homepage
+
+# Create default config if not exists
+if [ ! -f /config/homepage/services.yaml ]; then
+    cp -r /app/configs/homepage/* /config/homepage/ 2>/dev/null || true
+fi
+
+# Run Homepage
+cd /opt/homepage
+exec s6-setuidgid media node server.js

@@ -1,0 +1,268 @@
+{
+  "test_start_time": "2025-08-03T14:53:47.488152",
+  "docker_status": {
+    "total_containers": 6,
+    "running_containers": 6,
+    "containers": [
+      {
+        "Command": "\"docker-entrypoint.s\u2026\"",
+        "CreatedAt": "2025-08-03 10:29:46 -0400 EDT",
+        "ID": "3c251ba72061",
+        "Image": "node:18-alpine",
+        "Labels": "com.docker.compose.config-hash=75e0790ae177c3af9c752a200338c62b1733be2523b6a61b3fbea7032348fbfd,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=mcp-dashboard,com.docker.compose.version=2.38.2,desktop.docker.io/binds/0/Source=/Users/morlock/fun/newmedia/mcp-architecture,desktop.docker.io/binds/0/SourceKind=hostFile,desktop.docker.io/binds/0/Target=/app,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/3000/tcp=:3000,desktop.docker.io/ports/8090/tcp=:8090",
+        "LocalVolumes": "1",
+        "Mounts": "/host_mnt/User\u2026,mcp-architectu\u2026",
+        "Names": "ultimate-mcp-dashboard",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux",
+          "variant": "v8"
+        },
+        "Ports": "0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp, 0.0.0.0:8090->8090/tcp, [::]:8090->8090/tcp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours"
+      },
+      {
+        "Command": "\"/init\"",
+        "CreatedAt": "2025-08-03 10:29:05 -0400 EDT",
+        "ID": "c513a95370b2",
+        "Image": "lscr.io/linuxserver/radarr:latest",
+        "Labels": "build_version=Linuxserver.io version:- 5.26.2.10099-ls279 Build-date:- 2025-07-20T17:01:38+00:00,com.docker.compose.config-hash=87b228090ee4b333386b16cf5347d43bae6c2c5d03e156fd64d6134d7ecf37a7,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:ae89f05ad7023258730ed62f5fcca63aab1e27ee5adcca1edb55d716f7cef356,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=radarr,com.docker.compose.version=2.38.2,desktop.docker.io/binds/0/Source=/Users/morlock/fun/newmedia/mcp-architecture/downloads,desktop.docker.io/binds/0/SourceKind=hostFile,desktop.docker.io/binds/0/Target=/downloads,desktop.docker.io/binds/2/Source=/Users/morlock/fun/newmedia/mcp-architecture/media/movies,desktop.docker.io/binds/2/SourceKind=hostFile,desktop.docker.io/binds/2/Target=/movies,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/7878/tcp=:7878,maintainer=Roxedus,thespad,org.opencontainers.image.authors=linuxserver.io,org.opencontainers.image.created=2025-07-20T17:01:38+00:00,org.opencontainers.image.description=[Radarr](https://github.com/Radarr/Radarr) - A fork of Sonarr to work with movies \u00e0 la Couchpotato.  ,org.opencontainers.image.documentation=https://docs.linuxserver.io/images/docker-radarr,org.opencontainers.image.licenses=GPL-3.0-only,org.opencontainers.image.ref.name=2396b73523c95d6d9bfdc203b15e3dd597f29cdf,org.opencontainers.image.revision=2396b73523c95d6d9bfdc203b15e3dd597f29cdf,org.opencontainers.image.source=https://github.com/linuxserver/docker-radarr,org.opencontainers.image.title=Radarr,org.opencontainers.image.url=https://github.com/linuxserver/docker-radarr/packages,org.opencontainers.image.vendor=linuxserver.io,org.opencontainers.image.version=5.26.2.10099-ls279",
+        "LocalVolumes": "1",
+        "Mounts": "mcp-architectu\u2026,/host_mnt/User\u2026,/host_mnt/User\u2026",
+        "Names": "radarr",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux"
+        },
+        "Ports": "0.0.0.0:7878->7878/tcp, [::]:7878->7878/tcp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours"
+      },
+      {
+        "Command": "\"/init\"",
+        "CreatedAt": "2025-08-03 10:29:05 -0400 EDT",
+        "ID": "0f04fbbc347d",
+        "Image": "lscr.io/linuxserver/sonarr:latest",
+        "Labels": "build_version=Linuxserver.io version:- 4.0.15.2941-ls289 Build-date:- 2025-07-25T23:40:13+00:00,com.docker.compose.config-hash=a8fbc90144b8e0b697beba371c7f2d3843d4484d85d76dd180f3ac992079e3fa,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:c0836f49c20000e603170dc95d74c2527e690d50309977d94fc171eaa49351a4,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=sonarr,com.docker.compose.version=2.38.2,desktop.docker.io/binds/1/Source=/Users/morlock/fun/newmedia/mcp-architecture/media/tv,desktop.docker.io/binds/1/SourceKind=hostFile,desktop.docker.io/binds/1/Target=/tv,desktop.docker.io/binds/2/Source=/Users/morlock/fun/newmedia/mcp-architecture/downloads,desktop.docker.io/binds/2/SourceKind=hostFile,desktop.docker.io/binds/2/Target=/downloads,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/8989/tcp=:8989,maintainer=thespad,org.opencontainers.image.authors=linuxserver.io,org.opencontainers.image.created=2025-07-25T23:40:13+00:00,org.opencontainers.image.description=[Sonarr](https://sonarr.tv/) (formerly NZBdrone) is a PVR for usenet and bittorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.  ,org.opencontainers.image.documentation=https://docs.linuxserver.io/images/docker-sonarr,org.opencontainers.image.licenses=GPL-3.0-only,org.opencontainers.image.ref.name=19433ea1afdacf1e4f3c304244c8c86c6928a756,org.opencontainers.image.revision=19433ea1afdacf1e4f3c304244c8c86c6928a756,org.opencontainers.image.source=https://github.com/linuxserver/docker-sonarr,org.opencontainers.image.title=Sonarr,org.opencontainers.image.url=https://github.com/linuxserver/docker-sonarr/packages,org.opencontainers.image.vendor=linuxserver.io,org.opencontainers.image.version=4.0.15.2941-ls289",
+        "LocalVolumes": "1",
+        "Mounts": "mcp-architectu\u2026,/host_mnt/User\u2026,/host_mnt/User\u2026",
+        "Names": "sonarr",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux"
+        },
+        "Ports": "0.0.0.0:8989->8989/tcp, [::]:8989->8989/tcp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours"
+      },
+      {
+        "Command": "\"/init\"",
+        "CreatedAt": "2025-08-03 10:29:05 -0400 EDT",
+        "ID": "6b065a0f7860",
+        "Image": "lscr.io/linuxserver/prowlarr:latest",
+        "Labels": "build_version=Linuxserver.io version:- 1.37.0.5076-ls123 Build-date:- 2025-07-23T04:29:34+00:00,com.docker.compose.config-hash=d1a7b7d9278b1e8224335bda9d175726f224e8bf3d5120f6a2371f8d37664ee4,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:d2462d470891c70073e31d158657a9b247b317c90238c40534d8be8f98671057,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=prowlarr,com.docker.compose.version=2.38.2,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/9696/tcp=:9696,maintainer=Roxedus,thespad,org.opencontainers.image.authors=linuxserver.io,org.opencontainers.image.created=2025-07-23T04:29:34+00:00,org.opencontainers.image.description=[Prowlarr](https://github.com/Prowlarr/Prowlarr) is a indexer manager/proxy built on the popular arr .net/reactjs base stack to integrate with your various PVR apps. Prowlarr supports both Torrent Trackers and Usenet Indexers. It integrates seamlessly with Sonarr, Radarr, Lidarr, and Readarr offering complete management of your indexers with no per app Indexer setup required (we do it all).  ,org.opencontainers.image.documentation=https://docs.linuxserver.io/images/docker-prowlarr,org.opencontainers.image.licenses=GPL-3.0-only,org.opencontainers.image.ref.name=c95504d893d0f0868fba21ac0591bf99163b48be,org.opencontainers.image.revision=c95504d893d0f0868fba21ac0591bf99163b48be,org.opencontainers.image.source=https://github.com/linuxserver/docker-prowlarr,org.opencontainers.image.title=Prowlarr,org.opencontainers.image.url=https://github.com/linuxserver/docker-prowlarr/packages,org.opencontainers.image.vendor=linuxserver.io,org.opencontainers.image.version=1.37.0.5076-ls123",
+        "LocalVolumes": "1",
+        "Mounts": "mcp-architectu\u2026",
+        "Names": "prowlarr",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux"
+        },
+        "Ports": "0.0.0.0:9696->9696/tcp, [::]:9696->9696/tcp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours"
+      },
+      {
+        "Command": "\"/init\"",
+        "CreatedAt": "2025-08-03 10:29:05 -0400 EDT",
+        "ID": "fb7f8de34d34",
+        "Image": "lscr.io/linuxserver/qbittorrent:latest",
+        "Labels": "build_version=Linuxserver.io version:- 5.1.2-r1-ls407 Build-date:- 2025-07-27T07:01:05+00:00,com.docker.compose.config-hash=0bf066eb532165cb903f878ea31df41d539bd0ff89576ce05699d62041cf29f9,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:33a6bedcd6c17e60ae48d86af9dbc776f779be446bb42b72313e6d573c75cddb,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=qbittorrent,com.docker.compose.version=2.38.2,desktop.docker.io/binds/1/Source=/Users/morlock/fun/newmedia/mcp-architecture/downloads,desktop.docker.io/binds/1/SourceKind=hostFile,desktop.docker.io/binds/1/Target=/downloads,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/6881/tcp=:6881,desktop.docker.io/ports/6881/udp=:6881,desktop.docker.io/ports/8080/tcp=:8080,maintainer=thespad,org.opencontainers.image.authors=linuxserver.io,org.opencontainers.image.created=2025-07-27T07:01:05+00:00,org.opencontainers.image.description=The [Qbittorrent](https://www.qbittorrent.org/) project aims to provide an open-source software alternative to \u00b5Torrent. qBittorrent is based on the Qt toolkit and libtorrent-rasterbar library.,org.opencontainers.image.documentation=https://docs.linuxserver.io/images/docker-qbittorrent,org.opencontainers.image.licenses=GPL-3.0-only,org.opencontainers.image.ref.name=ce6ccdb84f45ab70cf11ece7d4416bc90625a845,org.opencontainers.image.revision=ce6ccdb84f45ab70cf11ece7d4416bc90625a845,org.opencontainers.image.source=https://github.com/linuxserver/docker-qbittorrent,org.opencontainers.image.title=Qbittorrent,org.opencontainers.image.url=https://github.com/linuxserver/docker-qbittorrent/packages,org.opencontainers.image.vendor=linuxserver.io,org.opencontainers.image.version=5.1.2-r1-ls407",
+        "LocalVolumes": "1",
+        "Mounts": "mcp-architectu\u2026,/host_mnt/User\u2026",
+        "Names": "qbittorrent",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux"
+        },
+        "Ports": "0.0.0.0:6881->6881/tcp, [::]:6881->6881/tcp, 0.0.0.0:8080->8080/tcp, 0.0.0.0:6881->6881/udp, [::]:8080->8080/tcp, [::]:6881->6881/udp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours"
+      },
+      {
+        "Command": "\"/jellyfin/jellyfin\"",
+        "CreatedAt": "2025-08-03 10:29:05 -0400 EDT",
+        "ID": "5d9a4bafb6e1",
+        "Image": "jellyfin/jellyfin:latest",
+        "Labels": "com.docker.compose.config-hash=a760fda184cde1cf3bc32582618d01b478e5c82937cccc34537f858d34cdcb16,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:7ae36aab93ef9b6aaff02b37f8bb23df84bb2d7a3f6054ec8fc466072a648ce2,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=/Users/morlock/fun/newmedia/mcp-architecture/docker-compose.simple.yml,com.docker.compose.project.working_dir=/Users/morlock/fun/newmedia/mcp-architecture,com.docker.compose.project=mcp-architecture,com.docker.compose.service=jellyfin,com.docker.compose.version=2.38.2,desktop.docker.io/binds/1/Source=/Users/morlock/fun/newmedia/mcp-architecture/media,desktop.docker.io/binds/1/SourceKind=hostFile,desktop.docker.io/binds/1/Target=/media,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/8096/tcp=:8096,org.opencontainers.image.description=The Free Software Media System,org.opencontainers.image.documentation=https://jellyfin.org/docs/,org.opencontainers.image.source=https://github.com/jellyfin/jellyfin-packaging,org.opencontainers.image.title=Jellyfin,org.opencontainers.image.url=https://jellyfin.org,org.opencontainers.image.version=10.10.7",
+        "LocalVolumes": "2",
+        "Mounts": "f55d618ea15c00\u2026,mcp-architectu\u2026,/host_mnt/User\u2026",
+        "Names": "jellyfin",
+        "Networks": "mcp-architecture_mediaserver",
+        "Platform": {
+          "architecture": "arm64",
+          "os": "linux",
+          "variant": "v8"
+        },
+        "Ports": "0.0.0.0:8096->8096/tcp, [::]:8096->8096/tcp",
+        "RunningFor": "4 hours ago",
+        "Size": "0B",
+        "State": "running",
+        "Status": "Up 4 hours (healthy)"
+      }
+    ],
+    "status": "PASS"
+  },
+  "service_connectivity": {
+    "jellyfin": {
+      "url": "http://localhost:8096/System/Info",
+      "status_code": 200,
+      "response_time": 0.02728,
+      "accessible": true,
+      "status": "PASS"
+    },
+    "sonarr": {
+      "url": "http://localhost:8989/api/v3/system/status",
+      "status_code": 401,
+      "response_time": 0.00576,
+      "accessible": true,
+      "status": "PASS"
+    },
+    "radarr": {
+      "url": "http://localhost:7878/api/v3/system/status",
+      "status_code": 401,
+      "response_time": 0.006151,
+      "accessible": true,
+      "status": "PASS"
+    },
+    "prowlarr": {
+      "url": "http://localhost:9696/api/v1/system/status",
+      "status_code": 401,
+      "response_time": 0.003904,
+      "accessible": true,
+      "status": "PASS"
+    },
+    "qbittorrent": {
+      "url": "http://localhost:8080/",
+      "status_code": 200,
+      "response_time": 0.001978,
+      "accessible": true,
+      "status": "PASS"
+    },
+    "dashboard": {
+      "url": "http://localhost:8090/",
+      "status_code": 200,
+      "response_time": 0.010229,
+      "accessible": true,
+      "status": "PASS"
+    }
+  },
+  "api_endpoints": {},
+  "dashboard_functionality": {
+    "main_page": {
+      "status": "FAIL",
+      "message": "Missing elements",
+      "content_length": 66363
+    },
+    "api_endpoints": {
+      "status": "PASS",
+      "message": "3/3 endpoints accessible",
+      "endpoints": {
+        "/api/services": {
+          "status_code": 404,
+          "accessible": true
+        },
+        "/api/system": {
+          "status_code": 404,
+          "accessible": true
+        },
+        "/api/health": {
+          "status_code": 404,
+          "accessible": true
+        }
+      }
+    },
+    "static_assets": {
+      "status": "PASS",
+      "message": "Asset loading test completed",
+      "assets": {
+        "/mobile-ui.css": {
+          "status_code": 404,
+          "size": 0
+        },
+        "/social-share.js": {
+          "status_code": 404,
+          "size": 0
+        }
+      }
+    },
+    "real_time_features": {
+      "status": "WARN",
+      "message": "Socket.IO not available (fallback mode)",
+      "socket_io": false
+    }
+  },
+  "mobile_responsiveness": {
+    "status": "PASS",
+    "score": "3/4",
+    "features": {
+      "viewport_meta": true,
+      "responsive_css": true,
+      "mobile_menu": false,
+      "touch_friendly": true
+    }
+  },
+  "security_tests": {
+    "https_headers": {
+      "status": "WARN",
+      "message": "0/4 security headers present",
+      "headers": {
+        "X-Content-Type-Options": false,
+        "X-Frame-Options": false,
+        "X-XSS-Protection": false,
+        "Content-Security-Policy": false
+      }
+    },
+    "content_security": {
+      "status": "FAIL",
+      "message": "1 security issues found",
+      "issues": [
+        "Potential XSS risk with innerHTML"
+      ]
+    },
+    "authentication": {
+      "status": "PASS",
+      "message": "3/3 services require authentication",
+      "protected_services": 3
+    }
+  },
+  "performance_metrics": {
+    "initial_load_time": 0.0034210681915283203,
+    "average_response_time": 0.004830074310302734,
+    "content_size": 66858,
+    "status": "PASS"
+  },
+  "overall_score": 35.0,
+  "issues_found": [],
+  "recommendations": [
+    "Fix dashboard functionality issues",
+    "Add security headers for better protection"
+  ],
+  "test_end_time": "2025-08-03T14:53:47.744198"
+}

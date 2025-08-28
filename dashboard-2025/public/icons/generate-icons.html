@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas" width="512" height="512"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function generateIcon(size) {
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#8B5CF6');
+            gradient.addColorStop(0.5, '#EC4899');
+            gradient.addColorStop(1, '#06B6D4');
+            
+            // Draw background
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw icon (media server symbol)
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('M', size / 2, size / 2);
+            
+            // Add play button overlay
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size * 0.15;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX + radius * 0.5, centerY);
+            ctx.lineTo(centerX - radius * 0.5, centerY - radius * 0.866);
+            ctx.lineTo(centerX - radius * 0.5, centerY + radius * 0.866);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fill();
+            
+            // Convert to data URL
+            return canvas.toDataURL('image/png');
+        }
+        
+        // Generate icons of different sizes
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        
+        sizes.forEach(size => {
+            const dataUrl = generateIcon(size);
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = dataUrl;
+            link.textContent = `Download ${size}x${size}`;
+            document.body.appendChild(link);
+            document.body.appendChild(document.createElement('br'));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+# Sonarr service runner
+
+set -e
+
+echo "Starting Sonarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/sonarr
+
+# Set proper ownership
+chown -R media:media /config/sonarr
+
+# Set environment
+export HOME="/config/sonarr"
+export XDG_CONFIG_HOME="/config/sonarr"
+
+# Run Sonarr
+exec s6-setuidgid media /opt/sonarr/Sonarr \
+    -nobrowser \
+    -data=/config/sonarr

@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Bazarr service cleanup
+
+echo "$(date) [INFO] Bazarr service stopped" >> /logs/bazarr.log

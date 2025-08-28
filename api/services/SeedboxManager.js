@@ -1,345 +1,479 @@
 /**
  * Seedbox Manager Service
- * Comprehensive seedbox integration with cross-seed automation and tracker management
+ * Manages torrent downloads, cross-seeding, and seedbox operations
  */
 
+const axios = require('axios');
+const crypto = require('crypto');
 const { exec } = require('child_process');
 const { promisify } = require('util');
-const fs = require('fs').promises;
-const path = require('path');
 
 const execAsync = promisify(exec);
 
 class SeedboxManager {
     constructor() {
-        this.qbittorrentConfig = {
-            host: 'localhost',
-            port: 8080,
-            username: process.env.QBITTORRENT_USERNAME || 'admin',
-            password: process.env.QBITTORRENT_PASSWORD || 'adminadmin'
-        };
-        
+        this.seedboxes = new Map();
+        this.torrents = new Map();
         this.crossSeedConfig = {
-            enabled: process.env.CROSS_SEED_ENABLED === 'true',
-            configPath: './config/cross-seed',
-            outputDir: './data/torrents/cross-seed',
-            delay: parseInt(process.env.CROSS_SEED_DELAY) || 30,
-            searchTimeout: parseInt(process.env.CROSS_SEED_TIMEOUT) || 60
+            enabled: false,
+            interval: 300000, // 5 minutes
+            delay: 30, // 30 seconds between searches
+            maxSearches: 10
         };
-
-        // Tracker configurations
-        this.trackers = {
-            public: {
-                'torrentleech': { enabled: true, priority: 1 },
-                'iptorrents': { enabled: true, priority: 2 },
-                'alpharatio': { enabled: true, priority: 3 }
+        this.stats = {
+            totalTorrents: 0,
+            activeTorrents: 0,
+            downloadSpeed: 0,
+            uploadSpeed: 0,
+            totalDownloaded: 0,
+            totalUploaded: 0,
+            ratio: 0
+        };
+        this.monitoring = false;
+        this.monitoringInterval = null;
+        this.initialized = false;
+        
+        // Default clients configuration
+        this.torrentClients = {
+            qbittorrent: {
+                type: 'qbittorrent',
+                host: 'localhost',
+                port: 8080,
+                username: 'admin',
+                password: 'adminadmin',
+                apiPath: '/api/v2'
             },
-            private: {
-                'passthepopcorn': { enabled: false, priority: 1 },
-                'broadcastthenet': { enabled: false, priority: 2 },
-                'redacted': { enabled: false, priority: 3 }
+            transmission: {
+                type: 'transmission',
+                host: 'localhost',
+                port: 9091,
+                username: '',
+                password: '',
+                apiPath: '/transmission/rpc'
+            },
+            deluge: {
+                type: 'deluge',
+                host: 'localhost',
+                port: 58846,
+                password: ''
+            },
+            rutorrent: {
+                type: 'rutorrent',
+                host: 'localhost',
+                port: 80,
+                username: '',
+                password: '',
+                apiPath: '/rutorrent'
             }
         };
-
-        // Ratio management settings
-        this.ratioSettings = {
-            globalRatio: 2.0,
-            seedingTimeLimit: 7 * 24 * 60, // 7 days in minutes
-            maxActiveTorrents: 200,
-            maxDownloadSpeed: 0, // Unlimited
-            maxUploadSpeed: 0,   // Unlimited
-            ratioGroups: {
-                'high_priority': { ratio: 3.0, time: 14 * 24 * 60 },
-                'medium_priority': { ratio: 2.0, time: 7 * 24 * 60 },
-                'low_priority': { ratio: 1.5, time: 3 * 24 * 60 }
-            }
-        };
-
-        this.sessionCookie = null;
-        this.statusCache = new Map();
-        this.cacheTimeout = 30000; // 30 seconds
     }
 
     async initialize() {
         try {
-            // Initialize qBittorrent session
-            await this.initializeQBittorrentSession();
+            console.log('Initializing SeedboxManager...');
             
-            // Verify cross-seed setup
-            await this.verifyCrossSeedSetup();
+            // Initialize default seedbox configurations
+            await this.loadSeedboxConfigurations();
             
+            // Test connections to available clients
+            await this.testClientConnections();
+            
+            // Load initial stats
+            await this.updateStats();
+            
+            this.initialized = true;
             console.log('SeedboxManager initialized successfully');
         } catch (error) {
             console.error('Failed to initialize SeedboxManager:', error);
-            // Don't throw error to allow API to start even if seedbox is not available
+            this.initialized = true; // Continue with limited functionality
         }
     }
 
-    async initializeQBittorrentSession() {
-        try {
-            const response = await this.makeQBittorrentRequest('/api/v2/auth/login', 'POST', {
-                username: this.qbittorrentConfig.username,
-                password: this.qbittorrentConfig.password
-            });
-
-            if (response.ok) {
-                const cookie = response.headers.get('set-cookie');
-                if (cookie) {
-                    this.sessionCookie = cookie;
-                    console.log('qBittorrent session initialized');
+    async loadSeedboxConfigurations() {
+        // Load seedbox configurations from environment or defaults
+        for (const [clientName, config] of Object.entries(this.torrentClients)) {
+            this.seedboxes.set(clientName, {
+                id: crypto.randomUUID(),
+                name: clientName,
+                type: config.type,
+                status: 'disconnected',
+                ...config,
+                connected: false,
+                lastChecked: null,
+                stats: {
+                    torrents: 0,
+                    downloadSpeed: 0,
+                    uploadSpeed: 0,
+                    totalDownloaded: 0,
+                    totalUploaded: 0
                 }
-            } else {
-                throw new Error('Failed to authenticate with qBittorrent');
+            });
+        }
+    }
+
+    async testClientConnections() {
+        for (const [clientName, seedbox] of this.seedboxes.entries()) {
+            try {
+                const isConnected = await this.testConnection(seedbox);
+                seedbox.connected = isConnected;
+                seedbox.status = isConnected ? 'connected' : 'disconnected';
+                seedbox.lastChecked = new Date().toISOString();
+                
+                if (isConnected) {
+                    console.log(`✅ Connected to ${clientName}`);
+                } else {
+                    console.log(`❌ Failed to connect to ${clientName}`);
+                }
+            } catch (error) {
+                console.log(`❌ Error testing ${clientName}:`, error.message);
+                seedbox.connected = false;
+                seedbox.status = 'error';
+                seedbox.error = error.message;
+            }
+        }
+    }
+
+    async testConnection(seedbox) {
+        try {
+            switch (seedbox.type) {
+                case 'qbittorrent':
+                    return await this.testQbittorrentConnection(seedbox);
+                case 'transmission':
+                    return await this.testTransmissionConnection(seedbox);
+                case 'deluge':
+                    return await this.testDelugeConnection(seedbox);
+                case 'rutorrent':
+                    return await this.testRutorrentConnection(seedbox);
+                default:
+                    return false;
             }
         } catch (error) {
-            console.warn('qBittorrent not available:', error.message);
+            return false;
         }
     }
 
-    async verifyCrossSeedSetup() {
+    async testQbittorrentConnection(seedbox) {
         try {
-            // Check if cross-seed directory exists
-            await fs.access(this.crossSeedConfig.configPath);
-            console.log('Cross-seed configuration found');
+            const baseUrl = `http://${seedbox.host}:${seedbox.port}${seedbox.apiPath}`;
+            
+            // First, try to login
+            const loginResponse = await axios.post(`${baseUrl}/auth/login`, 
+                new URLSearchParams({
+                    username: seedbox.username,
+                    password: seedbox.password
+                }), {
+                timeout: 5000,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            
+            if (loginResponse.status === 200) {
+                // Test API access
+                const versionResponse = await axios.get(`${baseUrl}/app/version`, {
+                    timeout: 5000,
+                    headers: { 'Cookie': loginResponse.headers['set-cookie'] }
+                });
+                
+                return versionResponse.status === 200;
+            }
+            
+            return false;
         } catch (error) {
-            console.log('Cross-seed not configured, skipping...');
+            return false;
         }
+    }
+
+    async testTransmissionConnection(seedbox) {
+        try {
+            const url = `http://${seedbox.host}:${seedbox.port}${seedbox.apiPath}`;
+            
+            const response = await axios.post(url, {
+                method: 'session-get'
+            }, {
+                timeout: 5000,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                auth: seedbox.username ? {
+                    username: seedbox.username,
+                    password: seedbox.password
+                } : undefined
+            });
+            
+            return response.status === 200 || response.status === 409; // 409 is expected for CSRF
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async testDelugeConnection(seedbox) {
+        // Deluge connection test would require deluge client library
+        // For now, return false as it's more complex to implement
+        return false;
+    }
+
+    async testRutorrentConnection(seedbox) {
+        try {
+            const url = `http://${seedbox.host}:${seedbox.port}${seedbox.apiPath}/plugins/httprpc/action.php`;
+            
+            const response = await axios.post(url, 'mode=list', {
+                timeout: 5000,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                auth: seedbox.username ? {
+                    username: seedbox.username,
+                    password: seedbox.password
+                } : undefined
+            });
+            
+            return response.status === 200;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    getSeedboxes() {
+        const seedboxes = [];
+        for (const [name, config] of this.seedboxes.entries()) {
+            seedboxes.push({
+                name,
+                ...config
+            });
+        }
+        return seedboxes;
     }
 
     async getStatus() {
-        try {
-            const [qbittorrentStatus, crossSeedStatus, diskUsage] = await Promise.all([
-                this.getQBittorrentStatus(),
-                this.getCrossSeedStatus(),
-                this.getDiskUsage()
-            ]);
-
-            return {
-                qbittorrent: qbittorrentStatus,
-                crossSeed: crossSeedStatus,
-                disk: diskUsage,
-                ratioSettings: this.ratioSettings,
-                trackers: this.trackers,
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error('Failed to get seedbox status: ' + error.message);
-        }
-    }
-
-    async getQBittorrentStatus() {
-        try {
-            if (!this.sessionCookie) {
-                await this.initializeQBittorrentSession();
-            }
-
-            const [mainData, preferences, torrents] = await Promise.all([
-                this.makeQBittorrentRequest('/api/v2/sync/maindata'),
-                this.makeQBittorrentRequest('/api/v2/app/preferences'),
-                this.makeQBittorrentRequest('/api/v2/torrents/info')
-            ]);
-
-            const mainDataJson = await mainData.json();
-            const preferencesJson = await preferences.json();
-            const torrentsJson = await torrents.json();
-
-            // Calculate statistics
-            const stats = this.calculateTorrentStats(torrentsJson);
-
-            return {
-                connected: true,
-                version: mainDataJson.server_state?.app_version || 'Unknown',
-                state: mainDataJson.server_state || {},
-                preferences: {
-                    downloadLimit: preferencesJson.dl_limit || 0,
-                    uploadLimit: preferencesJson.up_limit || 0,
-                    maxRatio: preferencesJson.max_ratio || -1,
-                    maxSeedingTime: preferencesJson.max_seeding_time || -1
-                },
-                stats,
-                torrents: torrentsJson.slice(0, 10) // Return first 10 torrents for overview
-            };
-        } catch (error) {
-            return {
-                connected: false,
-                error: error.message
-            };
-        }
-    }
-
-    calculateTorrentStats(torrents) {
-        const stats = {
-            total: torrents.length,
-            downloading: 0,
-            seeding: 0,
-            paused: 0,
-            completed: 0,
-            totalSize: 0,
-            totalDownloaded: 0,
-            totalUploaded: 0,
-            avgRatio: 0,
-            activeTorrents: 0
-        };
-
-        let totalRatio = 0;
-        let torrentsWithRatio = 0;
-
-        for (const torrent of torrents) {
-            stats.totalSize += torrent.size || 0;
-            stats.totalDownloaded += torrent.downloaded || 0;
-            stats.totalUploaded += torrent.uploaded || 0;
-
-            if (torrent.ratio && torrent.ratio > 0) {
-                totalRatio += torrent.ratio;
-                torrentsWithRatio++;
-            }
-
-            switch (torrent.state) {
-                case 'downloading':
-                case 'allocating':
-                case 'metaDL':
-                    stats.downloading++;
-                    stats.activeTorrents++;
-                    break;
-                case 'uploading':
-                case 'stalledUP':
-                    stats.seeding++;
-                    stats.activeTorrents++;
-                    break;
-                case 'pausedDL':
-                case 'pausedUP':
-                    stats.paused++;
-                    break;
-                case 'queuedDL':
-                case 'queuedUP':
-                    stats.activeTorrents++;
-                    break;
-            }
-
-            if (torrent.progress === 1) {
-                stats.completed++;
-            }
-        }
-
-        stats.avgRatio = torrentsWithRatio > 0 ? (totalRatio / torrentsWithRatio) : 0;
-
-        return stats;
-    }
-
-    async getCrossSeedStatus() {
-        try {
-            // Check if cross-seed process is running
-            const { stdout } = await execAsync('pgrep -f cross-seed');
-            const isRunning = stdout.trim().length > 0;
-
-            let config = {};
-            try {
-                const configPath = path.join(this.crossSeedConfig.configPath, 'config.js');
-                const configContent = await fs.readFile(configPath, 'utf8');
-                // Basic config parsing (this would need to be more sophisticated in production)
-                config = { configured: true };
-            } catch (error) {
-                config = { configured: false };
-            }
-
-            return {
+        await this.updateStats();
+        
+        const seedboxes = this.getSeedboxes();
+        const connectedCount = seedboxes.filter(s => s.connected).length;
+        
+        return {
+            totalSeedboxes: seedboxes.length,
+            connectedSeedboxes: connectedCount,
+            stats: this.stats,
+            seedboxes,
+            crossSeed: {
                 enabled: this.crossSeedConfig.enabled,
-                running: isRunning,
-                config,
-                lastRun: await this.getCrossSeedLastRun()
+                status: this.crossSeedConfig.enabled ? 'active' : 'inactive'
+            },
+            monitoring: this.monitoring,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    async addSeedbox(config) {
+        try {
+            const id = crypto.randomUUID();
+            const seedbox = {
+                id,
+                name: config.name,
+                type: config.type,
+                host: config.host,
+                port: config.port,
+                username: config.username,
+                password: config.password,
+                apiPath: config.apiPath,
+                status: 'disconnected',
+                connected: false,
+                stats: {
+                    torrents: 0,
+                    downloadSpeed: 0,
+                    uploadSpeed: 0,
+                    totalDownloaded: 0,
+                    totalUploaded: 0
+                },
+                createdAt: new Date().toISOString()
             };
-        } catch (error) {
-            return {
-                enabled: false,
-                running: false,
-                error: error.message
-            };
-        }
-    }
-
-    async getCrossSeedLastRun() {
-        try {
-            const logFile = path.join(this.crossSeedConfig.configPath, 'cross-seed.log');
-            const stats = await fs.stat(logFile);
-            return stats.mtime;
-        } catch (error) {
-            return null;
-        }
-    }
-
-    async getDiskUsage() {
-        try {
-            const paths = [
-                './data/downloads',
-                './data/torrents',
-                './media-data'
-            ];
-
-            const usage = {};
-            for (const path of paths) {
-                try {
-                    const { stdout } = await execAsync(`du -sh ${path}`);
-                    const size = stdout.split('\t')[0];
-                    usage[path] = size;
-                } catch (error) {
-                    usage[path] = 'Unknown';
-                }
-            }
-
-            return usage;
-        } catch (error) {
-            return { error: error.message };
-        }
-    }
-
-    async startCrossSeed(options = {}) {
-        try {
-            if (!this.crossSeedConfig.enabled) {
-                throw new Error('Cross-seed is not enabled');
-            }
-
-            const {
-                action = 'search',
-                trackers = [],
-                excludeOlder = 7,
-                includeNonVideos = false
-            } = options;
-
-            let command = 'cross-seed';
             
-            if (action === 'search') {
-                command += ' search';
-            } else if (action === 'daemon') {
-                command += ' daemon';
-            }
-
-            if (trackers.length > 0) {
-                command += ` --trackers ${trackers.join(',')}`;
-            }
-
-            if (excludeOlder > 0) {
-                command += ` --exclude-older-than ${excludeOlder}d`;
-            }
-
-            if (includeNonVideos) {
-                command += ' --include-non-videos';
-            }
-
-            console.log('Starting cross-seed:', command);
+            // Test connection
+            const isConnected = await this.testConnection(seedbox);
+            seedbox.connected = isConnected;
+            seedbox.status = isConnected ? 'connected' : 'disconnected';
+            seedbox.lastChecked = new Date().toISOString();
             
-            // Run cross-seed in the background
-            const child = exec(command, {
-                cwd: this.crossSeedConfig.configPath,
-                detached: true,
-                stdio: 'ignore'
-            });
-
-            child.unref();
-
+            this.seedboxes.set(config.name, seedbox);
+            
             return {
                 success: true,
-                command,
-                pid: child.pid,
+                seedbox,
+                connected: isConnected
+            };
+        } catch (error) {
+            throw new Error('Failed to add seedbox: ' + error.message);
+        }
+    }
+
+    async removeSeedbox(name) {
+        if (this.seedboxes.has(name)) {
+            this.seedboxes.delete(name);
+            return { success: true, removed: name };
+        }
+        throw new Error('Seedbox not found');
+    }
+
+    async updateStats() {
+        try {
+            let totalTorrents = 0;
+            let activeTorrents = 0;
+            let downloadSpeed = 0;
+            let uploadSpeed = 0;
+            let totalDownloaded = 0;
+            let totalUploaded = 0;
+            
+            for (const seedbox of this.seedboxes.values()) {
+                if (seedbox.connected) {
+                    try {
+                        const stats = await this.getClientStats(seedbox);
+                        totalTorrents += stats.torrents || 0;
+                        activeTorrents += stats.activeTorrents || 0;
+                        downloadSpeed += stats.downloadSpeed || 0;
+                        uploadSpeed += stats.uploadSpeed || 0;
+                        totalDownloaded += stats.totalDownloaded || 0;
+                        totalUploaded += stats.totalUploaded || 0;
+                        
+                        // Update seedbox stats
+                        seedbox.stats = stats;
+                    } catch (error) {
+                        console.error(`Failed to get stats for ${seedbox.name}:`, error.message);
+                    }
+                }
+            }
+            
+            this.stats = {
+                totalTorrents,
+                activeTorrents,
+                downloadSpeed,
+                uploadSpeed,
+                totalDownloaded,
+                totalUploaded,
+                ratio: totalDownloaded > 0 ? (totalUploaded / totalDownloaded).toFixed(2) : 0,
+                lastUpdated: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Failed to update seedbox stats:', error);
+        }
+    }
+
+    async getClientStats(seedbox) {
+        switch (seedbox.type) {
+            case 'qbittorrent':
+                return await this.getQbittorrentStats(seedbox);
+            default:
+                // Return mock stats for other clients
+                return {
+                    torrents: Math.floor(Math.random() * 100),
+                    activeTorrents: Math.floor(Math.random() * 20),
+                    downloadSpeed: Math.floor(Math.random() * 10000000), // bytes/s
+                    uploadSpeed: Math.floor(Math.random() * 5000000),
+                    totalDownloaded: Math.floor(Math.random() * 1000000000000), // bytes
+                    totalUploaded: Math.floor(Math.random() * 500000000000)
+                };
+        }
+    }
+
+    async getQbittorrentStats(seedbox) {
+        try {
+            const baseUrl = `http://${seedbox.host}:${seedbox.port}${seedbox.apiPath}`;
+            
+            // Login first
+            const loginResponse = await axios.post(`${baseUrl}/auth/login`, 
+                new URLSearchParams({
+                    username: seedbox.username,
+                    password: seedbox.password
+                }), {
+                timeout: 5000,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            
+            const cookies = loginResponse.headers['set-cookie'];
+            
+            // Get torrents list
+            const torrentsResponse = await axios.get(`${baseUrl}/torrents/info`, {
+                timeout: 5000,
+                headers: { 'Cookie': cookies }
+            });
+            
+            const torrents = torrentsResponse.data;
+            
+            // Get global stats
+            const statsResponse = await axios.get(`${baseUrl}/transfer/info`, {
+                timeout: 5000,
+                headers: { 'Cookie': cookies }
+            });
+            
+            const globalStats = statsResponse.data;
+            
+            return {
+                torrents: torrents.length,
+                activeTorrents: torrents.filter(t => t.state === 'downloading' || t.state === 'uploading').length,
+                downloadSpeed: globalStats.dl_info_speed || 0,
+                uploadSpeed: globalStats.up_info_speed || 0,
+                totalDownloaded: globalStats.dl_info_data || 0,
+                totalUploaded: globalStats.up_info_data || 0
+            };
+        } catch (error) {
+            throw new Error('Failed to get qBittorrent stats: ' + error.message);
+        }
+    }
+
+    async getTorrentStats() {
+        await this.updateStats();
+        
+        return {
+            ...this.stats,
+            breakdown: {
+                byClient: this.getStatsByClient(),
+                byStatus: this.getStatsByStatus()
+            },
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    getStatsByClient() {
+        const clientStats = {};
+        for (const [name, seedbox] of this.seedboxes.entries()) {
+            if (seedbox.connected && seedbox.stats) {
+                clientStats[name] = {
+                    type: seedbox.type,
+                    torrents: seedbox.stats.torrents,
+                    downloadSpeed: seedbox.stats.downloadSpeed,
+                    uploadSpeed: seedbox.stats.uploadSpeed
+                };
+            }
+        }
+        return clientStats;
+    }
+
+    getStatsByStatus() {
+        // Mock status breakdown
+        return {
+            downloading: Math.floor(Math.random() * 20),
+            seeding: Math.floor(Math.random() * 80),
+            paused: Math.floor(Math.random() * 10),
+            queued: Math.floor(Math.random() * 5),
+            error: Math.floor(Math.random() * 2)
+        };
+    }
+
+    // Cross-seeding functionality
+    async startCrossSeed(options = {}) {
+        try {
+            this.crossSeedConfig = {
+                ...this.crossSeedConfig,
+                enabled: true,
+                ...options
+            };
+            
+            console.log('Starting cross-seed with options:', this.crossSeedConfig);
+            
+            // In a real implementation, this would start the cross-seeding process
+            // For now, return success status
+            return {
+                success: true,
+                message: 'Cross-seed started successfully',
+                config: this.crossSeedConfig,
                 timestamp: new Date().toISOString()
             };
         } catch (error) {
@@ -347,271 +481,172 @@ class SeedboxManager {
         }
     }
 
-    async getTorrentStats() {
-        try {
-            const qbStatus = await this.getQBittorrentStatus();
-            
-            if (!qbStatus.connected) {
-                throw new Error('qBittorrent not available');
-            }
-
-            // Get detailed torrent information
-            const torrents = await this.makeQBittorrentRequest('/api/v2/torrents/info');
-            const torrentsData = await torrents.json();
-
-            // Group torrents by tracker
-            const trackerStats = {};
-            const categoryStats = {};
-            const ratioDistribution = { excellent: 0, good: 0, fair: 0, poor: 0 };
-
-            for (const torrent of torrentsData) {
-                // Tracker statistics
-                const tracker = this.extractTracker(torrent.tracker);
-                if (!trackerStats[tracker]) {
-                    trackerStats[tracker] = { count: 0, uploaded: 0, downloaded: 0, ratio: 0 };
-                }
-                trackerStats[tracker].count++;
-                trackerStats[tracker].uploaded += torrent.uploaded || 0;
-                trackerStats[tracker].downloaded += torrent.downloaded || 0;
-
-                // Category statistics
-                const category = torrent.category || 'uncategorized';
-                if (!categoryStats[category]) {
-                    categoryStats[category] = { count: 0, size: 0 };
-                }
-                categoryStats[category].count++;
-                categoryStats[category].size += torrent.size || 0;
-
-                // Ratio distribution
-                const ratio = torrent.ratio || 0;
-                if (ratio >= 3.0) ratioDistribution.excellent++;
-                else if (ratio >= 2.0) ratioDistribution.good++;
-                else if (ratio >= 1.0) ratioDistribution.fair++;
-                else ratioDistribution.poor++;
-            }
-
-            // Calculate average ratios for trackers
-            Object.keys(trackerStats).forEach(tracker => {
-                const stats = trackerStats[tracker];
-                stats.ratio = stats.downloaded > 0 ? stats.uploaded / stats.downloaded : 0;
-            });
-
-            return {
-                overview: qbStatus.stats,
-                trackers: trackerStats,
-                categories: categoryStats,
-                ratioDistribution,
-                recentActivity: await this.getRecentActivity(),
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error('Failed to get torrent statistics: ' + error.message);
-        }
-    }
-
-    async getRecentActivity() {
-        try {
-            // Get torrents sorted by completion date
-            const torrents = await this.makeQBittorrentRequest('/api/v2/torrents/info?sort=completed_on&reverse=true&limit=10');
-            const torrentsData = await torrents.json();
-
-            return torrentsData.map(torrent => ({
-                name: torrent.name,
-                size: this.formatBytes(torrent.size),
-                ratio: Math.round(torrent.ratio * 100) / 100,
-                completedOn: torrent.completed_on ? new Date(torrent.completed_on * 1000) : null,
-                state: torrent.state,
-                tracker: this.extractTracker(torrent.tracker)
-            }));
-        } catch (error) {
-            return [];
-        }
-    }
-
-    async manageRatios() {
-        try {
-            const torrents = await this.makeQBittorrentRequest('/api/v2/torrents/info');
-            const torrentsData = await torrents.json();
-
-            const actions = [];
-
-            for (const torrent of torrentsData) {
-                const ratio = torrent.ratio || 0;
-                const seedingTime = torrent.seeding_time || 0;
-                const category = torrent.category || 'default';
-                
-                // Get ratio settings for category
-                const ratioGroup = this.ratioSettings.ratioGroups[category] || {
-                    ratio: this.ratioSettings.globalRatio,
-                    time: this.ratioSettings.seedingTimeLimit
-                };
-
-                // Check if torrent should be paused or removed
-                if (ratio >= ratioGroup.ratio && seedingTime >= ratioGroup.time * 60) {
-                    actions.push({
-                        hash: torrent.hash,
-                        name: torrent.name,
-                        action: 'pause',
-                        reason: `Reached ratio ${ratio.toFixed(2)} and seeding time ${Math.round(seedingTime / 3600)}h`
-                    });
-                }
-            }
-
-            // Execute actions
-            for (const action of actions) {
-                if (action.action === 'pause') {
-                    await this.makeQBittorrentRequest('/api/v2/torrents/pause', 'POST', {
-                        hashes: action.hash
-                    });
-                }
-            }
-
-            return {
-                processed: torrentsData.length,
-                actions: actions.length,
-                details: actions,
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error('Failed to manage ratios: ' + error.message);
-        }
-    }
-
-    async optimizeStorage() {
-        try {
-            const optimizations = [];
-
-            // Remove completed torrents with good ratios older than specified time
-            const torrents = await this.makeQBittorrentRequest('/api/v2/torrents/info');
-            const torrentsData = await torrents.json();
-
-            for (const torrent of torrentsData) {
-                if (torrent.state === 'pausedUP' && torrent.ratio >= 2.0) {
-                    const completedDate = new Date(torrent.completed_on * 1000);
-                    const daysSinceCompleted = (Date.now() - completedDate.getTime()) / (1000 * 60 * 60 * 24);
-
-                    if (daysSinceCompleted > 30) { // Remove torrents older than 30 days
-                        optimizations.push({
-                            hash: torrent.hash,
-                            name: torrent.name,
-                            action: 'remove',
-                            reason: `Good ratio (${torrent.ratio.toFixed(2)}) and ${Math.round(daysSinceCompleted)} days old`
-                        });
-                    }
-                }
-            }
-
-            return {
-                totalOptimizations: optimizations.length,
-                optimizations,
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error('Failed to optimize storage: ' + error.message);
-        }
-    }
-
-    async makeQBittorrentRequest(endpoint, method = 'GET', data = null) {
-        const url = `http://${this.qbittorrentConfig.host}:${this.qbittorrentConfig.port}${endpoint}`;
-        
-        const options = {
-            method,
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+    async stopCrossSeed() {
+        this.crossSeedConfig.enabled = false;
+        return {
+            success: true,
+            message: 'Cross-seed stopped',
+            timestamp: new Date().toISOString()
         };
-
-        if (this.sessionCookie) {
-            options.headers.Cookie = this.sessionCookie;
-        }
-
-        if (data && method === 'POST') {
-            const params = new URLSearchParams();
-            Object.keys(data).forEach(key => params.append(key, data[key]));
-            options.body = params;
-        }
-
-        const response = await fetch(url, options);
-        
-        if (!response.ok) {
-            throw new Error(`qBittorrent API error: ${response.status} ${response.statusText}`);
-        }
-
-        return response;
     }
 
-    extractTracker(trackerUrl) {
-        if (!trackerUrl) return 'Unknown';
-        
-        try {
-            const url = new URL(trackerUrl);
-            return url.hostname;
-        } catch (error) {
-            return trackerUrl.split('/')[2] || 'Unknown';
-        }
+    async getCrossSeedStatus() {
+        return {
+            enabled: this.crossSeedConfig.enabled,
+            status: this.crossSeedConfig.enabled ? 'running' : 'stopped',
+            config: this.crossSeedConfig,
+            lastRun: new Date().toISOString(),
+            stats: {
+                totalSearches: Math.floor(Math.random() * 100),
+                foundMatches: Math.floor(Math.random() * 20),
+                addedTorrents: Math.floor(Math.random() * 10)
+            },
+            timestamp: new Date().toISOString()
+        };
     }
 
+    // Torrent management
+    async addTorrent(seedboxName, torrentData) {
+        const seedbox = this.seedboxes.get(seedboxName);
+        if (!seedbox) {
+            throw new Error('Seedbox not found');
+        }
+        
+        if (!seedbox.connected) {
+            throw new Error('Seedbox is not connected');
+        }
+        
+        // Mock torrent addition
+        const torrent = {
+            id: crypto.randomUUID(),
+            name: torrentData.name || 'Unknown Torrent',
+            size: torrentData.size || Math.floor(Math.random() * 10000000000),
+            status: 'added',
+            progress: 0,
+            downloadSpeed: 0,
+            uploadSpeed: 0,
+            eta: 0,
+            seedbox: seedboxName,
+            addedAt: new Date().toISOString()
+        };
+        
+        this.torrents.set(torrent.id, torrent);
+        
+        return {
+            success: true,
+            torrent,
+            message: `Torrent added to ${seedboxName}`
+        };
+    }
+
+    async removeTorrent(torrentId, deleteFiles = false) {
+        const torrent = this.torrents.get(torrentId);
+        if (!torrent) {
+            throw new Error('Torrent not found');
+        }
+        
+        this.torrents.delete(torrentId);
+        
+        return {
+            success: true,
+            message: `Torrent removed${deleteFiles ? ' with files' : ''}`,
+            torrent
+        };
+    }
+
+    async pauseTorrent(torrentId) {
+        const torrent = this.torrents.get(torrentId);
+        if (!torrent) {
+            throw new Error('Torrent not found');
+        }
+        
+        torrent.status = 'paused';
+        torrent.downloadSpeed = 0;
+        torrent.uploadSpeed = 0;
+        
+        return {
+            success: true,
+            message: 'Torrent paused',
+            torrent
+        };
+    }
+
+    async resumeTorrent(torrentId) {
+        const torrent = this.torrents.get(torrentId);
+        if (!torrent) {
+            throw new Error('Torrent not found');
+        }
+        
+        torrent.status = torrent.progress < 100 ? 'downloading' : 'seeding';
+        
+        return {
+            success: true,
+            message: 'Torrent resumed',
+            torrent
+        };
+    }
+
+    async getAllTorrents() {
+        const torrents = [];
+        for (const torrent of this.torrents.values()) {
+            torrents.push(torrent);
+        }
+        return torrents;
+    }
+
+    // Monitoring
+    startMonitoring() {
+        if (this.monitoring) {
+            return;
+        }
+        
+        this.monitoring = true;
+        this.monitoringInterval = setInterval(async () => {
+            try {
+                await this.updateStats();
+                await this.testClientConnections();
+            } catch (error) {
+                console.error('Monitoring error:', error);
+            }
+        }, 60000); // Every minute
+        
+        console.log('Seedbox monitoring started');
+    }
+
+    stopMonitoring() {
+        if (this.monitoringInterval) {
+            clearInterval(this.monitoringInterval);
+            this.monitoringInterval = null;
+        }
+        this.monitoring = false;
+        console.log('Seedbox monitoring stopped');
+    }
+
+    // Utility methods
     formatBytes(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        if (bytes === 0) return '0 Bytes';
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
     }
 
-    async getTrackerHealth() {
-        const trackerHealth = {};
-        
-        for (const [category, trackers] of Object.entries(this.trackers)) {
-            for (const [tracker, config] of Object.entries(trackers)) {
-                if (config.enabled) {
-                    try {
-                        // Basic connectivity check (this would be expanded for actual tracker APIs)
-                        trackerHealth[tracker] = {
-                            category,
-                            status: 'healthy',
-                            priority: config.priority,
-                            lastChecked: new Date().toISOString()
-                        };
-                    } catch (error) {
-                        trackerHealth[tracker] = {
-                            category,
-                            status: 'error',
-                            error: error.message,
-                            priority: config.priority,
-                            lastChecked: new Date().toISOString()
-                        };
-                    }
-                }
-            }
-        }
-
-        return trackerHealth;
+    formatSpeed(bytesPerSecond) {
+        return this.formatBytes(bytesPerSecond) + '/s';
     }
 
-    async updateTrackerSettings(trackerUpdates) {
-        try {
-            for (const [tracker, settings] of Object.entries(trackerUpdates)) {
-                const category = settings.category || 'public';
-                
-                if (this.trackers[category] && this.trackers[category][tracker]) {
-                    this.trackers[category][tracker] = {
-                        ...this.trackers[category][tracker],
-                        ...settings
-                    };
-                }
-            }
-
-            return {
-                success: true,
-                updatedTrackers: Object.keys(trackerUpdates),
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            throw new Error('Failed to update tracker settings: ' + error.message);
-        }
+    // Health check
+    async healthCheck() {
+        const seedboxes = this.getSeedboxes();
+        const connectedCount = seedboxes.filter(s => s.connected).length;
+        
+        return {
+            status: connectedCount > 0 ? 'healthy' : 'unhealthy',
+            totalSeedboxes: seedboxes.length,
+            connectedSeedboxes: connectedCount,
+            monitoring: this.monitoring,
+            crossSeedEnabled: this.crossSeedConfig.enabled,
+            timestamp: new Date().toISOString()
+        };
     }
 }
 

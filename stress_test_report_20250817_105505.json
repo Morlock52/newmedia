@@ -1,0 +1,213 @@
+{
+  "timestamp": "2025-08-17T10:55:05.609023",
+  "target": "http://localhost:3333",
+  "summary": {
+    "total_requests": 6100,
+    "successful_requests": 6100,
+    "failed_requests": 0,
+    "success_rate": 100.0
+  },
+  "phases": [
+    {
+      "name": "Warm-up",
+      "total_requests": 50,
+      "successful": 50,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 77.2976767201908,
+      "median_response_time": 76.72216650098562,
+      "p95_response_time": 95.6654337089276,
+      "p99_response_time": 97.76628741296008,
+      "min_response_time": 65.90595800662413,
+      "max_response_time": 99.09212501952425
+    },
+    {
+      "name": "Normal Load",
+      "total_requests": 500,
+      "successful": 500,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 105.52576142805628,
+      "median_response_time": 103.31533302087337,
+      "p95_response_time": 164.62925266532693,
+      "p99_response_time": 177.01493799046148,
+      "min_response_time": 49.87987503409386,
+      "max_response_time": 180.3295830031857
+    },
+    {
+      "name": "High Load",
+      "total_requests": 1000,
+      "successful": 1000,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 132.6706857960089,
+      "median_response_time": 134.01364599121734,
+      "p95_response_time": 180.15893928240985,
+      "p99_response_time": 184.2722434119787,
+      "min_response_time": 60.86362496716902,
+      "max_response_time": 186.24500004807487
+    },
+    {
+      "name": "Stress Test",
+      "total_requests": 2000,
+      "successful": 2000,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 178.3330905372859,
+      "median_response_time": 183.47039551008493,
+      "p95_response_time": 256.4790333126439,
+      "p99_response_time": 260.057179746218,
+      "min_response_time": 62.66887503443286,
+      "max_response_time": 260.4766670265235
+    },
+    {
+      "name": "Breaking Point",
+      "total_requests": 2500,
+      "successful": 2500,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 240.35366221657023,
+      "median_response_time": 266.57929152133875,
+      "p95_response_time": 334.44540556229185,
+      "p99_response_time": 342.2556566592539,
+      "min_response_time": 92.15366601711139,
+      "max_response_time": 342.9951249854639
+    },
+    {
+      "name": "Recovery",
+      "total_requests": 50,
+      "successful": 50,
+      "failed": 0,
+      "success_rate": 100.0,
+      "avg_response_time": 51.281210023444146,
+      "median_response_time": 51.3802079949528,
+      "p95_response_time": 57.51813575334381,
+      "p99_response_time": 60.09655592206399,
+      "min_response_time": 35.60912504326552,
+      "max_response_time": 62.23995902109891
+    }
+  ],
+  "endpoints": {
+    "/api/visualization": {
+      "requests": 293,
+      "successes": 293,
+      "failures": 0,
+      "total_time": 55833.412668143865
+    },
+    "/api/pwa": {
+      "requests": 313,
+      "successes": 313,
+      "failures": 0,
+      "total_time": 59105.33775296062
+    },
+    "/api/webxr": {
+      "requests": 297,
+      "successes": 297,
+      "failures": 0,
+      "total_time": 54207.811332598794
+    },
+    "/api/assistant": {
+      "requests": 309,
+      "successes": 309,
+      "failures": 0,
+      "total_time": 57720.32616485376
+    },
+    "/api/downloads": {
+      "requests": 297,
+      "successes": 297,
+      "failures": 0,
+      "total_time": 57129.54991462175
+    },
+    "/api/services": {
+      "requests": 315,
+      "successes": 315,
+      "failures": 0,
+      "total_time": 59414.570162887685
+    },
+    "/api/watchparty": {
+      "requests": 299,
+      "successes": 299,
+      "failures": 0,
+      "total_time": 54649.860880628694
+    },
+    "/health": {
+      "requests": 320,
+      "successes": 320,
+      "failures": 0,
+      "total_time": 60132.156003208365
+    },
+    "/api/media": {
+      "requests": 307,
+      "successes": 307,
+      "failures": 0,
+      "total_time": 56487.10873944219
+    },
+    "/": {
+      "requests": 304,
+      "successes": 304,
+      "failures": 0,
+      "total_time": 55844.65221100254
+    },
+    "/api/auth": {
+      "requests": 286,
+      "successes": 286,
+      "failures": 0,
+      "total_time": 55362.46541974833
+    },
+    "/api/tests": {
+      "requests": 321,
+      "successes": 321,
+      "failures": 0,
+      "total_time": 62023.53524736827
+    },
+    "/api/predictions": {
+      "requests": 296,
+      "successes": 296,
+      "failures": 0,
+      "total_time": 56093.019497115165
+    },
+    "/api/player": {
+      "requests": 309,
+      "successes": 309,
+      "failures": 0,
+      "total_time": 57792.80133609427
+    },
+    "/api/monitoring": {
+      "requests": 331,
+      "successes": 331,
+      "failures": 0,
+      "total_time": 64184.5132173039
+    },
+    "/api/analytics": {
+      "requests": 298,
+      "successes": 298,
+      "failures": 0,
+      "total_time": 55372.66542139696
+    },
+    "/api/theme": {
+      "requests": 318,
+      "successes": 318,
+      "failures": 0,
+      "total_time": 60981.36200354202
+    },
+    "/api/recommendations": {
+      "requests": 296,
+      "successes": 296,
+      "failures": 0,
+      "total_time": 55346.99824627023
+    },
+    "/api/notifications": {
+      "requests": 295,
+      "successes": 295,
+      "failures": 0,
+      "total_time": 54828.64478591364
+    },
+    "/api/voice": {
+      "requests": 296,
+      "successes": 296,
+      "failures": 0,
+      "total_time": 56902.05645811511
+    }
+  },
+  "errors": {}
+}

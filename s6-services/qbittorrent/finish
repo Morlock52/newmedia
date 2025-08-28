@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# qBittorrent service cleanup
+
+echo "$(date) [INFO] qBittorrent service stopped" >> /logs/qbittorrent.log

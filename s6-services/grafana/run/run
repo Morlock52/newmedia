@@ -1,0 +1,25 @@
+#!/command/with-contenv bash
+# Grafana monitoring dashboard runner
+
+set -e
+
+echo "Starting Grafana..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/grafana/{data,logs,plugins}
+
+# Set proper ownership
+chown -R media:media /config/grafana
+
+# Set environment
+export GF_PATHS_DATA="/config/grafana/data"
+export GF_PATHS_LOGS="/config/grafana/logs"
+export GF_PATHS_PLUGINS="/config/grafana/plugins"
+export GF_SERVER_HTTP_PORT="3000"
+export GF_SECURITY_ADMIN_USER="admin"
+export GF_SECURITY_ADMIN_PASSWORD="admin"
+
+# Run Grafana
+exec s6-setuidgid media grafana-server \
+    --homepath=/usr/share/grafana \
+    --config=/etc/grafana/grafana.ini

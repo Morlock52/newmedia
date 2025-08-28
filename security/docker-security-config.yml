@@ -1,0 +1,435 @@
+# Secure Docker Compose Configuration
+# Fixes: Docker socket exposure, privilege escalation, network security
+# Author: Security Manager Agent
+# Date: 2025-08-03
+
+version: '3.9'
+
+# Security-focused common variables
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+# Security configuration template
+x-security-defaults: &security-defaults
+  security_opt:
+    - no-new-privileges:true
+    - apparmor:docker-default
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=100m
+    - /var/tmp:rw,noexec,nosuid,size=100m
+
+# User namespace remapping
+x-user-mapping: &user-mapping
+  user: "${PUID:-1000}:${PGID:-1000}"
+
+# Resource limits
+x-resource-limits: &resource-limits
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+        cpus: '0.5'
+      reservations:
+        memory: 256M
+        cpus: '0.25'
+
+networks:
+  # Isolated internal network
+  media-internal:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    internal: true
+  
+  # External network for services that need internet
+  media-external:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+  
+  # Monitoring network (isolated)
+  monitoring:
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16
+
+volumes:
+  # Secure volume configurations
+  jellyfin-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind,rw,noexec,nosuid
+      device: "${CONFIG_PATH}/jellyfin"
+  
+  media-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind,ro
+      device: "${MEDIA_PATH}"
+
+services:
+  # ==================== SECURITY SERVICES ====================
+  
+  # Security monitoring service
+  security-monitor:
+    image: alpine:latest
+    container_name: security-monitor
+    <<: *security-defaults
+    <<: *user-mapping
+    environment:
+      <<: *common-variables
+    command: >
+      sh -c "
+        apk add --no-cache curl jq &&
+        while true; do
+          echo '[$(date)] Security monitoring active' >> /var/log/security.log
+          sleep 60
+        done
+      "
+    volumes:
+      - ./security/logs:/var/log:rw
+    networks:
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ps", "aux", "|", "grep", "sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WAF (Web Application Firewall) using ModSecurity
+  waf:
+    image: owasp/modsecurity-crs:apache
+    container_name: waf
+    <<: *security-defaults
+    environment:
+      PARANOIA: 2
+      ANOMALY_INBOUND: 5
+      ANOMALY_OUTBOUND: 4
+      PROXY: 1
+      PROXY_TIMEOUT: 60
+      PROXY_SSL_VERIFY: "Off"
+      BACKEND: http://jellyfin:8096
+    ports:
+      - "127.0.0.1:8096:80"
+    networks:
+      - media-internal
+      - media-external
+    restart: unless-stopped
+    depends_on:
+      - jellyfin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.waf.rule=Host(\`media.local\`)"
+      - "traefik.http.services.waf.loadbalancer.server.port=80"
+
+  # ==================== HARDENED MEDIA SERVICES ====================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    <<: *security-defaults
+    <<: *user-mapping
+    <<: *resource-limits
+    environment:
+      <<: *common-variables
+      JELLYFIN_PublishedServerUrl: "http://127.0.0.1:8096"
+      JELLYFIN_LOG_DIR: "/var/log/jellyfin"
+    volumes:
+      - jellyfin-config:/config:rw
+      - media-data:/media:ro
+      - ./jellyfin/logs:/var/log/jellyfin:rw
+      # NO DOCKER SOCKET - SECURITY FIX
+    networks:
+      media-internal:
+        aliases:
+          - jellyfin-server
+    restart: unless-stopped
+    # Remove privileged hardware access for security
+    # devices:
+    #   - /dev/dri:/dev/dri
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Hardened Sonarr
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    <<: *security-defaults
+    <<: *user-mapping
+    environment:
+      <<: *common-variables
+      SONARR__INSTANCE_NAME: "Sonarr"
+      SONARR__BRANCH: "main"
+      SONARR__PORT: "8989"
+      SONARR__LOG_LEVEL: "info"
+    volumes:
+      - ./sonarr-config:/config:rw
+      - media-data:/media:rw
+      - ./downloads:/downloads:rw
+    networks:
+      - media-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Hardened qBittorrent with VPN
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    <<: *security-defaults
+    <<: *user-mapping
+    environment:
+      <<: *common-variables
+      WEBUI_PORT: 8080
+      QBT_EULA: "accept"
+      QBT_VERSION: "latest"
+    volumes:
+      - ./qbittorrent-config:/config:rw
+      - ./downloads:/downloads:rw
+    # Use VPN network container
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+
+  # Secure VPN container
+  vpn:
+    image: qmcgaw/gluetun:latest
+    container_name: vpn
+    <<: *security-defaults
+    cap_add:
+      - NET_ADMIN  # Required for VPN
+    environment:
+      <<: *common-variables
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-mullvad}
+      VPN_TYPE: wireguard
+      WIREGUARD_PRIVATE_KEY_FILE: /run/secrets/vpn_private_key
+      WIREGUARD_ADDRESSES: ${VPN_ADDRESSES}
+      SERVER_COUNTRIES: ${VPN_COUNTRIES:-Switzerland}
+      FIREWALL: "on"
+      DOT: "on"
+      BLOCK_MALICIOUS: "on"
+      BLOCK_ADS: "on"
+      BLOCK_SURVEILLANCE: "on"
+    secrets:
+      - vpn_private_key
+    networks:
+      - media-external
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://www.google.com/"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+
+  # ==================== SECURE MONITORING ====================
+  
+  # Hardened Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    <<: *security-defaults
+    <<: *user-mapping
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api=false'
+      - '--web.external-url=http://localhost:9090'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./prometheus-config:/etc/prometheus:ro
+      - ./prometheus-data:/prometheus:rw
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Hardened Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    <<: *security-defaults
+    <<: *user-mapping
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
+      - GF_SECURITY_SECRET_KEY_FILE=/run/secrets/grafana_secret
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_BASIC_ENABLED=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_USERS_AUTO_ASSIGN_ORG=true
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
+    secrets:
+      - grafana_password
+      - grafana_secret
+    volumes:
+      - ./grafana-data:/var/lib/grafana:rw
+      - ./grafana-config:/etc/grafana/provisioning:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # ==================== SECURE DATABASES ====================
+  
+  # Hardened PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    <<: *security-defaults
+    <<: *user-mapping
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: mediaserver
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    secrets:
+      - postgres_password
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data:rw
+      - ./postgres-config:/etc/postgresql:ro
+    networks:
+      - media-internal
+    restart: unless-stopped
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+      -c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+      -c log_statement=all
+      -c log_connections=on
+      -c log_disconnections=on
+      -c shared_preload_libraries=pg_stat_statements
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Hardened Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    <<: *security-defaults
+    <<: *user-mapping
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --save 60 1
+      --loglevel notice
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --protected-mode yes
+      --port 6379
+      --bind 127.0.0.1
+    volumes:
+      - ./redis-data:/data:rw
+      - ./redis-config:/usr/local/etc/redis:ro
+    networks:
+      - media-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== REVERSE PROXY WITH SSL ====================
+  
+  # Traefik with SSL termination
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    <<: *security-defaults
+    cap_add:
+      - CAP_NET_BIND_SERVICE  # For binding to port 80/443
+    environment:
+      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL=${ACME_EMAIL}
+    command:
+      - --api.dashboard=false
+      - --api.debug=false
+      - --log.level=INFO
+      - --accesslog=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=media-external
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt:rw
+    networks:
+      - media-external
+      - media-internal
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+
+# ==================== SECRETS MANAGEMENT ====================
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+  grafana_secret:
+    file: ./secrets/grafana_secret.txt
+  vpn_private_key:
+    file: ./secrets/vpn_private_key.txt
+
+# ==================== SECURITY CONFIGURATIONS ====================
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    labels: "service,version"
+
+# Apply logging to all services
+logging: *default-logging

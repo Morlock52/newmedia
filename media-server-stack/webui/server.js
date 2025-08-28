@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const STACK_DIR = process.env.STACK_DIR || '/app/compose';
+let COMPOSE_BIN = 'docker compose';
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -16,6 +17,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 console.log('🎬 Media Server Stack Web UI starting...');
 console.log(`📁 Stack directory: ${STACK_DIR}`);
 console.log(`📁 Server directory: ${__dirname}`);
+
+// Detect docker compose flavor (plugin vs classic)
+async function detectComposeBinary() {
+  try {
+    await runCommand('docker compose version');
+    COMPOSE_BIN = 'docker compose';
+  } catch (e1) {
+    try {
+      await runCommand('docker-compose version');
+      COMPOSE_BIN = 'docker-compose';
+    } catch (e2) {
+      // leave default, subsequent commands will report errors
+    }
+  }
+  console.log(`🐳 Using compose binary: ${COMPOSE_BIN}`);
+}
 
 // Utility function to run commands
 function runCommand(cmd, options = {}) {
@@ -28,6 +45,30 @@ function runCommand(cmd, options = {}) {
       }
     });
   });
+}
+
+// Helper to run docker compose consistently with PATH
+async function runCompose(args, options = {}) {
+  const dockerPath = (process.env.PATH || '') + ':/usr/local/bin:/usr/bin';
+  try {
+    return await runCommand(`${COMPOSE_BIN} -f docker-compose.yml ${args}`, {
+      env: { ...process.env, PATH: dockerPath },
+      ...options
+    });
+  } catch (e1) {
+    // Try alternate binary once
+    const alt = COMPOSE_BIN === 'docker compose' ? 'docker-compose' : 'docker compose';
+    try {
+      const res = await runCommand(`${alt} -f docker-compose.yml ${args}`, {
+        env: { ...process.env, PATH: dockerPath },
+        ...options
+      });
+      COMPOSE_BIN = alt;
+      return res;
+    } catch (e2) {
+      throw e1;
+    }
+  }
 }
 
 // API Endpoints
@@ -99,9 +140,7 @@ app.get('/api/docker-status', async (req, res) => {
 
 app.get('/api/status', async (req, res) => {
   try {
-    // Add PATH to include Docker
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
-    const { stdout } = await runCommand('docker compose -f docker-compose.yml ps', { env: { ...process.env, PATH: dockerPath } });
+    const { stdout } = await runCompose('ps');
     
     res.type('text/plain').send(stdout);
   } catch (error) {
@@ -112,10 +151,7 @@ app.get('/api/status', async (req, res) => {
 
 app.post('/api/start', async (req, res) => {
   try {
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
-    const { stdout } = await runCommand('docker compose -f docker-compose.yml up -d', { 
-      env: { ...process.env, PATH: dockerPath }
-    });
+    const { stdout } = await runCompose('up -d');
     
     res.type('text/plain').send(`✅ Services started successfully!\n\n${stdout}`);
   } catch (error) {
@@ -126,10 +162,7 @@ app.post('/api/start', async (req, res) => {
 
 app.post('/api/stop', async (req, res) => {
   try {
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
-    const { stdout } = await runCommand('docker compose -f docker-compose.yml down', { 
-      env: { ...process.env, PATH: dockerPath }
-    });
+    const { stdout } = await runCompose('down');
     
     res.type('text/plain').send(`✅ Services stopped successfully!\n\n${stdout}`);
   } catch (error) {
@@ -152,14 +185,13 @@ app.post('/api/deploy', async (req, res) => {
     let output = '🚀 Starting Media Server Stack Deployment\n';
     output += '=========================================\n\n';
 
-    // Add Docker to PATH
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
-    const cmdOptions = { env: { ...process.env, PATH: dockerPath } };
+    // Options for subsequent commands
+    const cmdOptions = {};
 
     // Clean up any existing containers first
     output += '🧹 Cleaning up existing containers...\n';
     try {
-      await runCommand('docker compose -f docker-compose.yml down --remove-orphans 2>/dev/null || true', cmdOptions);
+      await runCompose('down --remove-orphans');
       await runCommand('docker system prune -f 2>/dev/null || true', cmdOptions);
     } catch (error) {
       output += `⚠️ Cleanup warnings: ${error.stderr || error.message || 'Some cleanup operations may have failed'}\n`;
@@ -168,7 +200,7 @@ app.post('/api/deploy', async (req, res) => {
     // Pull latest images
     output += '📥 Pulling latest Docker images...\n';
     try {
-      const { stdout: pullOutput } = await runCommand('docker compose -f docker-compose.yml pull', cmdOptions);
+      const { stdout: pullOutput } = await runCompose('pull', cmdOptions);
       output += pullOutput + '\n';
     } catch (error) {
       output += `⚠️ Warning: Failed to pull some images: ${error.error || error.message}\n`;
@@ -177,7 +209,7 @@ app.post('/api/deploy', async (req, res) => {
     // Deploy the stack
     output += '🚀 Deploying services...\n';
     try {
-      const { stdout: deployOutput } = await runCommand('docker compose -f docker-compose.yml up -d', cmdOptions);
+      const { stdout: deployOutput } = await runCompose('up -d', cmdOptions);
       output += deployOutput + '\n';
     } catch (error) {
       console.error('Docker compose deployment error:', error);
@@ -195,7 +227,7 @@ app.post('/api/deploy', async (req, res) => {
     // Check service status
     output += '🔍 Checking service status...\n';
     try {
-      const { stdout: statusOutput } = await runCommand('docker compose -f docker-compose.yml ps', cmdOptions);
+      const { stdout: statusOutput } = await runCompose('ps', cmdOptions);
       output += statusOutput + '\n';
     } catch (error) {
       output += `Error checking status: ${error.error || error.message}\n`;
@@ -284,7 +316,7 @@ app.post('/api/setup-environment', async (req, res) => {
     response += `🎬 Media Server Stack Configuration\n`;
     response += `================================\n`;
     response += `Domain: ${config.domain || 'localhost'}\n`;
-    response += `Email: ${config.email || 'admin@localhost'}\n`;
+    response += `Email: ${config.email || 'admin@example.com'}\n`;
     response += `VPN Provider: ${config.vpnProvider || 'pia'}\n`;
     response += `VPN Type: ${config.vpnType || 'wireguard'}\n`;
     response += `Timezone: ${config.timezone || 'UTC'}\n`;
@@ -347,22 +379,31 @@ app.get('/api/logs/:service', async (req, res) => {
   try {
     const { service } = req.params;
     const lines = req.query.lines || '100';
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
-    
-    const { stdout: logs } = await runCommand(`docker compose -f docker-compose.yml logs --tail ${lines} ${service}`, { 
-      env: { ...process.env, PATH: dockerPath }
-    });
-    
+    const { stdout: logs } = await runCompose(`logs --tail ${lines} ${service}`);
     res.type('text/plain').send(logs);
   } catch (error) {
     res.status(500).send(`Error getting logs for ${req.params.service}: ${error.message}`);
   }
 });
 
+// Combined logs endpoint
+app.get('/api/logs/all', async (req, res) => {
+  try {
+    const lines = req.query.lines || '200';
+    const download = String(req.query.download || '').toLowerCase() === 'true';
+    const { stdout: logs } = await runCompose(`logs --tail ${lines}`);
+    if (download) {
+      res.setHeader('Content-Disposition', `attachment; filename="stack-logs-${new Date().toISOString().split('T')[0]}.txt"`);
+    }
+    res.type('text/plain').send(logs);
+  } catch (error) {
+    res.status(500).send(`Error getting logs: ${error.message}`);
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    const dockerPath = process.env.PATH + ':/usr/local/bin:/usr/bin';
     
     // Check environment
     let environment = false;
@@ -376,7 +417,7 @@ app.get('/api/health', async (req, res) => {
     // Check Docker
     let docker = false;
     try {
-      await runCommand('docker info', { env: { ...process.env, PATH: dockerPath } });
+      await runCommand('docker info');
       docker = true;
     } catch (error) {
       // Docker not running
@@ -385,9 +426,7 @@ app.get('/api/health', async (req, res) => {
     // Check services
     let services = [];
     try {
-      const { stdout } = await runCommand('docker compose -f docker-compose.yml ps --format json', { 
-        env: { ...process.env, PATH: dockerPath }
-      });
+      const { stdout } = await runCompose('ps --format json');
       
       if (stdout.trim()) {
         const lines = stdout.trim().split('\n');
@@ -449,10 +488,10 @@ PIA_REGION=us_east
 WIREGUARD_ADDRESSES=10.0.0.0/8
 
 # Cloudflare Configuration
-CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoiNmM5NTAxYzY4OWMyZTEzNzE5MGQ1MGZiYTYyN2I3ZmYiLCJzIjoiTUdObU5tVTVNakV0TUdVMFpTMDBNemRsTFdFeE5qTXRZalU1WkdJMlpUSTJNelEzIiwidCI6IjQzZWZhZGJhLTJjZDEtNGUyZS04MTc0LWMxNjg2ZjBkNTU0NCJ9
+CLOUDFLARE_TUNNEL_TOKEN=${config.cloudflareTunnelToken || ''}
 
 # Notifications Configuration
-EMAIL=${config.email || 'admin@morloksmaze.com'}
+EMAIL=${config.email || 'admin@example.com'}
 
 # Storage Configuration
 DATA_ROOT=./data
@@ -474,13 +513,13 @@ TAUTULLI_API_KEY_FILE=/run/secrets/tautulli_api_key
 PHOTOPRISM_ADMIN_PASSWORD_FILE=/run/secrets/photoprism_admin_password
 YTDL_MATERIAL_IMAGE=ghcr.io/iv-org/youtube-dl-material:latest
 YTDL_MATERIAL_PORT=17442
-CF_API_EMAIL=admin@morloksmaze.com
-CF_API_KEY=PLACEHOLDER_CLOUDFLARE_API_KEY
-CLOUDFLARE_ZONE_ID=PLACEHOLDER_CLOUDFLARE_ZONE_ID
-CF_TUNNEL_NAME=home-morloksmaze-tunnel
+CF_API_EMAIL=${config.email || 'admin@example.com'}
+CF_API_KEY=
+CLOUDFLARE_ZONE_ID=
+CF_TUNNEL_NAME=media-stack-tunnel
 DEPLOY_MONITORING=true
-SLACK_WEBHOOK=PLACEHOLDER_SLACK_WEBHOOK
-REDIS_PASSWORD=secure-redis-password-morloksmaze
+SLACK_WEBHOOK=
+REDIS_PASSWORD=change-me-redis-password
 `;
 
   return content;
@@ -491,3 +530,6 @@ app.listen(PORT, () => {
   console.log('🌐 Access the setup interface at: http://localhost:3000');
   console.log(`📁 Stack directory: ${STACK_DIR}`);
 });
+
+// Non-blocking detection of compose binary
+detectComposeBinary();

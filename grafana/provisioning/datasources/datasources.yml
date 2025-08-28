@@ -1,0 +1,89 @@
+# Grafana Datasources Configuration
+# Automatically provisions Prometheus, Loki, and other data sources
+
+apiVersion: 1
+
+datasources:
+  # Primary Prometheus datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      queryTimeout: 300s
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name: Jaeger
+          datasourceUid: jaeger-uid
+          urlDisplayLabel: 'View in Jaeger'
+    secureJsonData: {}
+
+  # Loki for log aggregation
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: jaeger-uid
+          matcherRegex: "traceID=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+        - datasourceUid: prometheus-uid
+          matcherRegex: "(?:level=error|ERROR)"
+          name: Error
+          url: "/explore?orgId=1&left=[\"now-1h\",\"now\",\"Prometheus\",{\"expr\":\"rate(log_messages_total{level=\\\"error\\\"}[5m])\"}]"
+
+  # TestData for testing dashboards
+  - name: TestData
+    type: testdata
+    access: proxy
+    editable: true
+    isDefault: false
+
+  # Node Exporter specific datasource
+  - name: Node Exporter
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: true
+    jsonData:
+      httpMethod: POST
+      queryTimeout: 300s
+      timeInterval: 15s
+      # Custom headers for node exporter metrics
+      customQueryParameters: 'job=node-exporter'
+
+  # Media Server specific datasource
+  - name: Media Metrics
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: true
+    jsonData:
+      httpMethod: POST
+      queryTimeout: 300s
+      timeInterval: 30s
+      # Filter for media server related metrics
+      customQueryParameters: 'job=~"jellyfin|sonarr|radarr|prowlarr|qbittorrent"'
+
+  # Infrastructure monitoring datasource
+  - name: Infrastructure
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: true
+    jsonData:
+      httpMethod: POST
+      queryTimeout: 300s
+      timeInterval: 15s
+      customQueryParameters: 'job=~"traefik|authelia|gluetun|cadvisor"'
+
+# deleteDatasources:
+#   - name: old-datasource
+#     orgId: 1

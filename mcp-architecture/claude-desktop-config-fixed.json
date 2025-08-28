@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "media-server-suite": {
+      "command": "node",
+      "args": [
+        "/Users/morlock/fun/newmedia/mcp-architecture/fixed-stdio-mcp-server.js"
+      ],
+      "env": {
+        "JELLYFIN_URL": "http://localhost:8096",
+        "JELLYFIN_API_KEY": "bf7e9b8c5f8f4e3d83c3b4d5a6e7f8g9",
+        "SONARR_URL": "http://localhost:8989",
+        "SONARR_API_KEY": "6e6bfac6e15d4f9a9d0e0d35ec0b8e23",
+        "RADARR_URL": "http://localhost:7878",
+        "RADARR_API_KEY": "7b74da952069425f9568ea361b001a12",
+        "PROWLARR_URL": "http://localhost:9696",
+        "PROWLARR_API_KEY": "b7ef1468932940b2a4cf27ad980f1076",
+        "QBITTORRENT_URL": "http://localhost:8080",
+        "QBITTORRENT_USERNAME": "admin",
+        "QBITTORRENT_PASSWORD": "adminadmin",
+        "SABNZBD_URL": "http://localhost:8085",
+        "LOG_LEVEL": "info",
+        "MCP_DEBUG": "true"
+      }
+    },
+    "ruv-swarm": {
+      "command": "npx",
+      "args": [
+        "ruv-swarm@latest",
+        "mcp",
+        "start"
+      ]
+    }
+  }
+}

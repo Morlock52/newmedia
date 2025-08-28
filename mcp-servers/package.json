@@ -1,0 +1,12 @@
+{
+  "name": "ultimate-media-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Ultimate Media Server 2025",
+  "main": "unified-media-mcp.js",
+  "scripts": {
+    "start": "node unified-media-mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0"
+  }
+}

@@ -1,7 +1,7 @@
 FROM node:22-alpine
 
-# Install Docker CLI
-RUN apk add --no-cache docker-cli docker-compose
+# Install Docker CLI and Compose plugin (plus classic for fallback)
+RUN apk add --no-cache docker-cli docker-cli-compose docker-compose
 
 WORKDIR /app
 COPY package.json .

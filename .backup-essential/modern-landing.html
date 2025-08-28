@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaFlow 2025 - Next-Gen Media Server</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="mobile-ui.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.1)',
+                        'glass-border': 'rgba(255, 255, 255, 0.2)',
+                        neon: {
+                            pink: '#FF006E',
+                            blue: '#3A86FF',
+                            purple: '#8338EC',
+                            green: '#06FFA5'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite',
+                        'pulse-neon': 'pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient': 'gradient 8s ease infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        glow: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.8 },
+                        },
+                        'pulse-neon': {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.5 },
+                        },
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        }
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-black text-white overflow-x-hidden">
+    <!-- Animated Background -->
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/20 via-black to-neon-blue/20"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+    </div>
+
+    <!-- Floating Orbs -->
+    <div class="fixed inset-0 -z-5">
+        <div class="absolute top-20 left-20 w-96 h-96 bg-neon-pink/30 rounded-full blur-3xl animate-float"></div>
+        <div class="absolute bottom-20 right-20 w-96 h-96 bg-neon-blue/30 rounded-full blur-3xl animate-float" style="animation-delay: 3s"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-glass backdrop-blur-xl border-b border-glass-border">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-neon-pink to-neon-purple rounded-xl animate-pulse-neon"></div>
+                    <span class="text-xl font-bold">MediaFlow</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="hover:text-neon-blue transition-colors">Features</a>
+                    <a href="#services" class="hover:text-neon-blue transition-colors">Services</a>
+                    <a href="#ai" class="hover:text-neon-blue transition-colors">AI Tools</a>
+                    <a href="/dashboard-enhanced.html" class="px-6 py-2 bg-gradient-to-r from-neon-pink to-neon-purple rounded-full hover:shadow-lg hover:shadow-neon-pink/50 transition-all">Dashboard</a>
+                </div>
+                <button class="md:hidden" onclick="toggleMobileMenu()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex items-center justify-center px-6 pt-20">
+        <div class="text-center max-w-4xl mx-auto">
+            <div class="mb-8 animate-float">
+                <div class="inline-flex items-center px-4 py-2 bg-glass backdrop-blur-xl rounded-full border border-glass-border">
+                    <div class="w-2 h-2 bg-neon-green rounded-full animate-pulse mr-2"></div>
+                    <span class="text-sm">AI-Powered • Voice Controlled • 2025 Ready</span>
+                </div>
+            </div>
+            
+            <h1 class="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-white via-neon-blue to-neon-purple bg-clip-text text-transparent animate-gradient bg-300%">
+                Media Server
+                <br>
+                <span class="text-4xl md:text-6xl">Reimagined</span>
+            </h1>
+            
+            <p class="text-xl md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto">
+                Experience the future of media management with AI recommendations, voice control, and seamless streaming across all your devices.
+            </p>
+            
+            <div class="flex flex-col md:flex-row gap-4 justify-center mb-12">
+                <button onclick="startVoiceSetup()" class="group px-8 py-4 bg-gradient-to-r from-neon-pink to-neon-purple rounded-full font-semibold hover:shadow-2xl hover:shadow-neon-pink/50 transition-all transform hover:scale-105">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 10-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"/>
+                        </svg>
+                        Start with Voice
+                    </span>
+                </button>
+                <a href="/dashboard-enhanced.html" class="px-8 py-4 bg-glass backdrop-blur-xl border border-glass-border rounded-full font-semibold hover:bg-white/20 transition-all transform hover:scale-105">
+                    Open Dashboard
+                </a>
+            </div>
+
+            <!-- Social Share Widget -->
+            <div id="social-share-hero" class="inline-flex space-x-2"></div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 px-6">
+        <div class="container mx-auto">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
+                <span class="bg-gradient-to-r from-neon-blue to-neon-green bg-clip-text text-transparent">
+                    Next-Gen Features
+                </span>
+            </h2>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature Cards -->
+                <div class="group relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-neon-pink to-neon-purple rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-8 hover:transform hover:scale-105 transition-all">
+                        <div class="w-12 h-12 bg-gradient-to-br from-neon-pink to-neon-purple rounded-xl mb-4 flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v10H5V5z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">AI Recommendations</h3>
+                        <p class="text-gray-400">Smart content suggestions based on your viewing habits and preferences.</p>
+                    </div>
+                </div>
+
+                <div class="group relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-neon-blue to-neon-green rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-8 hover:transform hover:scale-105 transition-all">
+                        <div class="w-12 h-12 bg-gradient-to-br from-neon-blue to-neon-green rounded-xl mb-4 flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 10-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Voice Control</h3>
+                        <p class="text-gray-400">Control your media with natural voice commands. Just say what you want to watch.</p>
+                    </div>
+                </div>
+
+                <div class="group relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-neon-purple to-neon-pink rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-8 hover:transform hover:scale-105 transition-all">
+                        <div class="w-12 h-12 bg-gradient-to-br from-neon-purple to-neon-pink rounded-xl mb-4 flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Real-time Transcoding</h3>
+                        <p class="text-gray-400">Stream to any device with automatic format optimization and quality adjustment.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Grid -->
+    <section id="services" class="py-20 px-6">
+        <div class="container mx-auto">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">
+                <span class="bg-gradient-to-r from-neon-purple to-neon-pink bg-clip-text text-transparent">
+                    Integrated Services
+                </span>
+            </h2>
+            
+            <div class="grid md:grid-cols-4 gap-6">
+                <div class="bg-glass backdrop-blur-xl border border-glass-border rounded-xl p-6 hover:border-neon-pink/50 transition-all">
+                    <div class="text-3xl mb-2">🎬</div>
+                    <h3 class="font-semibold mb-1">Plex</h3>
+                    <p class="text-sm text-gray-400">Stream your media library</p>
+                </div>
+                
+                <div class="bg-glass backdrop-blur-xl border border-glass-border rounded-xl p-6 hover:border-neon-blue/50 transition-all">
+                    <div class="text-3xl mb-2">📺</div>
+                    <h3 class="font-semibold mb-1">Sonarr</h3>
+                    <p class="text-sm text-gray-400">TV show management</p>
+                </div>
+                
+                <div class="bg-glass backdrop-blur-xl border border-glass-border rounded-xl p-6 hover:border-neon-green/50 transition-all">
+                    <div class="text-3xl mb-2">🎥</div>
+                    <h3 class="font-semibold mb-1">Radarr</h3>
+                    <p class="text-sm text-gray-400">Movie collection automation</p>
+                </div>
+                
+                <div class="bg-glass backdrop-blur-xl border border-glass-border rounded-xl p-6 hover:border-neon-purple/50 transition-all">
+                    <div class="text-3xl mb-2">🎵</div>
+                    <h3 class="font-semibold mb-1">Lidarr</h3>
+                    <p class="text-sm text-gray-400">Music library management</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Section -->
+    <section id="ai" class="py-20 px-6">
+        <div class="container mx-auto">
+            <div class="bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 rounded-3xl p-12 backdrop-blur-xl border border-glass-border">
+                <div class="max-w-3xl mx-auto text-center">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6">
+                        <span class="bg-gradient-to-r from-white to-neon-green bg-clip-text text-transparent">
+                            AI-Powered Intelligence
+                        </span>
+                    </h2>
+                    <p class="text-xl text-gray-400 mb-8">
+                        Our AI learns your preferences, suggests content you'll love, and even creates custom playlists based on your mood.
+                    </p>
+                    <div class="flex justify-center space-x-4">
+                        <div class="px-6 py-3 bg-glass backdrop-blur-xl rounded-full border border-glass-border">
+                            <span class="text-neon-green">•</span> Smart Recommendations
+                        </div>
+                        <div class="px-6 py-3 bg-glass backdrop-blur-xl rounded-full border border-glass-border">
+                            <span class="text-neon-blue">•</span> Mood Detection
+                        </div>
+                        <div class="px-6 py-3 bg-glass backdrop-blur-xl rounded-full border border-glass-border">
+                            <span class="text-neon-pink">•</span> Auto-Tagging
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 hidden">
+        <div class="flex justify-end p-6">
+            <button onclick="toggleMobileMenu()">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="flex flex-col items-center space-y-8 mt-20">
+            <a href="#features" onclick="toggleMobileMenu()" class="text-2xl hover:text-neon-blue transition-colors">Features</a>
+            <a href="#services" onclick="toggleMobileMenu()" class="text-2xl hover:text-neon-blue transition-colors">Services</a>
+            <a href="#ai" onclick="toggleMobileMenu()" class="text-2xl hover:text-neon-blue transition-colors">AI Tools</a>
+            <a href="/dashboard-enhanced.html" class="px-8 py-4 bg-gradient-to-r from-neon-pink to-neon-purple rounded-full text-xl">Dashboard</a>
+        </div>
+    </div>
+
+    <script src="social-share.js"></script>
+    <script>
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        }
+
+        function startVoiceSetup() {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance('Welcome to MediaFlow 2025. Say "Hey MediaFlow" to get started.');
+                speechSynthesis.speak(utterance);
+            }
+            window.location.href = '/dashboard-enhanced.html';
+        }
+
+        // Initialize social share widget
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.initSocialShare) {
+                window.initSocialShare('social-share-hero', {
+                    url: window.location.href,
+                    title: 'MediaFlow 2025 - Next-Gen Media Server',
+                    description: 'Experience the future of media management'
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,564 @@
+version: '3.9'
+
+networks:
+  media-proxy:
+    name: media-proxy
+
+volumes:
+  letsencrypt:
+  jellyfin_config:
+  jellyfin_cache:
+  qbittorrent_config:
+  prowlarr_config:
+  sonarr_config:
+  radarr_config:
+  bazarr_config:
+  lidarr_config:
+  readarr_config:
+  overseerr_config:
+  calibre_web_config:
+  navidrome_data:
+  audiobookshelf_config:
+  audiobookshelf_metadata:
+  tautulli_config:
+  jellyseerr_config:
+  sabnzbd_config:
+  uptime_kuma_data:
+  grafana_data:
+  prometheus_data:
+  node_exporter_data:
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - TZ=${TZ}
+      - CF_API_EMAIL=${CF_API_EMAIL:-}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/dynamic.yml:/dynamic.yml:ro
+    labels:
+      - traefik.enable=true
+      # Define a basic auth middleware via labels (compose will expand env var)
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}
+      # Traefik dashboard (secured)
+      - traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.traefik.middlewares=dashboard-auth@docker,security-headers@file,compress@file
+      - traefik.http.services.traefik.loadbalancer.server.port=8080
+      - traefik.http.routers.traefik.service=api@internal
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAIN}
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - ${MEDIA_PATH}/movies:/data/movies
+      - ${MEDIA_PATH}/tv:/data/tvshows
+      - ${MEDIA_PATH}/music:/data/music
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.tls=true
+      - traefik.http.routers.jellyfin.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.jellyfin.middlewares=security-headers@file,compress@file
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr_config:/config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)
+      - traefik.http.routers.prowlarr.entrypoints=websecure
+      - traefik.http.routers.prowlarr.tls=true
+      - traefik.http.routers.prowlarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.prowlarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - sonarr_config:/config
+      - ${MEDIA_PATH}/tv:/tv
+      - ${DOWNLOADS_PATH}:/downloads
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.tls=true
+      - traefik.http.routers.sonarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.sonarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - radarr_config:/config
+      - ${MEDIA_PATH}/movies:/movies
+      - ${DOWNLOADS_PATH}:/downloads
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.tls=true
+      - traefik.http.routers.radarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.radarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - bazarr_config:/config
+      - ${MEDIA_PATH}/movies:/movies
+      - ${MEDIA_PATH}/tv:/tv
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)
+      - traefik.http.routers.bazarr.entrypoints=websecure
+      - traefik.http.routers.bazarr.tls=true
+      - traefik.http.routers.bazarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.bazarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - lidarr_config:/config
+      - ${MEDIA_PATH}/music:/music
+      - ${DOWNLOADS_PATH}:/downloads
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)
+      - traefik.http.routers.lidarr.entrypoints=websecure
+      - traefik.http.routers.lidarr.tls=true
+      - traefik.http.routers.lidarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.lidarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - readarr_config:/config
+      - ${MEDIA_PATH}/books:/books
+      - ${DOWNLOADS_PATH}:/downloads
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.readarr.rule=Host(`readarr.${DOMAIN}`)
+      - traefik.http.routers.readarr.entrypoints=websecure
+      - traefik.http.routers.readarr.tls=true
+      - traefik.http.routers.readarr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.readarr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.readarr.loadbalancer.server.port=8787
+
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - overseerr_config:/config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.overseerr.rule=Host(`overseerr.${DOMAIN}`)
+      - traefik.http.routers.overseerr.entrypoints=websecure
+      - traefik.http.routers.overseerr.tls=true
+      - traefik.http.routers.overseerr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.overseerr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.overseerr.loadbalancer.server.port=5055
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - calibre_web_config:/config
+      - ${MEDIA_PATH}/books:/books
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.calibre.rule=Host(`calibre.${DOMAIN}`)
+      - traefik.http.routers.calibre.entrypoints=websecure
+      - traefik.http.routers.calibre.tls=true
+      - traefik.http.routers.calibre.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.calibre.middlewares=security-headers@file,compress@file
+      - traefik.http.services.calibre.loadbalancer.server.port=8083
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - ND_SCANINTERVAL=1m
+      - TZ=${TZ}
+    user: "${PUID}:${PGID}"
+    volumes:
+      - navidrome_data:/data
+      - ${MEDIA_PATH}/music:/music:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN}`)
+      - traefik.http.routers.navidrome.entrypoints=websecure
+      - traefik.http.routers.navidrome.tls=true
+      - traefik.http.routers.navidrome.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.navidrome.middlewares=security-headers@file,compress@file
+      - traefik.http.services.navidrome.loadbalancer.server.port=4533
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - TZ=${TZ}
+      - AUDIOBOOKSHELF_UID=${PUID}
+      - AUDIOBOOKSHELF_GID=${PGID}
+    volumes:
+      - audiobookshelf_config:/config
+      - audiobookshelf_metadata:/metadata
+      - ${MEDIA_PATH}/audiobooks:/audiobooks
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN}`)
+      - traefik.http.routers.audiobookshelf.entrypoints=websecure
+      - traefik.http.routers.audiobookshelf.tls=true
+      - traefik.http.routers.audiobookshelf.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.audiobookshelf.middlewares=security-headers@file,compress@file
+      - traefik.http.services.audiobookshelf.loadbalancer.server.port=80
+
+  # VPN container
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      - media-proxy
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - OPENVPN_USER=${VPN_USER}
+      - OPENVPN_PASSWORD=${VPN_PASSWORD}
+      - SERVER_COUNTRIES=${VPN_COUNTRY}
+      - SERVER_CITIES=${VPN_CITY}
+      # Optional:
+      - HTTPPROXY=on
+      - HTTPPROXY_LISTENING_ADDRESS=:8888
+    # Expose torrent peer ports on the host
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+    labels:
+      - traefik.enable=true
+      # Route qBittorrent via gluetun (same network namespace)
+      - traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAIN}`)
+      - traefik.http.routers.qbittorrent.entrypoints=websecure
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.qbittorrent.middlewares=security-headers@file,compress@file
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+      - traefik.http.routers.prowlarrvpn.rule=Host(`prowlarrvpn.${DOMAIN}`)
+      - traefik.http.routers.prowlarrvpn.entrypoints=websecure
+      - traefik.http.routers.prowlarrvpn.tls=true
+      - traefik.http.routers.prowlarrvpn.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.prowlarrvpn.middlewares=security-headers@file,compress@file
+      - traefik.http.services.prowlarrvpn.loadbalancer.server.port=9696
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - ${DOWNLOADS_PATH}:/downloads
+
+
+  jellyseerr:
+    image: lscr.io/linuxserver/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - jellyseerr_config:/config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.${DOMAIN}`)
+      - traefik.http.routers.jellyseerr.entrypoints=websecure
+      - traefik.http.routers.jellyseerr.tls=true
+      - traefik.http.routers.jellyseerr.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.jellyseerr.middlewares=security-headers@file,compress@file
+      - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
+
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - tautulli_config:/config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)
+      - traefik.http.routers.tautulli.entrypoints=websecure
+      - traefik.http.routers.tautulli.tls=true
+      - traefik.http.routers.tautulli.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.tautulli.middlewares=security-headers@file,compress@file
+      - traefik.http.services.tautulli.loadbalancer.server.port=8181
+
+
+  prowlarr-vpn:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr-vpn
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr_config:/config
+
+
+  # Usenet client (optional)
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - sabnzbd_config:/config
+      - ${DOWNLOADS_PATH}:/downloads
+      - ${DOWNLOADS_PATH}/incomplete:/incomplete-downloads
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAIN}`)
+      - traefik.http.routers.sabnzbd.entrypoints=websecure
+      - traefik.http.routers.sabnzbd.tls=true
+      - traefik.http.routers.sabnzbd.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.sabnzbd.middlewares=security-headers@file,compress@file
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+
+
+  # Uptime Kuma (monitoring)
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    volumes:
+      - uptime_kuma_data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.uptime.rule=Host(`uptime.${DOMAIN}`)
+      - traefik.http.routers.uptime.entrypoints=websecure
+      - traefik.http.routers.uptime.tls=true
+      - traefik.http.routers.uptime.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.uptime.middlewares=security-headers@file,compress@file
+      - traefik.http.services.uptime.loadbalancer.server.port=3001
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    volumes:
+      - prometheus_data:/prometheus
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls=true
+      - traefik.http.routers.prometheus.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.prometheus.middlewares=security-headers@file,compress@file
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.routers.grafana.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.grafana.middlewares=security-headers@file,compress@file
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)'
+    expose:
+      - 9100
+
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - 8080
+
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    networks:
+      - media-proxy
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/config/blackbox.yml:ro
+    command:
+      - '--config.file=/config/blackbox.yml'
+    expose:
+      - 9115

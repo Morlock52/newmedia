@@ -1,0 +1,17 @@
+version: '3.9'
+services:
+  jest-runner:
+    build:
+      context: .
+      dockerfile: tests/jest-docker/Dockerfile
+    container_name: jest-runner
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal}
+      - NODE_ENV=test
+    network_mode: host
+    # Run tests serially to avoid flakiness with port probing
+    command: bash -lc "npm ci && npm test -- --runInBand"

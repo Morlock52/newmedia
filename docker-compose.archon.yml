@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # Archon PostgreSQL Database with PGVector
+  archon-db:
+    image: ankane/pgvector:latest
+    container_name: archon-db
+    environment:
+      POSTGRES_USER: archon
+      POSTGRES_PASSWORD: ${ARCHON_DB_PASSWORD:-archon_secure_pass_2025}
+      POSTGRES_DB: archon
+    volumes:
+      - archon-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - archon-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Archon Backend API Server
+  archon-server:
+    image: archon/server:latest
+    build:
+      context: ./archon-server
+      dockerfile: Dockerfile
+    container_name: archon-server
+    environment:
+      DATABASE_URL: postgresql://archon:${ARCHON_DB_PASSWORD:-archon_secure_pass_2025}@archon-db:5432/archon
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OLLAMA_API_URL: ${OLLAMA_API_URL:-http://ollama:11434}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      REDIS_URL: redis://archon-redis:6379
+      ENVIRONMENT: production
+    ports:
+      - "8181:8181"  # Server API
+    depends_on:
+      archon-db:
+        condition: service_healthy
+      archon-redis:
+        condition: service_started
+    networks:
+      - archon-net
+      - media-net  # Connect to media network for integration
+    volumes:
+      - ./archon-data:/app/data
+      - ./archon-uploads:/app/uploads
+    restart: unless-stopped
+
+  # Archon MCP Server
+  archon-mcp:
+    image: archon/mcp:latest
+    build:
+      context: ./archon-mcp
+      dockerfile: Dockerfile
+    container_name: archon-mcp
+    environment:
+      SERVER_URL: http://archon-server:8181
+      MCP_PORT: 8051
+      DATABASE_URL: postgresql://archon:${ARCHON_DB_PASSWORD:-archon_secure_pass_2025}@archon-db:5432/archon
+    ports:
+      - "8051:8051"  # MCP endpoint
+    depends_on:
+      - archon-server
+    networks:
+      - archon-net
+      - media-net
+    restart: unless-stopped
+
+  # Archon Agents Service
+  archon-agents:
+    image: archon/agents:latest
+    build:
+      context: ./archon-agents
+      dockerfile: Dockerfile
+    container_name: archon-agents
+    environment:
+      SERVER_URL: http://archon-server:8181
+      AGENTS_PORT: 8052
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: postgresql://archon:${ARCHON_DB_PASSWORD:-archon_secure_pass_2025}@archon-db:5432/archon
+    ports:
+      - "8052:8052"  # Agents service
+    depends_on:
+      - archon-server
+    networks:
+      - archon-net
+      - media-net
+    restart: unless-stopped
+
+  # Archon Frontend UI
+  archon-ui:
+    image: archon/ui:latest
+    build:
+      context: ./archon-ui
+      dockerfile: Dockerfile
+    container_name: archon-ui
+    environment:
+      VITE_API_URL: http://localhost:8181
+      VITE_MCP_URL: http://localhost:8051
+      VITE_AGENTS_URL: http://localhost:8052
+    ports:
+      - "3737:3737"  # UI
+    depends_on:
+      - archon-server
+    networks:
+      - archon-net
+    restart: unless-stopped
+
+  # Redis for caching and real-time features
+  archon-redis:
+    image: redis:7-alpine
+    container_name: archon-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - archon-redis-data:/data
+    networks:
+      - archon-net
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # Optional: Ollama for local LLM support
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - archon-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  archon-net:
+    driver: bridge
+  media-net:
+    external: true
+    name: media-net
+
+volumes:
+  archon-db-data:
+  archon-redis-data:
+  ollama-data:

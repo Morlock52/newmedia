@@ -1,0 +1,481 @@
+version: '3.8'
+
+services:
+  # AI Safety System
+  ai-safety-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-safety
+    image: newmedia/ai-safety:latest
+    container_name: ai-safety-service
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      - DATABASE_PATH=/app/data/ai_safety.db
+      - LOG_LEVEL=info
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_CACHE_PATH=/app/models
+      - CONTENT_ANALYSIS_WORKERS=4
+      - SAFETY_THRESHOLD_STRICT=0.9
+      - SAFETY_THRESHOLD_MODERATE=0.7
+      - SAFETY_THRESHOLD_RELAXED=0.5
+    volumes:
+      - ./ai-safety-data:/app/data
+      - ./ai-models:/app/models
+      - ./logs/ai-safety:/app/logs
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # Content Moderation Service
+  content-moderation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.content-moderation
+    image: newmedia/content-moderation:latest
+    container_name: content-moderation-service
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+      - "8081:8081"  # WebSocket port
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/content_moderation.db
+      - LOG_LEVEL=info
+      - UPLOAD_MAX_SIZE=100mb
+      - NSFW_MODEL_ENABLED=true
+      - TEXT_ANALYSIS_ENABLED=true
+      - IMAGE_ANALYSIS_ENABLED=true
+      - VIDEO_ANALYSIS_ENABLED=true
+      - REAL_TIME_MODERATION=true
+    volumes:
+      - ./moderation-data:/app/data
+      - ./moderation-uploads:/app/uploads
+      - ./logs/moderation:/app/logs
+      - ./temp:/app/temp
+    networks:
+      - ai-network
+    depends_on:
+      - ai-safety-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Recommendation Engine
+  recommendation-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.recommendation
+    image: newmedia/recommendation-engine:latest
+    container_name: recommendation-engine
+    restart: unless-stopped
+    ports:
+      - "8092:8080"
+    environment:
+      - DATABASE_PATH=/app/data/recommendations.db
+      - LOG_LEVEL=info
+      - CUDA_VISIBLE_DEVICES=0
+      - EMBEDDING_MODEL_PATH=/app/models/embeddings
+      - RECOMMENDATION_BATCH_SIZE=100
+      - ETHICAL_SCORING_ENABLED=true
+      - DIVERSITY_PROMOTION=0.3
+      - FAIRNESS_WEIGHT=0.25
+      - SAFETY_WEIGHT=0.2
+    volumes:
+      - ./recommendation-data:/app/data
+      - ./ai-models:/app/models
+      - ./logs/recommendations:/app/logs
+    networks:
+      - ai-network
+    depends_on:
+      - ai-safety-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Social Media Integration
+  social-media-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.social-media
+    image: newmedia/social-media:latest
+    container_name: social-media-service
+    restart: unless-stopped
+    ports:
+      - "8093:8082"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/social_media.db
+      - LOG_LEVEL=info
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
+      - CONTENT_FILTERING_STRICT=true
+      - REAL_TIME_TRENDS=true
+      - PRIVACY_MODE=enhanced
+      - DATA_RETENTION_DAYS=30
+    volumes:
+      - ./social-media-data:/app/data
+      - ./logs/social-media:/app/logs
+    networks:
+      - ai-network
+    depends_on:
+      - content-moderation-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI Dashboard UI
+  ai-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-dashboard
+    image: newmedia/ai-dashboard:latest
+    container_name: ai-dashboard
+    restart: unless-stopped
+    ports:
+      - "8094:80"
+    environment:
+      - NODE_ENV=production
+      - API_BASE_URL=http://ai-gateway:8095
+      - WEBSOCKET_URL=ws://content-moderation-service:8081
+      - FEATURES_AI_CHAT=true
+      - FEATURES_CONTENT_ANALYSIS=true
+      - FEATURES_RECOMMENDATIONS=true
+      - FEATURES_SOCIAL_INTEGRATION=true
+      - THEME=dark
+      - PWA_ENABLED=true
+    volumes:
+      - ./dashboard-config:/app/config
+      - ./logs/dashboard:/app/logs
+    networks:
+      - ai-network
+    depends_on:
+      - ai-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI Gateway (API Gateway)
+  ai-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-gateway
+    image: newmedia/ai-gateway:latest
+    container_name: ai-gateway
+    restart: unless-stopped
+    ports:
+      - "8095:8080"
+    environment:
+      - LOG_LEVEL=info
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_MAX=1000
+      - RATE_LIMIT_WINDOW=3600
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8094
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret}
+      - API_KEY_REQUIRED=true
+      - LOAD_BALANCING=round_robin
+    volumes:
+      - ./gateway-config:/app/config
+      - ./logs/gateway:/app/logs
+    networks:
+      - ai-network
+    depends_on:
+      - ai-safety-service
+      - content-moderation-service
+      - recommendation-engine
+      - social-media-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and session management
+  redis-ai:
+    image: redis:7-alpine
+    container_name: redis-ai-cache
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - ./redis-ai-data:/data
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL for advanced analytics and user management
+  postgres-ai:
+    image: postgres:15-alpine
+    container_name: postgres-ai-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=ai_media_server
+      - POSTGRES_USER=${POSTGRES_USER:-aiuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ai_secure_pass}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres-ai-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiuser} -d ai_media_server"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch for advanced search and analytics
+  elasticsearch-ai:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch-ai
+    restart: unless-stopped
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    environment:
+      - node.name=ai-es-node
+      - cluster.name=ai-media-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - ./elasticsearch-ai-data:/usr/share/elasticsearch/data
+    networks:
+      - ai-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana for analytics dashboard
+  kibana-ai:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana-ai
+    restart: unless-stopped
+    ports:
+      - "5602:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch-ai:9200
+      - SERVER_NAME=ai-kibana
+      - SERVER_HOST=0.0.0.0
+    volumes:
+      - ./kibana-ai-config:/usr/share/kibana/config
+    networks:
+      - ai-network
+    depends_on:
+      - elasticsearch-ai
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Prometheus for metrics collection
+  prometheus-ai:
+    image: prom/prometheus:latest
+    container_name: prometheus-ai
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus-ai-config:/etc/prometheus
+      - ./prometheus-ai-data:/prometheus
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana for monitoring dashboards
+  grafana-ai:
+    image: grafana/grafana:latest
+    container_name: grafana-ai
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./grafana-ai-data:/var/lib/grafana
+      - ./grafana-ai-config:/etc/grafana
+    networks:
+      - ai-network
+    depends_on:
+      - prometheus-ai
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # NVIDIA GPU Support Service (if available)
+  gpu-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu-monitor
+    image: newmedia/gpu-monitor:latest
+    container_name: gpu-monitor
+    restart: unless-stopped
+    ports:
+      - "8096:8080"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - /usr/local/cuda:/usr/local/cuda:ro
+      - ./logs/gpu:/app/logs
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - gpu
+
+  # AI Model Manager (for downloading and managing AI models)
+  model-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.model-manager
+    image: newmedia/model-manager:latest
+    container_name: ai-model-manager
+    restart: "no"
+    environment:
+      - MODEL_CACHE_PATH=/app/models
+      - HF_HOME=/app/models/huggingface
+      - TORCH_HOME=/app/models/torch
+      - DOWNLOAD_MODELS=sentence-transformers/all-MiniLM-L6-v2,Falconsai/nsfw_image_detection,unitary/toxic-bert
+    volumes:
+      - ./ai-models:/app/models
+      - ./logs/model-manager:/app/logs
+    networks:
+      - ai-network
+    profiles:
+      - init
+
+  # Nginx reverse proxy with SSL
+  nginx-ai:
+    image: nginx:alpine
+    container_name: nginx-ai-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-ai-config:/etc/nginx
+      - ./ssl-certs:/etc/ssl/certs
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - ai-network
+    depends_on:
+      - ai-gateway
+      - ai-dashboard
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - production
+
+networks:
+  ai-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  ai-safety-data:
+    driver: local
+  moderation-data:
+    driver: local
+  recommendation-data:
+    driver: local
+  social-media-data:
+    driver: local
+  redis-ai-data:
+    driver: local
+  postgres-ai-data:
+    driver: local
+  elasticsearch-ai-data:
+    driver: local
+  prometheus-ai-data:
+    driver: local
+  grafana-ai-data:
+    driver: local
+  ai-models:
+    driver: local
+
+# Configuration for different deployment profiles
+# 
+# Development mode:
+# docker-compose -f docker-compose.ai-enhanced.yml up
+#
+# Production mode with SSL:
+# docker-compose -f docker-compose.ai-enhanced.yml --profile production up
+#
+# GPU-enabled mode:
+# docker-compose -f docker-compose.ai-enhanced.yml --profile gpu up
+#
+# Initialize models:
+# docker-compose -f docker-compose.ai-enhanced.yml --profile init up model-manager
+#
+# Full deployment:
+# docker-compose -f docker-compose.ai-enhanced.yml --profile production --profile gpu up

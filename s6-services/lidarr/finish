@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Lidarr service cleanup
+
+echo "$(date) [INFO] Lidarr service stopped" >> /logs/lidarr.log

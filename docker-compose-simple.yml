@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  media-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ultimate-media-server-2025-simplified
+    image: ultimate-media-server:2025-simple
+    container_name: ultimate-media-server-simple
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      # Media Servers
+      - "8096:8096"   # Jellyfin
+      - "32400:32400" # Plex
+      # ARR Stack
+      - "8989:8989"   # Sonarr
+      - "7878:7878"   # Radarr
+      - "9696:9696"   # Prowlarr
+      - "8686:8686"   # Lidarr
+      - "8787:8787"   # Readarr
+      - "6767:6767"   # Bazarr
+      # Download Clients
+      - "8080:8080"   # qBittorrent
+      - "9091:9091"   # Transmission
+      # Management
+      - "9000:9000"   # Portainer
+      - "3001:3001"   # Uptime Kuma
+      - "80:80"       # Nginx
+      - "443:443"     # Nginx SSL
+    volumes:
+      - ./config:/config
+      - ./data:/data
+      - ./media:/media
+      - ./downloads:/downloads
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge

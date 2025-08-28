@@ -1,0 +1,445 @@
+# Ultimate Media Server Single Container 2025
+# Complete stack with 30+ services in one container
+# Built with s6-overlay v3 for proper process supervision
+#
+# FEATURES:
+# - Jellyfin, Plex, Emby (Media Servers)
+# - Sonarr, Radarr, Lidarr, Readarr, Bazarr, Prowlarr (*ARR Suite)
+# - qBittorrent, Transmission, SABnzbd, NZBGet (Download Clients)
+# - Overseerr, Jellyseerr, Ombi (Request Management)
+# - Tautulli, Organizr, Homarr, Homepage (Dashboards)
+# - Calibre-Web, Audiobookshelf, Navidrome (Libraries)
+# - PhotoPrism, Immich, Paperless-ngx, Nextcloud (Content)
+# - Vaultwarden, Pi-hole, AdGuard, Syncthing (Utilities)
+# - Prometheus, Grafana, Uptime Kuma (Monitoring)
+# - Portainer, Code Server, Gitea (Management)
+# - AI Assistant with Ollama integration
+# - Traefik reverse proxy with auto-SSL
+
+ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG DEBIAN_VERSION=bookworm
+
+# Base image with all dependencies
+FROM debian:${DEBIAN_VERSION}-slim as base
+
+# Re-declare ARG after FROM
+ARG S6_OVERLAY_VERSION=3.2.1.0
+
+# Build arguments for versions (August 2025)
+ARG JELLYFIN_VERSION=10.10.6
+ARG SONARR_VERSION=4.0.15.2941
+ARG RADARR_VERSION=5.27.2.10142
+ARG PROWLARR_VERSION=2.0.2.5116
+ARG LIDARR_VERSION=2.8.4.4430
+ARG BAZARR_VERSION=1.4.8
+ARG QBITTORRENT_VERSION=5.0.3
+ARG NODE_VERSION=20
+ARG PYTHON_VERSION=3.11
+
+# System environment
+ENV DEBIAN_FRONTEND=noninteractive \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_VERBOSITY=1 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    PUID=1000 \
+    PGID=1000 \
+    TZ=UTC
+
+# Install base system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # System essentials
+    ca-certificates \
+    curl \
+    wget \
+    gnupg \
+    lsb-release \
+    apt-transport-https \
+    software-properties-common \
+    xz-utils \
+    unzip \
+    tar \
+    gzip \
+    # Process management
+    supervisor \
+    # Networking
+    nginx \
+    # Media tools
+    ffmpeg \
+    mediainfo \
+    # Development tools
+    build-essential \
+    git \
+    # Python
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    # Databases
+    sqlite3 \
+    postgresql-client \
+    # Fonts and libraries
+    fonts-liberation \
+    libicu72 \
+    libssl3 \
+    libgdiplus \
+    libc6-dev \
+    libfontconfig1 \
+    libfreetype6 \
+    libgomp1 \
+    libva2 \
+    libva-drm2 \
+    mesa-va-drivers \
+    i965-va-driver-shaders \
+    intel-media-va-driver-non-free \
+    # Locale support
+    locales \
+    tzdata \
+    # Utilities
+    htop \
+    nano \
+    vim \
+    rsync \
+    jq \
+    net-tools \
+    dnsutils \
+    # Hardware acceleration
+    vainfo \
+    intel-media-va-driver-non-free \
+    && locale-gen en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install s6-overlay
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp/
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
+    && rm -f /tmp/s6-overlay-*.tar.xz
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g pm2 yarn pnpm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go (for some services)
+RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz \
+    && rm go1.21.5.linux-amd64.tar.gz
+ENV PATH=/usr/local/go/bin:$PATH
+
+# Install Jellyfin
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor --yes --output /etc/apt/keyrings/jellyfin.gpg \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/debian $(lsb_release -cs) main" > /etc/apt/sources.list.d/jellyfin.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        jellyfin \
+        jellyfin-web \
+        jellyfin-ffmpeg6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Plex Media Server
+RUN curl -s https://downloads.plex.tv/plex-keys/PlexSign.key | apt-key add - \
+    && echo "deb https://downloads.plex.tv/repo/deb public main" > /etc/apt/sources.list.d/plexmediaserver.list \
+    && apt-get update \
+    && apt-get install -y plexmediaserver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install *ARR applications
+WORKDIR /tmp
+
+# Sonarr
+RUN wget "https://github.com/Sonarr/Sonarr/releases/download/v${SONARR_VERSION}/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" \
+    && tar -xzf "Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" -C /opt \
+    && rm "Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" \
+    && mv /opt/Sonarr /opt/sonarr \
+    && chmod +x /opt/sonarr/Sonarr
+
+# Radarr
+RUN wget "https://github.com/Radarr/Radarr/releases/download/v${RADARR_VERSION}/Radarr.master.${RADARR_VERSION}.linux-core-x64.tar.gz" \
+    && tar -xzf "Radarr.master.${RADARR_VERSION}.linux-core-x64.tar.gz" -C /opt \
+    && rm "Radarr.master.${RADARR_VERSION}.linux-core-x64.tar.gz" \
+    && mv /opt/Radarr /opt/radarr \
+    && chmod +x /opt/radarr/Radarr
+
+# Prowlarr
+RUN wget "https://github.com/Prowlarr/Prowlarr/releases/download/v${PROWLARR_VERSION}/Prowlarr.master.${PROWLARR_VERSION}.linux-core-x64.tar.gz" \
+    && tar -xzf "Prowlarr.master.${PROWLARR_VERSION}.linux-core-x64.tar.gz" -C /opt \
+    && rm "Prowlarr.master.${PROWLARR_VERSION}.linux-core-x64.tar.gz" \
+    && mv /opt/Prowlarr /opt/prowlarr \
+    && chmod +x /opt/prowlarr/Prowlarr
+
+# Lidarr
+RUN wget "https://github.com/Lidarr/Lidarr/releases/download/v${LIDARR_VERSION}/Lidarr.master.${LIDARR_VERSION}.linux-core-x64.tar.gz" \
+    && tar -xzf "Lidarr.master.${LIDARR_VERSION}.linux-core-x64.tar.gz" -C /opt \
+    && rm "Lidarr.master.${LIDARR_VERSION}.linux-core-x64.tar.gz" \
+    && mv /opt/Lidarr /opt/lidarr \
+    && chmod +x /opt/lidarr/Lidarr
+
+# Readarr
+RUN wget "https://github.com/Readarr/Readarr/releases/download/v0.4.6.2568/Readarr.develop.0.4.6.2568.linux-core-x64.tar.gz" \
+    && tar -xzf "Readarr.develop.0.4.6.2568.linux-core-x64.tar.gz" -C /opt \
+    && rm "Readarr.develop.0.4.6.2568.linux-core-x64.tar.gz" \
+    && mv /opt/Readarr /opt/readarr \
+    && chmod +x /opt/readarr/Readarr
+
+# Bazarr
+RUN wget "https://github.com/morpheus65535/bazarr/releases/download/v${BAZARR_VERSION}/bazarr.zip" \
+    && mkdir -p /opt/bazarr \
+    && unzip bazarr.zip -d /opt/bazarr \
+    && rm bazarr.zip \
+    && pip3 install -r /opt/bazarr/requirements.txt
+
+# Install download clients
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    qbittorrent-nox \
+    transmission-daemon \
+    sabnzbdplus \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install NZBGet
+RUN wget "https://github.com/nzbgetcom/nzbget/releases/download/v24.3/nzbget-24.3-linux.run" \
+    && sh nzbget-24.3-linux.run --destdir /opt/nzbget \
+    && rm nzbget-24.3-linux.run
+
+# Install additional services
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Pi-hole dependencies
+    dnsmasq \
+    lighttpd \
+    php-fpm \
+    # Docker for Portainer integration
+    docker.io \
+    # Additional utilities
+    rsync \
+    screen \
+    tmux \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Tautulli
+RUN git clone https://github.com/Tautulli/Tautulli.git /opt/tautulli \
+    && pip3 install -r /opt/tautulli/requirements.txt
+
+# Install Overseerr
+RUN mkdir -p /opt/overseerr \
+    && wget "https://github.com/sct/overseerr/releases/download/v1.33.2/overseerr-1.33.2-linux.tar.gz" \
+    && tar -xzf overseerr-1.33.2-linux.tar.gz -C /opt/overseerr --strip-components=1 \
+    && rm overseerr-1.33.2-linux.tar.gz \
+    && cd /opt/overseerr \
+    && npm ci --only=production
+
+# Install Jellyseerr
+RUN git clone https://github.com/Fallenbagel/jellyseerr.git /opt/jellyseerr \
+    && cd /opt/jellyseerr \
+    && npm ci --only=production \
+    && npm run build
+
+# Install Homepage
+RUN git clone https://github.com/gethomepage/homepage.git /opt/homepage \
+    && cd /opt/homepage \
+    && npm ci --only=production \
+    && npm run build
+
+# Install Homarr
+RUN git clone https://github.com/ajnart/homarr.git /opt/homarr \
+    && cd /opt/homarr \
+    && npm ci --only=production \
+    && npm run build
+
+# Install Organizr
+RUN git clone https://github.com/causefx/Organizr.git /opt/organizr
+
+# Install additional content management
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Calibre
+    calibre \
+    # PhotoPrism dependencies
+    exiftool \
+    rawtherapee \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PhotoPrism
+RUN wget "https://dl.photoprism.app/dist/photoprism/230719-b8009e1b6-linux-amd64.tar.gz" \
+    && tar -xzf photoprism-230719-b8009e1b6-linux-amd64.tar.gz -C /opt \
+    && rm photoprism-230719-b8009e1b6-linux-amd64.tar.gz
+
+# Install Navidrome
+RUN wget "https://github.com/navidrome/navidrome/releases/download/v0.52.5/navidrome_0.52.5_linux_amd64.tar.gz" \
+    && mkdir -p /opt/navidrome \
+    && tar -xzf navidrome_0.52.5_linux_amd64.tar.gz -C /opt/navidrome \
+    && rm navidrome_0.52.5_linux_amd64.tar.gz \
+    && chmod +x /opt/navidrome/navidrome
+
+# Install Audiobookshelf
+RUN wget "https://github.com/advplyr/audiobookshelf/releases/download/v2.16.1/audiobookshelf-2.16.1-linux.tar.gz" \
+    && tar -xzf audiobookshelf-2.16.1-linux.tar.gz -C /opt \
+    && rm audiobookshelf-2.16.1-linux.tar.gz
+
+# Install monitoring tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    prometheus \
+    grafana \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Uptime Kuma
+RUN git clone https://github.com/louislam/uptime-kuma.git /opt/uptime-kuma \
+    && cd /opt/uptime-kuma \
+    && npm ci --only=production \
+    && npm run download-dist
+
+# Install Vaultwarden
+RUN wget "https://github.com/dani-garcia/vaultwarden/releases/download/1.32.0/vaultwarden-1.32.0-linux-x64.tar.gz" \
+    && tar -xzf vaultwarden-1.32.0-linux-x64.tar.gz \
+    && mv vaultwarden /usr/local/bin/ \
+    && rm vaultwarden-1.32.0-linux-x64.tar.gz
+
+# Install Pi-hole
+RUN git clone https://github.com/pi-hole/pi-hole.git /opt/pi-hole
+
+# Install Traefik
+RUN wget "https://github.com/traefik/traefik/releases/download/v3.1.6/traefik_v3.1.6_linux_amd64.tar.gz" \
+    && tar -xzf traefik_v3.1.6_linux_amd64.tar.gz \
+    && mv traefik /usr/local/bin/ \
+    && rm traefik_v3.1.6_linux_amd64.tar.gz \
+    && chmod +x /usr/local/bin/traefik
+
+# Install Ollama for AI functionality
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Install Redis for caching
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # File management
+    mc \
+    ranger \
+    ncdu \
+    # Networking
+    iftop \
+    iotop \
+    nethogs \
+    # System monitoring
+    htop \
+    glances \
+    # Backup tools
+    rclone \
+    restic \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directory structure
+RUN mkdir -p \
+    # Configuration directories
+    /config/{jellyfin,plex,emby,sonarr,radarr,lidarr,readarr,bazarr,prowlarr} \
+    /config/{qbittorrent,transmission,sabnzbd,nzbget} \
+    /config/{overseerr,jellyseerr,ombi,tautulli,organizr,homepage,homarr} \
+    /config/{calibre-web,audiobookshelf,navidrome,photoprism,immich} \
+    /config/{paperless,nextcloud,vaultwarden,pihole,adguard,syncthing} \
+    /config/{prometheus,grafana,uptime-kuma,portainer,code-server,gitea} \
+    /config/{traefik,nginx,redis,ollama,ai-assistant} \
+    # Data directories
+    /data/{media,downloads,watch,backups,logs,cache} \
+    /data/media/{movies,tv,music,books,audiobooks,photos,documents} \
+    /data/downloads/{complete,incomplete,watch} \
+    # Service directories
+    /var/log/media-server \
+    /tmp/media-server \
+    # AI model storage
+    /models/ollama \
+    /models/whisper \
+    /models/stable-diffusion
+
+# Copy service configurations and scripts
+COPY s6-services/ /etc/s6-overlay/s6-rc.d/
+COPY scripts/ /app/scripts/
+COPY configs/ /app/configs/
+
+# Create s6 service structure for all services
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d
+
+# Make all scripts executable
+RUN find /app/scripts -type f -name "*.sh" -exec chmod +x {} \; \
+    && find /etc/s6-overlay/s6-rc.d -type f -name "run" -exec chmod +x {} \;
+
+# Set up proper permissions
+RUN groupadd -g ${PGID} media \
+    && useradd -u ${PUID} -g media -d /config -s /bin/bash media \
+    && chown -R media:media /config /data /opt /var/log/media-server
+
+# Install AI Assistant
+COPY ai-assistant/ /opt/ai-assistant/
+RUN cd /opt/ai-assistant \
+    && npm install \
+    && npm run build
+
+# Final configuration
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Health check script
+COPY healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/healthcheck.sh
+
+# Ports configuration
+# Primary access
+EXPOSE 80 443
+# Media servers
+EXPOSE 8096 32400 8097
+# *ARR suite
+EXPOSE 8989 7878 8686 8787 6767 9696
+# Download clients
+EXPOSE 8080 9091 8085 6789
+# Request management
+EXPOSE 5055 5056 3579
+# Dashboards
+EXPOSE 3000 7575 8181 3001
+# Content libraries
+EXPOSE 8083 13378 4533 4040 2342 2283
+# Utilities
+EXPOSE 8010 8084 8085 53 8053 8384 8086
+# Monitoring
+EXPOSE 9090 3000 19999 9000 8443 3002
+# AI Assistant
+EXPOSE 8090 8091 11434
+
+# Volumes
+VOLUME ["/config", "/data", "/models"]
+
+# Environment defaults
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_VERBOSITY=1 \
+    PUID=1000 \
+    PGID=1000 \
+    TZ=UTC \
+    # Service URLs
+    JELLYFIN_URL=http://localhost:8096 \
+    SONARR_URL=http://localhost:8989 \
+    RADARR_URL=http://localhost:7878 \
+    PROWLARR_URL=http://localhost:9696 \
+    # AI Configuration
+    OLLAMA_HOST=http://localhost:11434 \
+    AI_ENABLED=true \
+    # Performance
+    NODE_OPTIONS=--max-old-space-size=4096
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=30s --start-period=300s --retries=5 \
+    CMD /app/healthcheck.sh
+
+# Labels
+LABEL org.opencontainers.image.title="Ultimate Media Server 2025" \
+      org.opencontainers.image.description="Complete media server stack with 30+ services" \
+      org.opencontainers.image.version="2025.08.07" \
+      org.opencontainers.image.authors="AI Backend Developer" \
+      maintainer="Ultimate Media Server Team"
+
+# Working directory
+WORKDIR /config
+
+# Entrypoint
+ENTRYPOINT ["/init"]

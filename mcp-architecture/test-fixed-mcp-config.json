@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "fixed-test-server": {
+      "command": "node",
+      "args": [
+        "/Users/morlock/fun/newmedia/mcp-architecture/fixed-mcp-server.js"
+      ],
+      "env": {
+        "MCP_DEBUG": "false"
+      }
+    }
+  }
+}

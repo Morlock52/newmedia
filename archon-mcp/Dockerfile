@@ -1,0 +1,5 @@
+FROM node:20-slim
+WORKDIR /app
+RUN npm init -y && npm install express cors body-parser
+COPY mcp.js ./mcp.js 2>/dev/null || echo "console.log('Archon MCP Mock');" > mcp.js
+CMD ["node", "mcp.js"]

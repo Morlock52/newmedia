@@ -1,0 +1,12 @@
+2025-08-02 07:42:01|INFO    |root                            |Scheduler will use this timezone: America/New_York|
+2025-08-02 07:42:05|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-08-02 07:42:05|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-08-02 11:51:19|INFO    |root                            |Scheduler will use this timezone: America/New_York|
+2025-08-02 11:51:22|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-08-02 11:51:22|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-08-02 18:22:21|WARNING |apscheduler.executors.default   |Run time of job "Check Health (trigger: interval[6:00:00], next run at: 2025-08-02 23:18:26 EDT)" was missed by 1:03:54.735474|
+2025-08-02 18:22:21|WARNING |apscheduler.executors.default   |Run time of job "Update Announcements File (trigger: interval[6:00:00], next run at: 2025-08-02 22:52:08 EDT)" was missed by 1:30:12.728065|
+2025-08-02 18:22:21|WARNING |apscheduler.executors.default   |Run time of job "Update Release Info (trigger: interval[3:00:00], next run at: 2025-08-02 20:34:39 EDT)" was missed by 0:47:41.742318|
+2025-08-02 22:25:12|INFO    |root                            |Scheduler will use this timezone: America/New_York|
+2025-08-02 22:25:20|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-08-02 22:25:20|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|

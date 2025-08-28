@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "claude-flow": {
+      "command": "npx",
+      "args": [
+        "claude-flow@alpha",
+        "mcp",
+        "start"
+      ],
+      "type": "stdio"
+    },
+    "media-server": {
+      "command": "node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/standalone-mcp.js"],
+      "type": "stdio"
+    }
+  }
+}

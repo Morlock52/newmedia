@@ -1,0 +1,172 @@
+{
+  "timestamp": "2025-08-03T11:02:16.478Z",
+  "duration": 2.409,
+  "summary": {
+    "total": 32,
+    "passed": 28,
+    "failed": 0,
+    "warnings": 4
+  },
+  "results": [
+    {
+      "category": "Server startup",
+      "status": "PASS",
+      "message": "Server started successfully"
+    },
+    {
+      "category": "Service discovery",
+      "status": "PASS",
+      "message": "Found 14 configured services"
+    },
+    {
+      "category": "Tool execution",
+      "status": "PASS",
+      "message": "Tool unified_health_check is available"
+    },
+    {
+      "category": "Tool execution",
+      "status": "PASS",
+      "message": "Tool unified_get_statistics is available"
+    },
+    {
+      "category": "Tool execution",
+      "status": "PASS",
+      "message": "Tool docker_list_containers is available"
+    },
+    {
+      "category": "Tool execution",
+      "status": "PASS",
+      "message": "Tool docker_container_logs is available"
+    },
+    {
+      "category": "Docker integration",
+      "status": "PASS",
+      "message": "Docker version 28.3.2 accessible"
+    },
+    {
+      "category": "Docker integration",
+      "status": "PASS",
+      "message": "Found 24 containers"
+    },
+    {
+      "category": "Docker integration",
+      "status": "PASS",
+      "message": "Found 6 media containers"
+    },
+    {
+      "category": "Health checks",
+      "status": "PASS",
+      "message": "Health check interval configured: 30000ms"
+    },
+    {
+      "category": "Health checks",
+      "status": "WARN",
+      "message": "sonarr is not accessible ()"
+    },
+    {
+      "category": "Health checks",
+      "status": "WARN",
+      "message": "radarr is not accessible ()"
+    },
+    {
+      "category": "Health checks",
+      "status": "WARN",
+      "message": "jellyfin is not accessible ()"
+    },
+    {
+      "category": "Health checks",
+      "status": "WARN",
+      "message": "prowlarr is not accessible ()"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Section 'server' is present"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Section 'services' is present"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Section 'monitoring' is present"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Section 'docker' is present"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'jellyfin' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'sonarr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'radarr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'lidarr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'prowlarr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'bazarr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'qbittorrent' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'transmission' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'sabnzbd' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'plex' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'tautulli' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'overseerr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'requestrr' is properly configured"
+    },
+    {
+      "category": "Configuration",
+      "status": "PASS",
+      "message": "Service 'homepage' is properly configured"
+    }
+  ]
+}

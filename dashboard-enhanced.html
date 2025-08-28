@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaFlow Dashboard - Real-time Stats & Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="mobile-ui.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.1)',
+                        'glass-border': 'rgba(255, 255, 255, 0.2)',
+                        neon: {
+                            pink: '#FF006E',
+                            blue: '#3A86FF',
+                            purple: '#8338EC',
+                            green: '#06FFA5'
+                        }
+                    },
+                    animation: {
+                        'slide-in': 'slide-in 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                    },
+                    keyframes: {
+                        'slide-in': {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-black text-white">
+    <!-- Background Effects -->
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/10 via-black to-neon-blue/10"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.03"%3E%3Cpath d="M0 0h20v20H0V0zm20 20h20v20H20V20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-glass backdrop-blur-xl border-r border-glass-border transform -translate-x-full md:translate-x-0 transition-transform z-40">
+        <div class="p-6">
+            <div class="flex items-center space-x-2 mb-8">
+                <div class="w-10 h-10 bg-gradient-to-br from-neon-pink to-neon-purple rounded-xl animate-pulse"></div>
+                <span class="text-xl font-bold">MediaFlow</span>
+            </div>
+            
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 bg-neon-purple/20 rounded-xl border border-neon-purple/50">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                    </svg>
+                    <span>Media Library</span>
+                </a>
+                
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Schedule</span>
+                </a>
+                
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                    </svg>
+                    <span>Users</span>
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-glass-border">
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- Voice Control Status -->
+        <div class="absolute bottom-0 left-0 right-0 p-6">
+            <div class="bg-glass backdrop-blur-xl rounded-xl p-4 border border-glass-border">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-400">Voice Control</span>
+                    <div class="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                </div>
+                <button onclick="toggleVoice()" class="w-full py-2 bg-neon-purple/20 rounded-lg hover:bg-neon-purple/30 transition-colors text-sm">
+                    "Hey MediaFlow"
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="md:ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="bg-glass backdrop-blur-xl border-b border-glass-border p-4">
+            <div class="flex items-center justify-between">
+                <button onclick="toggleSidebar()" class="md:hidden">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-neon-blue bg-clip-text text-transparent">
+                    Dashboard
+                </h1>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- AI Assistant -->
+                    <button onclick="openAIAssistant()" class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors">
+                        <svg class="w-5 h-5 text-neon-green" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <button class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors relative">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                        </svg>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-neon-pink rounded-full"></span>
+                    </button>
+                    
+                    <!-- Profile -->
+                    <div class="w-10 h-10 bg-gradient-to-br from-neon-blue to-neon-purple rounded-full"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="p-6">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Active Streams -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-pink/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">Active Streams</h3>
+                        <div class="w-10 h-10 bg-neon-pink/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-neon-pink" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <p class="text-3xl font-bold">7</p>
+                            <p class="text-sm text-gray-500">+2 from yesterday</p>
+                        </div>
+                        <div class="text-neon-green text-sm">↑ 28%</div>
+                    </div>
+                </div>
+
+                <!-- Total Media -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-blue/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">Total Media</h3>
+                        <div class="w-10 h-10 bg-neon-blue/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-neon-blue" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <p class="text-3xl font-bold">2,847</p>
+                            <p class="text-sm text-gray-500">Movies & Shows</p>
+                        </div>
+                        <div class="text-neon-blue text-sm">+145</div>
+                    </div>
+                </div>
+
+                <!-- Storage Used -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-green/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">Storage Used</h3>
+                        <div class="w-10 h-10 bg-neon-green/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-neon-green" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+                                <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+                                <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <p class="text-3xl font-bold">12.4</p>
+                            <p class="text-sm text-gray-500">TB of 20TB</p>
+                        </div>
+                        <div class="text-neon-green text-sm">62%</div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendations -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-purple/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">AI Accuracy</h3>
+                        <div class="w-10 h-10 bg-neon-purple/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-neon-purple" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 10-1.415-1.414l-.707.707a1 1 0 101.415 1.414l.707-.707zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <p class="text-3xl font-bold">94%</p>
+                            <p class="text-sm text-gray-500">Match Rate</p>
+                        </div>
+                        <div class="text-neon-purple text-sm">↑ 3%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Streaming Activity Chart -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                    <h3 class="text-xl font-semibold mb-4">Streaming Activity</h3>
+                    <canvas id="activityChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Popular Content -->
+                <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                    <h3 class="text-xl font-semibold mb-4">Trending Now</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-glass rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-neon-pink to-neon-purple rounded-lg"></div>
+                                <div>
+                                    <p class="font-medium">The Last of Us</p>
+                                    <p class="text-sm text-gray-400">87 streams today</p>
+                                </div>
+                            </div>
+                            <div class="text-neon-pink">🔥</div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-glass rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-neon-blue to-neon-green rounded-lg"></div>
+                                <div>
+                                    <p class="font-medium">Succession S4</p>
+                                    <p class="text-sm text-gray-400">62 streams today</p>
+                                </div>
+                            </div>
+                            <div class="text-neon-blue">📈</div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-glass rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-neon-purple to-neon-pink rounded-lg"></div>
+                                <div>
+                                    <p class="font-medium">Ted Lasso</p>
+                                    <p class="text-sm text-gray-400">45 streams today</p>
+                                </div>
+                            </div>
+                            <div class="text-neon-green">⭐</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Services -->
+            <div class="bg-glass backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold">Service Status</h3>
+                    <button onclick="refreshServices()" class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors">
+                        <svg class="w-5 h-5 animate-spin-slow" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="service-card p-4 bg-glass rounded-xl border border-glass-border hover:border-neon-green/50 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Plex</span>
+                            <div class="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                        </div>
+                        <p class="text-sm text-gray-400">Running</p>
+                    </div>
+                    
+                    <div class="service-card p-4 bg-glass rounded-xl border border-glass-border hover:border-neon-green/50 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Sonarr</span>
+                            <div class="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                        </div>
+                        <p class="text-sm text-gray-400">Running</p>
+                    </div>
+                    
+                    <div class="service-card p-4 bg-glass rounded-xl border border-glass-border hover:border-neon-green/50 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Radarr</span>
+                            <div class="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                        </div>
+                        <p class="text-sm text-gray-400">Running</p>
+                    </div>
+                    
+                    <div class="service-card p-4 bg-glass rounded-xl border border-glass-border hover:border-neon-yellow/50 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Lidarr</span>
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        </div>
+                        <p class="text-sm text-gray-400">Starting...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- AI Assistant Modal -->
+    <div id="aiAssistant" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center h-full p-4">
+            <div class="bg-glass backdrop-blur-xl rounded-2xl border border-glass-border w-full max-w-md animate-slide-in">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">AI Assistant</h3>
+                        <button onclick="closeAIAssistant()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="bg-glass rounded-xl p-4 mb-4 max-h-64 overflow-y-auto">
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-2">
+                                <div class="w-8 h-8 bg-neon-green/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <span class="text-xs">AI</span>
+                                </div>
+                                <div class="bg-glass rounded-lg p-3">
+                                    <p class="text-sm">Hello! I can help you find content, manage your library, or answer questions about your media server.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <input type="text" placeholder="Ask me anything..." class="flex-1 bg-glass rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-neon-green/50">
+                        <button class="p-2 bg-neon-green/20 rounded-lg hover:bg-neon-green/30 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Social Share Float -->
+    <div id="social-share-float" class="fixed bottom-6 right-6"></div>
+
+    <script src="social-share.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Socket.IO connection
+        let socket = null;
+        try {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('✅ Socket.IO connected successfully');
+            });
+            socket.on('disconnect', () => {
+                console.log('❌ Socket.IO disconnected');
+            });
+        } catch (error) {
+            console.log('Socket.IO not available, using fallback methods');
+        }
+
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        }
+
+        // Toggle voice control
+        function toggleVoice() {
+            console.log('Voice control toggled');
+            if ('webkitSpeechRecognition' in window) {
+                const recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript;
+                    console.log('Voice command:', command);
+                    // Process voice commands here
+                };
+                
+                recognition.start();
+            }
+        }
+
+        // AI Assistant
+        function openAIAssistant() {
+            document.getElementById('aiAssistant').classList.remove('hidden');
+        }
+
+        function closeAIAssistant() {
+            document.getElementById('aiAssistant').classList.add('hidden');
+        }
+
+        // Refresh services with real API call
+        async function refreshServices() {
+            const cards = document.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                card.classList.add('animate-pulse');
+            });
+            
+            try {
+                const response = await fetch('/api/services');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateServiceStatus(data);
+                    console.log('✅ Services refreshed successfully');
+                } else {
+                    console.log('⚠️ Failed to refresh services');
+                }
+            } catch (error) {
+                console.log('❌ Error refreshing services:', error);
+            }
+            
+            setTimeout(() => {
+                cards.forEach(card => {
+                    card.classList.remove('animate-pulse');
+                });
+            }, 1000);
+        }
+        
+        function updateServiceStatus(data) {
+            // Update service cards with real data
+            if (data.services) {
+                Object.entries(data.services).forEach(([key, service]) => {
+                    const card = document.querySelector(`[data-service="${key}"]`);
+                    if (card) {
+                        const indicator = card.querySelector('.status-dot');
+                        if (indicator) {
+                            indicator.style.backgroundColor = service.health?.status === 'healthy' ? '#00ff00' : '#ff0000';
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize Chart
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, 'rgba(255, 0, 110, 0.4)');
+        gradient.addColorStop(1, 'rgba(255, 0, 110, 0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Streams',
+                    data: [12, 19, 15, 25, 22, 30, 28],
+                    fill: true,
+                    backgroundColor: gradient,
+                    borderColor: '#FF006E',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointBackgroundColor: '#FF006E',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize social share
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.initSocialShare) {
+                window.initSocialShare('social-share-float', {
+                    url: window.location.href,
+                    title: 'Check out my MediaFlow Dashboard!',
+                    description: 'Managing my media server with style',
+                    floating: true
+                });
+            }
+        });
+
+        // Real-time updates from API
+        async function updateRealTimeStats() {
+            try {
+                const response = await fetch('/api/system');
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update dashboard stats with real data
+                    if (data.services) {
+                        document.getElementById('online-count').textContent = data.services.healthy || 0;
+                        document.getElementById('offline-count').textContent = (data.services.unhealthy || 0) + (data.services.unknown || 0);
+                    }
+                }
+            } catch (error) {
+                console.log('Error updating stats:', error);
+            }
+        }
+        
+        // Update stats every 30 seconds
+        setInterval(updateRealTimeStats, 30000);
+        
+        // Initial update
+        setTimeout(updateRealTimeStats, 2000);
+    </script>
+</body>
+</html>

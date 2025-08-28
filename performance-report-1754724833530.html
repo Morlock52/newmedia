@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Server Performance Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1, h2 { color: #333; }
+        .summary { background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+        .critical { background-color: #ffebee; }
+        .high { background-color: #fff3e0; }
+        .medium { background-color: #f3e5f5; }
+        .metric { display: inline-block; margin: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+        .good { color: #4caf50; }
+        .warning { color: #ff9800; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Media Server Performance Report</h1>
+        <div class="summary">
+            <strong>Test Date:</strong> 2025-08-09T07:33:44.282Z<br>
+            <strong>Platform:</strong> darwin<br>
+            <strong>Node Version:</strong> v24.2.0
+        </div>
+
+        <h2>📊 Performance Overview</h2>
+        <div class="metrics">
+            <div class="metric">
+                <strong>Total Bottlenecks:</strong> 11
+            </div>
+            <div class="metric">
+                <strong>Critical Issues:</strong> 11
+            </div>
+            <div class="metric">
+                <strong>Services Tested:</strong> 11
+            </div>
+        </div>
+
+        <h2>🔍 Identified Bottlenecks</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Component</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Jellyfin</td>
+                <td>CRITICAL</td>
+                <td>Service Jellyfin is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Sonarr</td>
+                <td>CRITICAL</td>
+                <td>Service Sonarr is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Radarr</td>
+                <td>CRITICAL</td>
+                <td>Service Radarr is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Prowlarr</td>
+                <td>CRITICAL</td>
+                <td>Service Prowlarr is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>qBittorrent</td>
+                <td>CRITICAL</td>
+                <td>Service qBittorrent is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Plex</td>
+                <td>CRITICAL</td>
+                <td>Service Plex is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Dashboard</td>
+                <td>CRITICAL</td>
+                <td>Service Dashboard is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>API Server</td>
+                <td>CRITICAL</td>
+                <td>Service API Server is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Portainer</td>
+                <td>CRITICAL</td>
+                <td>Service Portainer is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Grafana</td>
+                <td>CRITICAL</td>
+                <td>Service Grafana is not responding</td>
+            </tr><tr class="critical">
+                <td>AVAILABILITY</td>
+                <td>Prometheus</td>
+                <td>CRITICAL</td>
+                <td>Service Prometheus is not responding</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h2>💡 Recommendations</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Suggestion</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Jellyfin container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Sonarr container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Radarr container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Prowlarr container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check qBittorrent container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Plex container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Dashboard container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check API Server container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Portainer container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Grafana container health and logs</td>
+            </tr><tr class="critical">
+                <td>Service Health</td>
+                <td>CRITICAL</td>
+                <td>Check Prometheus container health and logs</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h2>📈 Detailed Metrics</h2>
+        <h3>Container Startup Times</h3>
+        <pre>{
+  "error": "Command failed: docker-compose up -d --no-recreate\ntime=\"2025-08-09T03:33:48-04:00\" level=warning msg=\"/Users/morlock/fun/newmedia/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion\"\n immich-server Pulling \n paperless-ngx Pulling \n readarr Pulling \n immich-machine-learning Pulling \n photoprism Pulling \n calibre-web Pulling \n airsonic-advanced Pulling \n immich-microservices Pulling \n glances Pulling \n nextcloud Pulling \n readarr Error no matching manifest for linux/arm64/v8 in the manifest list entries: no match for platform in manifest: not found\n photoprism  Interrupted\n airsonic-advanced  Interrupted\n calibre-web  Interrupted\nError response from daemon: no matching manifest for linux/arm64/v8 in the manifest list entries: no match for platform in manifest: not found\n",
+  "message": "Failed to start container stack"
+}</pre>
+
+        <h3>Memory Usage</h3>
+        <pre>{
+  "containers": {},
+  "totalUsage": "0 B",
+  "timestamp": "2025-08-09T07:33:51.646Z"
+}</pre>
+
+        <h3>CPU Utilization</h3>
+        <pre>{
+  "containers": {},
+  "totalUsage": "0.00%",
+  "timestamp": "2025-08-09T07:33:52.224Z"
+}</pre>
+
+        <h3>Response Time Tests</h3>
+        <pre>{
+  "Jellyfin": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:8096/health"
+  },
+  "Sonarr": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:8989/ping"
+  },
+  "Radarr": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:7878/ping"
+  },
+  "Prowlarr": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:9696/ping"
+  },
+  "qBittorrent": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:8080/api/v2/app/version"
+  },
+  "Plex": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:32400/identity"
+  },
+  "Dashboard": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:3000"
+  },
+  "API Server": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:3002/health"
+  },
+  "Portainer": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:9000"
+  },
+  "Grafana": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:3000"
+  },
+  "Prometheus": {
+    "responseTime": -1,
+    "error": "",
+    "available": false,
+    "url": "http://localhost:9090"
+  }
+}</pre>
+    </div>
+</body>
+</html>
+        

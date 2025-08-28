@@ -1,0 +1,362 @@
+{
+  "timestamp": "2025-08-18T10:02:53.524Z",
+  "projectId": "3e6fbcc1-60f6-434b-a45b-e811cc9bb891",
+  "testResults": {
+    "total": 56,
+    "passed": 41,
+    "failed": 15,
+    "actualErrors": [
+      {
+        "test": "User login",
+        "error": {
+          "success": true,
+          "data": {
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzU1NTExMzcyLCJleHAiOjE3NTU1OTc3NzJ9.NVVWm-3P7710PzZEJbFuR7d1emwOZ26GpdL58XqTu20",
+            "refreshToken": "4d7ebe210b97eb8a7e172fa51956367d26b4b572ab74e2ae8e532f9d082316828af279059a14d6618e9af1948a389ac6b41cd358a7292fec33c4d7d06e07d183",
+            "user": {
+              "id": "1",
+              "username": "admin",
+              "email": "updated@example.com",
+              "role": "admin"
+            }
+          }
+        }
+      },
+      {
+        "test": "Get media libraries",
+        "error": {
+          "success": true,
+          "data": [
+            {
+              "id": "1",
+              "name": "Movies",
+              "type": "movies",
+              "path": "/media/movies",
+              "itemCount": 1250
+            },
+            {
+              "id": "2",
+              "name": "TV Shows",
+              "type": "tv",
+              "path": "/media/tv",
+              "itemCount": 85
+            },
+            {
+              "id": "3",
+              "name": "Music",
+              "type": "music",
+              "path": "/media/music",
+              "itemCount": 3420
+            }
+          ],
+          "timestamp": "2025-08-18T10:02:53.488Z"
+        }
+      },
+      {
+        "test": "Jellyfin integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Plex integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Sonarr integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Radarr integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Prowlarr integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "qBittorrent integration test",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Create user",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:352:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Get users list",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:364:27)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Update user",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:372:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Delete user",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:382:25)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Send notification",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:395:26)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Get notifications",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:407:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      },
+      {
+        "test": "Mark notification as read",
+        "error": "Request failed with status code 429",
+        "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:415:26)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+        "response": "Too many requests, please try again later."
+      }
+    ]
+  },
+  "failures": [
+    {
+      "test": "User login",
+      "error": {
+        "success": true,
+        "data": {
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzU1NTExMzcyLCJleHAiOjE3NTU1OTc3NzJ9.NVVWm-3P7710PzZEJbFuR7d1emwOZ26GpdL58XqTu20",
+          "refreshToken": "4d7ebe210b97eb8a7e172fa51956367d26b4b572ab74e2ae8e532f9d082316828af279059a14d6618e9af1948a389ac6b41cd358a7292fec33c4d7d06e07d183",
+          "user": {
+            "id": "1",
+            "username": "admin",
+            "email": "updated@example.com",
+            "role": "admin"
+          }
+        }
+      }
+    },
+    {
+      "test": "Get media libraries",
+      "error": {
+        "success": true,
+        "data": [
+          {
+            "id": "1",
+            "name": "Movies",
+            "type": "movies",
+            "path": "/media/movies",
+            "itemCount": 1250
+          },
+          {
+            "id": "2",
+            "name": "TV Shows",
+            "type": "tv",
+            "path": "/media/tv",
+            "itemCount": 85
+          },
+          {
+            "id": "3",
+            "name": "Music",
+            "type": "music",
+            "path": "/media/music",
+            "itemCount": 3420
+          }
+        ],
+        "timestamp": "2025-08-18T10:02:53.488Z"
+      }
+    },
+    {
+      "test": "Jellyfin integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Plex integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Sonarr integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Radarr integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Prowlarr integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "qBittorrent integration test",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Create user",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Get users list",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Update user",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Delete user",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Send notification",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Get notifications",
+      "error": "Request failed with status code 429"
+    },
+    {
+      "test": "Mark notification as read",
+      "error": "Request failed with status code 429"
+    }
+  ],
+  "detailedErrors": [
+    {
+      "test": "User login",
+      "error": {
+        "success": true,
+        "data": {
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzU1NTExMzcyLCJleHAiOjE3NTU1OTc3NzJ9.NVVWm-3P7710PzZEJbFuR7d1emwOZ26GpdL58XqTu20",
+          "refreshToken": "4d7ebe210b97eb8a7e172fa51956367d26b4b572ab74e2ae8e532f9d082316828af279059a14d6618e9af1948a389ac6b41cd358a7292fec33c4d7d06e07d183",
+          "user": {
+            "id": "1",
+            "username": "admin",
+            "email": "updated@example.com",
+            "role": "admin"
+          }
+        }
+      }
+    },
+    {
+      "test": "Get media libraries",
+      "error": {
+        "success": true,
+        "data": [
+          {
+            "id": "1",
+            "name": "Movies",
+            "type": "movies",
+            "path": "/media/movies",
+            "itemCount": 1250
+          },
+          {
+            "id": "2",
+            "name": "TV Shows",
+            "type": "tv",
+            "path": "/media/tv",
+            "itemCount": 85
+          },
+          {
+            "id": "3",
+            "name": "Music",
+            "type": "music",
+            "path": "/media/music",
+            "itemCount": 3420
+          }
+        ],
+        "timestamp": "2025-08-18T10:02:53.488Z"
+      }
+    },
+    {
+      "test": "Jellyfin integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Plex integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Sonarr integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Radarr integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Prowlarr integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "qBittorrent integration test",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testServiceIntegrations (/Users/morlock/fun/newmedia/tests/real-backend-test.js:338:30)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:488:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Create user",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:352:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Get users list",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:364:27)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Update user",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:372:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Delete user",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testUserManagement (/Users/morlock/fun/newmedia/tests/real-backend-test.js:382:25)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:489:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Send notification",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:395:26)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Get notifications",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:407:28)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    },
+    {
+      "test": "Mark notification as read",
+      "error": "Request failed with status code 429",
+      "stack": "AxiosError: Request failed with status code 429\n    at settle (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:2090:12)\n    at IncomingMessage.handleStreamEnd (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:3207:11)\n    at IncomingMessage.emit (node:events:520:35)\n    at endReadableNT (node:internal/streams/readable:1701:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at Axios.request (/Users/morlock/fun/newmedia/node_modules/axios/dist/node/axios.cjs:4317:41)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async RealBackendTest.testNotifications (/Users/morlock/fun/newmedia/tests/real-backend-test.js:415:26)\n    at async RealBackendTest.runAllTests (/Users/morlock/fun/newmedia/tests/real-backend-test.js:490:9)\n    at async main (/Users/morlock/fun/newmedia/tests/real-backend-test.js:504:24)",
+      "response": "Too many requests, please try again later."
+    }
+  ],
+  "needsSwarmRepair": true
+}

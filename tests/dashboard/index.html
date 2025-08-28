@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaFlow Pro Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.1)',
+                        'glass-border': 'rgba(255, 255, 255, 0.2)',
+                        neon: {
+                            pink: '#FF006E',
+                            blue: '#3A86FF',
+                            purple: '#8338EC',
+                            green: '#06FFA5',
+                            yellow: '#FFBE0B',
+                            orange: '#FF5722'
+                        },
+                        dark: {
+                            primary: '#0D1117',
+                            secondary: '#161B22',
+                            tertiary: '#21262D'
+                        }
+                    },
+                    animation: {
+                        'slide-in': 'slide-in 0.3s ease-out',
+                        'slide-out': 'slide-out 0.3s ease-in',
+                        'fade-in': 'fade-in 0.2s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                        'bounce-subtle': 'bounce-subtle 2s infinite',
+                    },
+                    keyframes: {
+                        'slide-in': {
+                            '0%': { transform: 'translateX(-100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        'slide-out': {
+                            '0%': { transform: 'translateX(0)', opacity: '1' },
+                            '100%': { transform: 'translateX(-100%)', opacity: '0' },
+                        },
+                        'fade-in': {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        'bounce-subtle': {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-primary text-white min-h-screen">
+    <!-- Background Effects -->
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/10 via-dark-primary to-neon-blue/10"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.03"%3E%3Cpath d="M0 0h20v20H0V0zm20 20h20v20H20V20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-dark-secondary backdrop-blur-xl border-r border-glass-border transform -translate-x-full md:translate-x-0 transition-transform z-40">
+        <div class="p-6">
+            <!-- Logo -->
+            <div class="flex items-center space-x-2 mb-8">
+                <div class="w-10 h-10 bg-gradient-to-br from-neon-pink to-neon-purple rounded-xl animate-pulse-slow"></div>
+                <div>
+                    <span class="text-xl font-bold">MediaFlow</span>
+                    <div class="text-xs text-gray-400">Pro Dashboard</div>
+                </div>
+            </div>
+            
+            <!-- Main Navigation -->
+            <nav class="space-y-2">
+                <a href="#" onclick="showPage('dashboard')" class="nav-item flex items-center space-x-3 px-4 py-3 bg-neon-purple/20 rounded-xl border border-neon-purple/50 active">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    <span>Dashboard</span>
+                    <div class="ml-auto w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                </a>
+                
+                <a href="#" onclick="showPage('media')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                    </svg>
+                    <span>Media Library</span>
+                </a>
+                
+                <a href="#" onclick="showPage('services')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Services</span>
+                </a>
+                
+                <a href="#" onclick="showPage('monitoring')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Monitoring</span>
+                </a>
+
+                <a href="#" onclick="showPage('logs')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Logs</span>
+                </a>
+                
+                <a href="#" onclick="showPage('users')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                    </svg>
+                    <span>Users</span>
+                </a>
+
+                <a href="#" onclick="showPage('backup')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/>
+                    </svg>
+                    <span>Backup</span>
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-glass-border">
+                    <a href="#" onclick="showPage('settings')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+
+                    <a href="#" onclick="showPage('api-docs')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
+                        </svg>
+                        <span>API Docs</span>
+                    </a>
+
+                    <a href="#" onclick="showPage('help')" class="nav-item flex items-center space-x-3 px-4 py-3 hover:bg-glass rounded-xl transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Help</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- Voice Control Status -->
+        <div class="absolute bottom-0 left-0 right-0 p-6">
+            <div class="bg-glass backdrop-blur-xl rounded-xl p-4 border border-glass-border">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-400">Voice Control</span>
+                    <div id="voice-status" class="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                </div>
+                <button onclick="toggleVoice()" class="w-full py-2 bg-neon-purple/20 rounded-lg hover:bg-neon-purple/30 transition-colors text-sm">
+                    "Hey MediaFlow"
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="md:ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="bg-dark-secondary backdrop-blur-xl border-b border-glass-border p-4 sticky top-0 z-30">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-glass rounded-lg transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    
+                    <h1 id="page-title" class="text-2xl font-bold bg-gradient-to-r from-white to-neon-blue bg-clip-text text-transparent">
+                        Dashboard
+                    </h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Search -->
+                    <div class="relative hidden md:block">
+                        <input type="text" id="global-search" placeholder="Search services, media..." 
+                               class="bg-glass backdrop-blur-xl border border-glass-border rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-neon-blue/50 w-64">
+                        <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors">
+                        <svg id="theme-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <button onclick="toggleNotifications()" class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors relative">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                        </svg>
+                        <span id="notification-count" class="absolute -top-1 -right-1 w-4 h-4 bg-neon-pink rounded-full text-xs flex items-center justify-center">3</span>
+                    </button>
+                    
+                    <!-- Profile -->
+                    <div class="relative">
+                        <button onclick="toggleProfile()" class="w-10 h-10 bg-gradient-to-br from-neon-blue to-neon-purple rounded-full flex items-center justify-center">
+                            <span class="text-sm font-bold">AD</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content Container -->
+        <div id="page-content" class="p-6">
+            <!-- Dashboard Page (Default) -->
+            <div id="dashboard-page" class="page-content">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Active Streams -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-pink/50 transition-all">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400">Active Streams</h3>
+                            <div class="w-10 h-10 bg-neon-pink/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-neon-pink" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-3xl font-bold" id="active-streams">7</p>
+                                <p class="text-sm text-gray-500">+2 from yesterday</p>
+                            </div>
+                            <div class="text-neon-green text-sm">↑ 28%</div>
+                        </div>
+                    </div>
+
+                    <!-- Total Media -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-blue/50 transition-all">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400">Total Media</h3>
+                            <div class="w-10 h-10 bg-neon-blue/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-neon-blue" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-3xl font-bold" id="total-media">2,847</p>
+                                <p class="text-sm text-gray-500">Movies & Shows</p>
+                            </div>
+                            <div class="text-neon-blue text-sm">+145</div>
+                        </div>
+                    </div>
+
+                    <!-- Storage Used -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-green/50 transition-all">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400">Storage Used</h3>
+                            <div class="w-10 h-10 bg-neon-green/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-neon-green" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+                                    <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+                                    <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-3xl font-bold" id="storage-used">12.4</p>
+                                <p class="text-sm text-gray-500">TB of 20TB</p>
+                            </div>
+                            <div class="text-neon-green text-sm">62%</div>
+                        </div>
+                    </div>
+
+                    <!-- System Health -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border hover:border-neon-purple/50 transition-all">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400">System Health</h3>
+                            <div class="w-10 h-10 bg-neon-purple/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-neon-purple" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-3xl font-bold text-neon-green" id="system-health">98%</p>
+                                <p class="text-sm text-gray-500">All Systems</p>
+                            </div>
+                            <div class="text-neon-green text-sm">●</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Activity Chart -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold">Streaming Activity</h3>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 bg-neon-blue/20 rounded-lg text-sm">7D</button>
+                                <button class="px-3 py-1 bg-glass rounded-lg text-sm">30D</button>
+                            </div>
+                        </div>
+                        <canvas id="activityChart" height="200"></canvas>
+                    </div>
+
+                    <!-- Service Status -->
+                    <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold">Service Status</h3>
+                            <button onclick="refreshServices()" class="p-2 bg-glass rounded-lg hover:bg-white/20 transition-colors">
+                                <svg id="refresh-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div id="services-grid" class="grid grid-cols-2 gap-4">
+                            <!-- Services will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-dark-secondary backdrop-blur-xl rounded-2xl p-6 border border-glass-border">
+                    <h3 class="text-xl font-semibold mb-4">Recent Activity</h3>
+                    <div id="recent-activity" class="space-y-3">
+                        <!-- Activity items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other pages will be added here via JavaScript -->
+        </div>
+    </main>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="fixed top-16 right-4 w-80 bg-dark-secondary backdrop-blur-xl rounded-xl border border-glass-border shadow-2xl z-50 transform translate-x-full transition-transform">
+        <div class="p-4 border-b border-glass-border">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold">Notifications</h3>
+                <button onclick="toggleNotifications()" class="text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-4 max-h-96 overflow-y-auto" id="notifications-list">
+            <!-- Notifications will be populated here -->
+        </div>
+    </div>
+
+    <!-- Profile Menu -->
+    <div id="profile-menu" class="fixed top-16 right-4 w-64 bg-dark-secondary backdrop-blur-xl rounded-xl border border-glass-border shadow-2xl z-50 transform translate-x-full transition-transform">
+        <div class="p-4">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-neon-blue to-neon-purple rounded-full flex items-center justify-center">
+                    <span class="font-bold">AD</span>
+                </div>
+                <div>
+                    <div class="font-semibold">Admin</div>
+                    <div class="text-sm text-gray-400">admin@mediaflow.local</div>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button class="w-full text-left p-2 hover:bg-glass rounded-lg transition-colors">Profile Settings</button>
+                <button class="w-full text-left p-2 hover:bg-glass rounded-lg transition-colors">Preferences</button>
+                <button class="w-full text-left p-2 hover:bg-glass rounded-lg transition-colors">Security</button>
+                <div class="border-t border-glass-border pt-2 mt-2">
+                    <button class="w-full text-left p-2 hover:bg-glass rounded-lg transition-colors text-red-400">Sign Out</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-dark-secondary rounded-xl p-8 text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-neon-blue border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-lg">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/dashboard.js"></script>
+    <script src="js/services.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/charts.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+#!/command/with-contenv bash
+# Traefik reverse proxy runner
+
+set -e
+
+echo "Starting Traefik..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/traefik/{config,acme,logs}
+
+# Set proper ownership
+chown -R media:media /config/traefik
+
+# Create default config if not exists
+if [ ! -f /config/traefik/traefik.yml ]; then
+    cat > /config/traefik/traefik.yml << 'EOF'
+api:
+  dashboard: true
+  debug: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    directory: /config/traefik/config
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@localhost
+      storage: /config/traefik/acme/acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO
+  filePath: /config/traefik/logs/traefik.log
+
+accessLog:
+  filePath: /config/traefik/logs/access.log
+EOF
+fi
+
+# Run Traefik
+exec s6-setuidgid media /usr/local/bin/traefik \
+    --configFile=/config/traefik/traefik.yml

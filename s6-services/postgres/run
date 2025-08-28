@@ -1,0 +1,28 @@
+#!/command/with-contenv bash
+# PostgreSQL service runner
+
+set -e
+
+echo "Starting PostgreSQL..."
+
+# Wait for proper initialization
+s6-setuidgid postgres mkdir -p /data/databases/postgres
+
+# Initialize database if it doesn't exist
+if [ ! -f "/data/databases/postgres/PG_VERSION" ]; then
+    echo "Initializing PostgreSQL database..."
+    s6-setuidgid postgres /usr/lib/postgresql/15/bin/initdb \
+        -D /data/databases/postgres \
+        --locale=C.UTF-8 \
+        --encoding=UTF8 \
+        --auth-local=peer \
+        --auth-host=md5
+fi
+
+# Set proper ownership
+chown -R postgres:postgres /data/databases/postgres
+chmod 700 /data/databases/postgres
+
+# Start PostgreSQL
+exec s6-setuidgid postgres /usr/lib/postgresql/15/bin/postgres \
+    -D /data/databases/postgres

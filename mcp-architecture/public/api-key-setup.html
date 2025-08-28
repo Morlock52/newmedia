@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key Setup - Ultimate Media Server 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #fff, #a8edea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 30px 0 15px 0;
+            color: #a8edea;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 20px 0 10px 0;
+            color: #fed330;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #a8edea;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #a8edea;
+            color: #000;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .code-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #06b6d4, #8b5cf6);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        .api-key-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .success-msg {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error-msg {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            color: #a8edea;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        
+        <div class="card">
+            <h1>🔑 Connect Your OpenAI API Key</h1>
+            <p style="text-align: center; font-size: 1.1rem; opacity: 0.9;">
+                Unlock AI-powered features for your Ultimate Media Server
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>📋 Quick Setup Guide</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Get Your OpenAI API Key</strong>
+                <p style="margin-left: 40px; margin-top: 10px;">
+                    Visit <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #a8edea;">platform.openai.com/api-keys</a> and create a new secret key.
+                </p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Enter Your API Key Below</strong>
+                <div style="margin-left: 40px; margin-top: 10px;">
+                    <input type="password" 
+                           id="apiKeyInput" 
+                           class="api-key-input" 
+                           placeholder="sk-..." 
+                           onpaste="this.type='text'; setTimeout(() => this.type='password', 1000)">
+                    <button class="btn" onclick="saveApiKey()">💾 Save API Key</button>
+                    <button class="btn" style="background: linear-gradient(45deg, #ff6b6b, #ee5a24);" onclick="testApiKey()">🧪 Test Connection</button>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Restart MCP Server</strong>
+                <div class="code-box">
+                    docker-compose -f docker-compose.simple.yml restart mcp-dashboard
+                </div>
+            </div>
+
+            <div class="success-msg" id="successMsg">
+                ✅ API Key saved successfully! Restart the MCP server to apply changes.
+            </div>
+
+            <div class="error-msg" id="errorMsg">
+                ❌ Error: Please check your API key format.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🤖 What You Can Do With OpenAI Integration</h2>
+            
+            <div class="feature-grid">
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Smart Search</h3>
+                    <p>Natural language search across all your media</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <h3>AI Recommendations</h3>
+                    <p>Personalized content suggestions</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🗣️</div>
+                    <h3>Voice Control</h3>
+                    <p>Control your server with voice commands</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <h3>Trend Analysis</h3>
+                    <p>AI-powered viewing insights</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Auto Organization</h3>
+                    <p>Smart library management</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Translation</h3>
+                    <p>Auto-translate subtitles and metadata</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>💡 Example AI Commands</h2>
+            
+            <div class="code-box">
+                "Find action movies from the 90s with high ratings"<br>
+                "Download the latest episodes of my watched shows"<br>
+                "Create a playlist for family movie night"<br>
+                "What should I watch based on my history?"<br>
+                "Optimize my library for 4K content"
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📝 Manual Configuration (Alternative Method)</h2>
+            
+            <p>You can also edit the <code>.env</code> file directly:</p>
+            
+            <div class="code-box">
+                cd /Users/morlock/fun/newmedia/mcp-architecture<br>
+                nano .env<br><br>
+                # Find and update this line:<br>
+                OPENAI_API_KEY=sk-your-actual-api-key-here
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="/" class="btn">🏠 Back to Dashboard</a>
+            <a href="https://platform.openai.com/docs" target="_blank" class="btn">📚 OpenAI Docs</a>
+        </div>
+    </div>
+
+    <script>
+        function saveApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            
+            if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
+                showError('Invalid API key format. It should start with "sk-"');
+                return;
+            }
+            
+            // In a real implementation, this would save to the backend
+            localStorage.setItem('openai_api_key', apiKey);
+            showSuccess();
+            
+            // Show restart command
+            alert('API Key saved locally!\n\nNow run this command to apply:\ndocker-compose -f docker-compose.simple.yml restart mcp-dashboard');
+        }
+        
+        async function testApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value || localStorage.getItem('openai_api_key');
+            
+            if (!apiKey) {
+                showError('Please enter an API key first');
+                return;
+            }
+            
+            try {
+                // Test the MCP connection
+                const response = await fetch('http://localhost:3000/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    alert('✅ MCP Server is running!\n\nTo test OpenAI integration, restart the server with your API key.');
+                } else {
+                    alert('❌ MCP Server error. Please check the logs.');
+                }
+            } catch (error) {
+                alert('❌ Cannot connect to MCP Server. Make sure it\'s running.');
+            }
+        }
+        
+        function showSuccess() {
+            document.getElementById('successMsg').style.display = 'block';
+            document.getElementById('errorMsg').style.display = 'none';
+            setTimeout(() => {
+                document.getElementById('successMsg').style.display = 'none';
+            }, 5000);
+        }
+        
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = '❌ ' + message;
+            errorMsg.style.display = 'block';
+            document.getElementById('successMsg').style.display = 'none';
+            setTimeout(() => {
+                errorMsg.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Load saved API key if exists
+        window.onload = function() {
+            const savedKey = localStorage.getItem('openai_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+version: '3.8'
+
+# Ultimate Media Server 2025 - Single Container Deployment
+# ALL 30 services running in one unified container
+# Addresses user requirement: "one docker container"
+
+services:
+  ultimate-media-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.single-container
+    container_name: ultimate-media-server-2025
+    restart: unless-stopped
+    
+    # ALL service ports exposed from single container
+    ports:
+      # Main Dashboard and MCP
+      - "8090:8090"   # Ultimate Dashboard
+      - "3000:3000"   # MCP Server
+      
+      # Media Servers
+      - "8096:8096"   # Jellyfin
+      - "32400:32400" # Plex
+      - "8097:8097"   # Emby
+      
+      # Content Management (*arr Suite)
+      - "8989:8989"   # Sonarr
+      - "7878:7878"   # Radarr
+      - "8686:8686"   # Lidarr
+      - "8787:8787"   # Readarr
+      - "6767:6767"   # Bazarr
+      
+      # Indexers & Search
+      - "9696:9696"   # Prowlarr
+      - "9117:9117"   # Jackett
+      - "8191:8191"   # FlareSolverr
+      
+      # Download Clients
+      - "8080:8080"   # qBittorrent
+      - "9091:9091"   # Transmission
+      - "8112:8112"   # Deluge
+      - "6789:6789"   # NZBGet
+      - "8085:8085"   # SABnzbd
+      
+      # Request Management
+      - "5055:5055"   # Overseerr
+      - "4545:4545"   # Requestrr
+      - "3579:3579"   # Ombi
+      
+      # Analytics & Monitoring
+      - "8181:8181"   # Tautulli
+      - "19999:19999" # Netdata
+      
+      # Dashboards
+      - "3001:3001"   # Homepage
+      - "80:80"       # Heimdall
+      - "8081:8081"   # Organizr
+      - "7575:7575"   # Homarr
+      
+      # Infrastructure
+      - "81:81"       # Nginx Proxy Manager
+      - "9000:9000"   # Portainer
+      - "8082:8082"   # Watchtower
+      - "8888:8888"   # Gluetun VPN
+      - "5656:5656"   # Unpackerr
+    
+    environment:
+      # System Configuration
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - UMASK=${UMASK:-022}
+      
+      # OpenAI Configuration (Required for MCP)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-o1-mini}
+      
+      # Media Server API Keys
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - EMBY_API_KEY=${EMBY_API_KEY}
+      
+      # Content Management API Keys
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - LIDARR_API_KEY=${LIDARR_API_KEY}
+      - READARR_API_KEY=${READARR_API_KEY}
+      - BAZARR_API_KEY=${BAZARR_API_KEY}
+      
+      # Indexer API Keys
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - JACKETT_API_KEY=${JACKETT_API_KEY}
+      
+      # Download Client Configuration
+      - QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME:-admin}
+      - TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD:-admin}
+      - DELUGE_PASSWORD=${DELUGE_PASSWORD:-deluge}
+      - SABNZBD_API_KEY=${SABNZBD_API_KEY}
+      - NZBGET_USERNAME=${NZBGET_USERNAME:-nzbget}
+      - NZBGET_PASSWORD=${NZBGET_PASSWORD:-tegbzn6789}
+      
+      # Request System API Keys
+      - OVERSEERR_API_KEY=${OVERSEERR_API_KEY}
+      - REQUESTRR_API_KEY=${REQUESTRR_API_KEY}
+      - OMBI_API_KEY=${OMBI_API_KEY}
+      
+      # Analytics API Keys
+      - TAUTULLI_API_KEY=${TAUTULLI_API_KEY}
+      
+      # Infrastructure Configuration
+      - NGINX_PM_MYSQL_ROOT_PASSWORD=${NGINX_PM_DB_PASS:-changeme}
+      - PORTAINER_ADMIN_PASSWORD=${PORTAINER_ADMIN_PASSWORD}
+      
+      # VPN Configuration (Optional)
+      - VPN_PROVIDER=${VPN_PROVIDER:-surfshark}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - VPN_REGIONS=${VPN_REGIONS:-United States}
+      
+      # Security Configuration
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-here}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-changeme123}
+      
+      # AI and Social Media APIs (Optional)
+      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      
+      # Performance Tuning
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CONSENSUS_THRESHOLD=${CONSENSUS_THRESHOLD:-0.7}
+      - VOTE_TIMEOUT_MINUTES=${VOTE_TIMEOUT_MINUTES:-5}
+      
+      # Feature Flags
+      - ENABLE_VPN=${ENABLE_VPN:-false}
+      - ENABLE_AUTO_UPDATE=${ENABLE_AUTO_UPDATE:-true}
+      - ENABLE_MONITORING=${ENABLE_MONITORING:-true}
+      - ENABLE_BACKUP=${ENABLE_BACKUP:-true}
+    
+    volumes:
+      # Configuration persistence
+      - ultimate-config:/config
+      
+      # Media directories
+      - ${MEDIA_ROOT:-./media}:/media
+      - ${DOWNLOADS_ROOT:-./downloads}:/downloads
+      - ${INCOMPLETE_ROOT:-./incomplete-downloads}:/incomplete-downloads
+      - ${WATCH_ROOT:-./watch}:/watch
+      
+      # Backup directory
+      - ${BACKUP_ROOT:-./backups}:/backups
+      
+      # Log persistence
+      - ultimate-logs:/var/log
+      - ultimate-app-logs:/app/logs
+      
+      # Additional data directories
+      - ultimate-data:/app/data
+      - ultimate-cache:/tmp/cache
+    
+    # Resource limits to prevent single container from consuming all resources
+    deploy:
+      resources:
+        limits:
+          memory: ${MAX_MEMORY:-16G}
+          cpus: '${MAX_CPUS:-8.0}'
+        reservations:
+          memory: ${MIN_MEMORY:-4G}
+          cpus: '${MIN_CPUS:-2.0}'
+    
+    # Network configuration
+    networks:
+      - ultimate-media-network
+    
+    # Health check for the entire stack
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Additional capabilities if needed
+    cap_add:
+      - NET_ADMIN  # For VPN functionality
+    
+    devices:
+      - /dev/dri:/dev/dri  # Hardware acceleration for media servers
+    
+    # Dependency on external database (optional)
+    # depends_on:
+    #   ultimate-database:
+    #     condition: service_healthy
+
+  # Optional: External database for services that need it
+  ultimate-database:
+    image: postgres:15-alpine
+    container_name: ultimate-media-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-ultimatemedia}
+      - POSTGRES_USER=${DB_USER:-ultimateuser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-ultimatepass123}
+      - POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - ultimate-db-data:/var/lib/postgresql/data
+      - ${BACKUP_ROOT:-./backups}/db:/backups
+    networks:
+      - ultimate-media-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ultimateuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - database  # Only start if database profile is specified
+
+  # Optional: Redis for caching and session management
+  ultimate-cache:
+    image: redis:7-alpine
+    container_name: ultimate-media-cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ultimatecache123}
+    volumes:
+      - ultimate-redis-data:/data
+    networks:
+      - ultimate-media-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - cache  # Only start if cache profile is specified
+
+volumes:
+  # Main application volumes
+  ultimate-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_ROOT:-./config}
+  
+  ultimate-logs:
+    driver: local
+  
+  ultimate-app-logs:
+    driver: local
+  
+  ultimate-data:
+    driver: local
+  
+  ultimate-cache:
+    driver: local
+    
+  # Database volumes (if using database profile)
+  ultimate-db-data:
+    driver: local
+  
+  ultimate-redis-data:
+    driver: local
+
+networks:
+  ultimate-media-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+      driver: default
+    driver_opts:
+      com.docker.network.bridge.name: ultimate-media-br
+
+# Profile-based deployment options
+# Usage examples:
+#
+# 1. Basic deployment (single container only):
+#    docker-compose up -d
+#
+# 2. With external database:
+#    docker-compose --profile database up -d
+#
+# 3. With caching layer:
+#    docker-compose --profile cache up -d
+#
+# 4. Full deployment with all components:
+#    docker-compose --profile database --profile cache up -d
+#
+# 5. Build and deploy:
+#    docker-compose build && docker-compose up -d

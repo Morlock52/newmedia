@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Media Server Remote",
+    "slug": "media-server-remote",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mediaserver.remote",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication",
+        "NSCameraUsageDescription": "This app uses the camera for AR features",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice commands"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.mediaserver.remote",
+      "permissions": [
+        "USE_FINGERPRINT",
+        "USE_BIOMETRIC",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-local-authentication",
+      "expo-notifications",
+      "expo-camera",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Media Server Remote to access your microphone for voice commands."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "media-server-remote-uuid"
+      }
+    }
+  }
+}

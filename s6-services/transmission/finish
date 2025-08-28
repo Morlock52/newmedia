@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Transmission service cleanup
+
+echo "$(date) [INFO] Transmission service stopped" >> /logs/transmission.log

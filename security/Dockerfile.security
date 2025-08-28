@@ -1,0 +1,44 @@
+# Security Monitoring Dockerfile
+FROM node:18-alpine
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S security && \
+    adduser -S security -u 1001 -G security
+
+# Install dependencies for monitoring
+RUN apk add --no-cache \
+    curl \
+    openssl \
+    ca-certificates \
+    dumb-init \
+    tini
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY security/monitor/package*.json ./
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy application code
+COPY security/monitor/ .
+
+# Change ownership to non-root user
+RUN chown -R security:security /app
+
+# Switch to non-root user
+USER security
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3011/health || exit 1
+
+# Use tini as init system
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["npm", "start"]
+
+# Expose port
+EXPOSE 3011

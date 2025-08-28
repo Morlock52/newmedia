@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaFlow Pro - Live Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        /* Glassmorphism styles */
+        .glass {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Gradient backgrounds */
+        .gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .gradient-success {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        }
+        
+        .gradient-warning {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+        
+        .gradient-danger {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        }
+        
+        /* Animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        /* Status indicators */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-healthy {
+            background: #4ade80;
+            box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3);
+        }
+        
+        .status-unhealthy {
+            background: #ef4444;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Log viewer */
+        .log-viewer {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .log-entry {
+            padding: 4px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background-color 0.2s;
+        }
+        
+        .log-entry:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-level-info { color: #3b82f6; }
+        .log-level-warn { color: #fbbf24; }
+        .log-level-error { color: #ef4444; }
+        .log-level-debug { color: #8b5cf6; }
+        
+        /* Alert styles */
+        .alert-critical {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+        }
+        
+        .alert-warning {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 4px solid #fbbf24;
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <!-- Background -->
+    <div class="fixed inset-0 -z-10">
+        <div class="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-gray-900 to-blue-900/20"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass border-b border-gray-800 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="gradient-primary p-2 rounded-lg">
+                        <i data-feather="activity" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                        MediaFlow Live Monitoring
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-400">Status:</span>
+                        <span id="connection-status" class="status-indicator status-unhealthy"></span>
+                        <span id="connection-text" class="text-sm">Connecting...</span>
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        Last Update: <span id="last-update">--:--:--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- System Overview -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i data-feather="cpu" class="w-5 h-5 mr-2"></i>
+                System Overview
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- CPU Card -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">CPU Usage</h3>
+                        <i data-feather="cpu" class="w-5 h-5 text-purple-400"></i>
+                    </div>
+                    <div class="text-3xl font-bold mb-2">
+                        <span id="cpu-usage">--</span>%
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div id="cpu-bar" class="gradient-primary h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-2">
+                        <span id="cpu-cores">--</span> cores
+                    </div>
+                </div>
+
+                <!-- Memory Card -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">Memory Usage</h3>
+                        <i data-feather="database" class="w-5 h-5 text-blue-400"></i>
+                    </div>
+                    <div class="text-3xl font-bold mb-2">
+                        <span id="memory-usage">--</span>%
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div id="memory-bar" class="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-2">
+                        <span id="memory-used">--</span> / <span id="memory-total">--</span> GB
+                    </div>
+                </div>
+
+                <!-- Network Card -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">Network I/O</h3>
+                        <i data-feather="activity" class="w-5 h-5 text-green-400"></i>
+                    </div>
+                    <div class="text-lg font-semibold space-y-1">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i data-feather="arrow-down" class="w-4 h-4 mr-1 text-green-400"></i>
+                                <span class="text-sm">RX</span>
+                            </div>
+                            <span id="network-rx" class="text-sm">-- MB/s</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i data-feather="arrow-up" class="w-4 h-4 mr-1 text-blue-400"></i>
+                                <span class="text-sm">TX</span>
+                            </div>
+                            <span id="network-tx" class="text-sm">-- MB/s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uptime Card -->
+                <div class="glass rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-gray-400">System Uptime</h3>
+                        <i data-feather="clock" class="w-5 h-5 text-orange-400"></i>
+                    </div>
+                    <div class="text-2xl font-bold mb-2">
+                        <span id="uptime-display">--:--:--</span>
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        System running for <span id="uptime-text">-- hours</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Status -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i data-feather="server" class="w-5 h-5 mr-2"></i>
+                Media Services Status
+            </h2>
+            <div id="services-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Services will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Alerts -->
+        <section class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold flex items-center">
+                    <i data-feather="alert-triangle" class="w-5 h-5 mr-2"></i>
+                    System Alerts
+                    <span id="alert-count" class="ml-2 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-sm">0</span>
+                </h2>
+                <div class="text-sm text-gray-400">
+                    Live monitoring active
+                </div>
+            </div>
+            <div id="alerts-container" class="space-y-2">
+                <!-- Alerts will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Logs -->
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold flex items-center">
+                    <i data-feather="file-text" class="w-5 h-5 mr-2"></i>
+                    Live System Logs
+                </h2>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-400">Auto-refresh</span>
+                    <div class="w-2 h-2 bg-green-400 rounded-full pulse-ring"></div>
+                </div>
+            </div>
+            <div class="glass rounded-xl p-4 h-96 overflow-y-auto log-viewer">
+                <div id="logs-container">
+                    <div class="text-center text-gray-400 py-8">
+                        <i data-feather="loader" class="w-6 h-6 mx-auto mb-2 animate-spin"></i>
+                        Loading logs...
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Socket.IO connection
+        const socket = io();
+        
+        // State
+        let state = {
+            system: {},
+            services: {},
+            logs: [],
+            alerts: [],
+            metrics: {}
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            feather.replace();
+            connectSocket();
+            updateLastUpdate();
+            
+            // Update last update time every second
+            setInterval(updateLastUpdate, 1000);
+        });
+        
+        function connectSocket() {
+            socket.on('connect', () => {
+                updateConnectionStatus(true);
+                console.log('✅ Connected to monitoring server');
+            });
+            
+            socket.on('disconnect', () => {
+                updateConnectionStatus(false);
+                console.log('❌ Disconnected from monitoring server');
+            });
+            
+            socket.on('initial-state', (data) => {
+                console.log('📊 Received initial state');
+                state = data;
+                updateUI();
+            });
+            
+            socket.on('metrics-update', (data) => {
+                state = data;
+                updateUI();
+            });
+            
+            socket.on('alert', (alert) => {
+                addAlert(alert);
+                showNotification('System Alert', alert.message, alert.severity);
+            });
+            
+            socket.on('log', (log) => {
+                addLog(log);
+            });
+        }
+        
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('connection-status');
+            const text = document.getElementById('connection-text');
+            
+            if (connected) {
+                indicator.className = 'status-indicator status-healthy';
+                text.textContent = 'Connected';
+                text.className = 'text-sm text-green-400';
+            } else {
+                indicator.className = 'status-indicator status-unhealthy';
+                text.textContent = 'Disconnected';
+                text.className = 'text-sm text-red-400';
+            }
+        }
+        
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+        
+        function updateUI() {
+            updateSystemMetrics();
+            updateServices();
+            updateAlerts();
+            updateLogs();
+        }
+        
+        function updateSystemMetrics() {
+            // CPU
+            const cpuUsage = Math.round(state.system.cpu?.usage || 0);
+            document.getElementById('cpu-usage').textContent = cpuUsage;
+            document.getElementById('cpu-bar').style.width = `${Math.min(cpuUsage, 100)}%`;
+            document.getElementById('cpu-cores').textContent = state.system.cpu?.cores || '--';
+            
+            // Memory
+            const memoryUsage = Math.round(state.system.memory?.percentage || 0);
+            const memoryUsedGB = ((state.system.memory?.used || 0) / 1024 / 1024 / 1024).toFixed(1);
+            const memoryTotalGB = ((state.system.memory?.total || 0) / 1024 / 1024 / 1024).toFixed(1);
+            
+            document.getElementById('memory-usage').textContent = memoryUsage;
+            document.getElementById('memory-bar').style.width = `${Math.min(memoryUsage, 100)}%`;
+            document.getElementById('memory-used').textContent = memoryUsedGB;
+            document.getElementById('memory-total').textContent = memoryTotalGB;
+            
+            // Network
+            const rxMbps = ((state.system.network?.rx || 0) / 1024 / 1024).toFixed(2);
+            const txMbps = ((state.system.network?.tx || 0) / 1024 / 1024).toFixed(2);
+            document.getElementById('network-rx').textContent = `${rxMbps} MB/s`;
+            document.getElementById('network-tx').textContent = `${txMbps} MB/s`;
+            
+            // Uptime
+            const uptime = state.system.uptime || 0;
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = Math.floor(uptime % 60);
+            
+            document.getElementById('uptime-display').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('uptime-text').textContent = `${hours} hours`;
+        }
+        
+        function updateServices() {
+            const container = document.getElementById('services-grid');
+            container.innerHTML = '';
+            
+            Object.values(state.services || {}).forEach(service => {
+                const card = createServiceCard(service);
+                container.appendChild(card);
+            });
+        }
+        
+        function createServiceCard(service) {
+            const div = document.createElement('div');
+            div.className = 'glass rounded-xl p-6 relative overflow-hidden';
+            
+            const statusClass = service.healthy ? 'status-healthy' : 'status-unhealthy';
+            const statusText = service.healthy ? 'Healthy' : 'Unhealthy';
+            const responseTime = service.responseTime || 0;
+            
+            div.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-lg">${service.name}</h3>
+                    <span class="status-indicator ${statusClass}"></span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-400">Status</span>
+                        <span class="${service.healthy ? 'text-green-400' : 'text-red-400'}">${statusText}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-400">Response</span>
+                        <span>${responseTime}ms</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-400">Last Check</span>
+                        <span>${new Date(service.lastCheck).toLocaleTimeString()}</span>
+                    </div>
+                </div>
+                ${service.healthy ? '' : '<div class="absolute inset-0 bg-red-500/10 pointer-events-none"></div>'}
+            `;
+            
+            return div;
+        }
+        
+        function updateAlerts() {
+            const container = document.getElementById('alerts-container');
+            const activeAlerts = (state.alerts || []).filter(a => !a.resolved);
+            document.getElementById('alert-count').textContent = activeAlerts.length;
+            
+            container.innerHTML = '';
+            
+            if (activeAlerts.length === 0) {
+                container.innerHTML = `
+                    <div class="glass rounded-lg p-4 text-center text-gray-400">
+                        <i data-feather="check-circle" class="w-6 h-6 mx-auto mb-2 text-green-400"></i>
+                        <div>All systems normal - No active alerts</div>
+                    </div>
+                `;
+                feather.replace();
+                return;
+            }
+            
+            activeAlerts.forEach(alert => {
+                const alertEl = createAlertElement(alert);
+                container.appendChild(alertEl);
+            });
+        }
+        
+        function createAlertElement(alert) {
+            const div = document.createElement('div');
+            div.className = `glass rounded-lg p-4 alert-${alert.severity} flex items-center justify-between`;
+            div.id = `alert-${alert.id}`;
+            
+            const time = new Date(alert.timestamp).toLocaleTimeString();
+            
+            div.innerHTML = `
+                <div class="flex-1">
+                    <div class="flex items-center">
+                        <i data-feather="alert-triangle" class="w-4 h-4 mr-2"></i>
+                        <span class="font-semibold">${alert.message}</span>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-1">
+                        ${time} - ${alert.type} (${alert.severity})
+                    </div>
+                </div>
+                <div class="text-sm px-3 py-1 rounded ${alert.severity === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}">
+                    ${alert.severity.toUpperCase()}
+                </div>
+            `;
+            
+            feather.replace();
+            return div;
+        }
+        
+        function updateLogs() {
+            const container = document.getElementById('logs-container');
+            
+            if (!state.logs || state.logs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i data-feather="clock" class="w-6 h-6 mx-auto mb-2"></i>
+                        Waiting for logs...
+                    </div>
+                `;
+                feather.replace();
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            state.logs.slice(0, 50).forEach(log => {
+                const logEl = createLogElement(log);
+                container.appendChild(logEl);
+            });
+        }
+        
+        function createLogElement(log) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            const levelClass = `log-level-${log.level}`;
+            
+            div.innerHTML = `
+                <span class="text-gray-500">${time}</span>
+                <span class="${levelClass} font-semibold mx-2">[${log.level.toUpperCase()}]</span>
+                <span class="text-gray-300">[${log.service || 'system'}]</span>
+                <span class="ml-2">${log.message}</span>
+            `;
+            
+            return div;
+        }
+        
+        function addAlert(alert) {
+            if (!state.alerts) state.alerts = [];
+            state.alerts.unshift(alert);
+            updateAlerts();
+        }
+        
+        function addLog(log) {
+            if (!state.logs) state.logs = [];
+            state.logs.unshift(log);
+            if (state.logs.length > 200) {
+                state.logs = state.logs.slice(0, 200);
+            }
+            
+            const container = document.getElementById('logs-container');
+            const logEl = createLogElement(log);
+            container.insertBefore(logEl, container.firstChild);
+            
+            // Remove old logs from DOM
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        function showNotification(title, message, severity = 'info') {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: message,
+                    icon: '/favicon.ico',
+                    tag: 'alert-' + Date.now()
+                });
+            }
+        }
+        
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // Page visibility handling
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Page became visible, refresh data
+                socket.emit('refresh');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "simple-mcp": {
+      "command": "npx",
+      "args": [
+        "-p",
+        "/Users/morlock/fun/newmedia/mcp-architecture/simple-mcp",
+        "simple-mcp"
+      ]
+    }
+  }
+}

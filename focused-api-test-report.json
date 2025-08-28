@@ -1,0 +1,113 @@
+{
+  "timestamp": "2025-08-09T07:34:02.291Z",
+  "tests": [
+    {
+      "name": "Jellyfin - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.319Z"
+    },
+    {
+      "name": "Jellyfin - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.321Z"
+    },
+    {
+      "name": "Sonarr - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.323Z"
+    },
+    {
+      "name": "Sonarr - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.324Z"
+    },
+    {
+      "name": "Radarr - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.326Z"
+    },
+    {
+      "name": "Radarr - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.328Z"
+    },
+    {
+      "name": "Prowlarr - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.329Z"
+    },
+    {
+      "name": "Prowlarr - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.331Z"
+    },
+    {
+      "name": "qBittorrent - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.333Z"
+    },
+    {
+      "name": "qBittorrent - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.336Z"
+    },
+    {
+      "name": "Uptime Kuma - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.338Z"
+    },
+    {
+      "name": "Uptime Kuma - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.340Z"
+    },
+    {
+      "name": "Portainer - Connectivity",
+      "passed": false,
+      "message": "Service not accessible",
+      "timestamp": "2025-08-09T07:34:02.342Z"
+    },
+    {
+      "name": "Portainer - API Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.345Z"
+    },
+    {
+      "name": "Prowlarr - Integration Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.347Z"
+    },
+    {
+      "name": "sonarr - Download Client Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.350Z"
+    },
+    {
+      "name": "radarr - Download Client Test",
+      "passed": false,
+      "message": "",
+      "timestamp": "2025-08-09T07:34:02.352Z"
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "passed": 0,
+    "failed": 17,
+    "successRate": "0.0"
+  }
+}

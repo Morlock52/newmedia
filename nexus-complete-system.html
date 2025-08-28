@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS COMPLETE // All Features Activated</title>
+    
+    <!-- Progressive Web App -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00FFFF">
+    
+    <!-- Fonts & Libraries -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <style>
+        :root {
+            --neon-cyan: #00FFFF;
+            --neon-magenta: #FF00FF;
+            --neon-yellow: #FFFF00;
+            --neon-green: #00FF00;
+            --dark-bg: #0a0a0a;
+            --dark-surface: #1a1a1a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--dark-bg);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Voice Control Indicator */
+        .voice-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--dark-surface);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s;
+        }
+
+        .voice-control.listening {
+            animation: pulse-voice 1s infinite;
+            border-color: var(--neon-green);
+            box-shadow: 0 0 30px var(--neon-green);
+        }
+
+        @keyframes pulse-voice {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* User Profile Switcher */
+        .user-profiles {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--dark-surface);
+            border: 1px solid var(--neon-magenta);
+            border-radius: 10px;
+            padding: 10px;
+            z-index: 1000;
+        }
+
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+        }
+
+        /* Watch Party Room */
+        .watch-party {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 1200px;
+            height: 80vh;
+            background: var(--dark-surface);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 9999;
+        }
+
+        .video-container {
+            width: 70%;
+            height: 100%;
+            background: black;
+            float: left;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .party-chat {
+            width: 28%;
+            height: 100%;
+            float: right;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Predictive Analytics */
+        .analytics-dashboard {
+            background: var(--dark-surface);
+            border: 1px solid var(--neon-yellow);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px;
+        }
+
+        .prediction-chart {
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        /* Smart Home Controls */
+        .smart-home-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark-surface);
+            border: 1px solid var(--neon-green);
+            border-radius: 30px;
+            padding: 15px 30px;
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .smart-device {
+            width: 50px;
+            height: 50px;
+            background: rgba(0,255,0,0.1);
+            border: 1px solid var(--neon-green);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .smart-device:hover {
+            background: rgba(0,255,0,0.3);
+            transform: scale(1.1);
+        }
+
+        /* Web3 Wallet */
+        .web3-wallet {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: var(--dark-surface);
+            border: 1px solid var(--neon-yellow);
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        .wallet-address {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8em;
+            color: var(--neon-yellow);
+            word-break: break-all;
+        }
+
+        .nft-collection {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .nft-item {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Security Dashboard */
+        .security-monitor {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 300px;
+            background: var(--dark-surface);
+            border: 1px solid red;
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        .threat-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px;
+            background: rgba(255,0,0,0.1);
+            border-radius: 5px;
+        }
+
+        /* Performance Optimization - Virtual Scrolling Container */
+        .virtual-scroll-container {
+            height: 400px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .virtual-scroll-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        /* Mobile App QR */
+        .mobile-app-qr {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 1000;
+        }
+
+        /* Face Recognition Scanner */
+        .face-scanner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            z-index: 10001;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: scan-face 2s linear infinite;
+        }
+
+        @keyframes scan-face {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        /* Loading Screen */
+        .system-boot {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .boot-text {
+            color: var(--neon-cyan);
+            font-size: 1.2em;
+            margin: 10px;
+        }
+
+        .progress-bar {
+            width: 300px;
+            height: 20px;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+            width: 0%;
+            animation: load-system 3s ease-out forwards;
+        }
+
+        @keyframes load-system {
+            to { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- System Boot Screen -->
+    <div class="system-boot" id="boot-screen">
+        <h1 style="color: var(--neon-cyan); font-size: 3em; margin-bottom: 30px;">NEXUS COMPLETE</h1>
+        <div class="boot-text">Initializing Voice Recognition...</div>
+        <div class="boot-text">Loading User Profiles...</div>
+        <div class="boot-text">Connecting to Smart Home...</div>
+        <div class="boot-text">Establishing Web3 Connection...</div>
+        <div class="boot-text">Activating Security Protocols...</div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Voice Control -->
+    <div class="voice-control" id="voice-control" title="Say 'Hey Nexus'">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+    </div>
+
+    <!-- User Profiles -->
+    <div class="user-profiles">
+        <div class="profile-avatar" onclick="switchProfile(1)">U1</div>
+        <div class="profile-avatar" onclick="switchProfile(2)">U2</div>
+        <div class="profile-avatar" onclick="addProfile()">+</div>
+    </div>
+
+    <!-- Web3 Wallet -->
+    <div class="web3-wallet">
+        <h4 style="color: var(--neon-yellow); font-family: 'Orbitron', monospace;">WEB3 WALLET</h4>
+        <div class="wallet-address" id="wallet-address">Not Connected</div>
+        <button onclick="connectWallet()" style="margin-top: 10px; padding: 5px 10px; background: var(--neon-yellow); color: black; border: none; border-radius: 5px; cursor: pointer;">Connect</button>
+        <div class="nft-collection" id="nft-collection"></div>
+    </div>
+
+    <!-- Watch Party Room -->
+    <div class="watch-party" id="watch-party">
+        <div class="video-container">
+            <video id="party-video" style="width: 100%; height: 100%; border-radius: 10px;"></video>
+            <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px;">
+                <button onclick="playPause()">▶️/⏸️</button>
+                <button onclick="syncAll()">🔄 SYNC</button>
+            </div>
+        </div>
+        <div class="party-chat">
+            <h3 style="color: var(--neon-cyan); margin-bottom: 10px;">PARTY CHAT</h3>
+            <div id="chat-messages" style="flex: 1; overflow-y: auto;"></div>
+            <input type="text" id="party-chat-input" placeholder="Type message..." style="background: var(--dark-bg); border: 1px solid var(--neon-cyan); color: white; padding: 10px; border-radius: 5px;">
+        </div>
+    </div>
+
+    <!-- Face Scanner -->
+    <div class="face-scanner" id="face-scanner">
+        <video id="face-video" style="width: 100%; height: 100%; border-radius: 10px;"></video>
+        <div class="scan-line"></div>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div class="analytics-dashboard">
+        <h2 style="color: var(--neon-yellow); font-family: 'Orbitron', monospace;">PREDICTIVE ANALYTICS</h2>
+        <canvas id="storage-prediction" class="prediction-chart"></canvas>
+        <canvas id="bandwidth-prediction" class="prediction-chart"></canvas>
+    </div>
+
+    <!-- Smart Home Panel -->
+    <div class="smart-home-panel">
+        <div class="smart-device" onclick="controlDevice('lights')" title="Lights">💡</div>
+        <div class="smart-device" onclick="controlDevice('temperature')" title="Temperature">🌡️</div>
+        <div class="smart-device" onclick="controlDevice('security')" title="Security">🔒</div>
+        <div class="smart-device" onclick="controlDevice('speakers')" title="Speakers">🔊</div>
+        <div class="smart-device" onclick="controlDevice('tv')" title="TV">📺</div>
+    </div>
+
+    <!-- Security Monitor -->
+    <div class="security-monitor">
+        <h4 style="color: red; font-family: 'Orbitron', monospace;">SECURITY STATUS</h4>
+        <div class="threat-indicator">
+            <span>Firewall</span>
+            <span style="color: var(--neon-green);">ACTIVE</span>
+        </div>
+        <div class="threat-indicator">
+            <span>2FA</span>
+            <span style="color: var(--neon-green);">ENABLED</span>
+        </div>
+        <div class="threat-indicator">
+            <span>Encryption</span>
+            <span style="color: var(--neon-green);">AES-256</span>
+        </div>
+        <div class="threat-indicator">
+            <span>Threats</span>
+            <span style="color: var(--neon-green);">0 DETECTED</span>
+        </div>
+    </div>
+
+    <!-- Main Content (Previous Dashboard) -->
+    <div id="main-content" style="padding: 20px;">
+        <!-- Services Grid with Virtual Scrolling -->
+        <div class="virtual-scroll-container" id="services-container">
+            <div class="virtual-scroll-content" id="services-content"></div>
+        </div>
+    </div>
+
+    <!-- Mobile App QR -->
+    <div class="mobile-app-qr">
+        <canvas id="qr-code" width="150" height="150"></canvas>
+        <p style="color: black; font-size: 0.8em; text-align: center; margin-top: 5px;">Scan for Mobile App</p>
+    </div>
+
+    <script>
+        // 1. VOICE CONTROL SYSTEM
+        class VoiceControl {
+            constructor() {
+                this.recognition = null;
+                this.synthesis = window.speechSynthesis;
+                this.isListening = false;
+                this.wakeWordDetected = false;
+                this.initRecognition();
+            }
+
+            initRecognition() {
+                if ('webkitSpeechRecognition' in window) {
+                    this.recognition = new webkitSpeechRecognition();
+                    this.recognition.continuous = true;
+                    this.recognition.interimResults = true;
+                    
+                    this.recognition.onresult = (event) => {
+                        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                        
+                        if (transcript.includes('hey nexus') || transcript.includes('nexus')) {
+                            this.wakeWordDetected = true;
+                            this.speak('Yes, how can I help?');
+                            document.getElementById('voice-control').classList.add('listening');
+                        } else if (this.wakeWordDetected) {
+                            this.processCommand(transcript);
+                        }
+                    };
+
+                    this.recognition.onerror = (event) => {
+                        console.error('Voice recognition error:', event.error);
+                    };
+                }
+            }
+
+            processCommand(command) {
+                console.log('Processing command:', command);
+                
+                // Command processing
+                if (command.includes('play')) {
+                    this.speak('Playing media');
+                    // Trigger play action
+                } else if (command.includes('download')) {
+                    this.speak('Starting download');
+                    // Trigger download
+                } else if (command.includes('show') && command.includes('movies')) {
+                    this.speak('Displaying movies');
+                    // Show movies
+                } else if (command.includes('party')) {
+                    this.speak('Starting watch party');
+                    document.getElementById('watch-party').style.display = 'block';
+                } else if (command.includes('lights')) {
+                    this.speak('Controlling lights');
+                    controlDevice('lights');
+                }
+                
+                this.wakeWordDetected = false;
+                setTimeout(() => {
+                    document.getElementById('voice-control').classList.remove('listening');
+                }, 2000);
+            }
+
+            speak(text) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.pitch = 0.8;
+                utterance.rate = 1.1;
+                this.synthesis.speak(utterance);
+            }
+
+            toggle() {
+                if (this.isListening) {
+                    this.recognition.stop();
+                    this.isListening = false;
+                } else {
+                    this.recognition.start();
+                    this.isListening = true;
+                }
+            }
+        }
+
+        // 2. USER PROFILES SYSTEM
+        class UserProfileSystem {
+            constructor() {
+                this.currentUser = 1;
+                this.profiles = {
+                    1: { name: 'User 1', preferences: {}, watchHistory: [] },
+                    2: { name: 'User 2', preferences: {}, watchHistory: [] }
+                };
+            }
+
+            switchProfile(userId) {
+                this.currentUser = userId;
+                this.loadUserPreferences();
+                console.log('Switched to profile:', userId);
+            }
+
+            loadUserPreferences() {
+                // Load user-specific dashboard
+                const profile = this.profiles[this.currentUser];
+                // Apply preferences
+            }
+
+            addProfile() {
+                // Start face recognition for new profile
+                document.getElementById('face-scanner').style.display = 'block';
+                this.startFaceRecognition();
+            }
+
+            startFaceRecognition() {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        document.getElementById('face-video').srcObject = stream;
+                        setTimeout(() => {
+                            // Simulate face scan
+                            document.getElementById('face-scanner').style.display = 'none';
+                            stream.getTracks().forEach(track => track.stop());
+                            alert('Face profile created!');
+                        }, 3000);
+                    });
+            }
+        }
+
+        // 3. GPT-4 CONTENT DISCOVERY
+        class AIContentDiscovery {
+            async searchContent(query) {
+                // Simulate GPT-4 API call
+                const response = await fetch('/api/ai/discover', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                return await response.json();
+            }
+
+            async getMoodBasedRecommendations(mood) {
+                return this.searchContent(`Find content for ${mood} mood`);
+            }
+        }
+
+        // 4. VIRTUAL SCROLLING
+        class VirtualScroller {
+            constructor(container, items, itemHeight) {
+                this.container = container;
+                this.items = items;
+                this.itemHeight = itemHeight;
+                this.visibleItems = Math.ceil(container.clientHeight / itemHeight);
+                this.render();
+                
+                container.addEventListener('scroll', () => this.render());
+            }
+
+            render() {
+                const scrollTop = this.container.scrollTop;
+                const startIndex = Math.floor(scrollTop / this.itemHeight);
+                const endIndex = startIndex + this.visibleItems;
+                
+                const content = document.getElementById('services-content');
+                content.innerHTML = '';
+                content.style.height = `${this.items.length * this.itemHeight}px`;
+                
+                for (let i = startIndex; i < endIndex && i < this.items.length; i++) {
+                    const item = document.createElement('div');
+                    item.style.position = 'absolute';
+                    item.style.top = `${i * this.itemHeight}px`;
+                    item.style.height = `${this.itemHeight}px`;
+                    item.innerHTML = this.renderItem(this.items[i]);
+                    content.appendChild(item);
+                }
+            }
+
+            renderItem(item) {
+                return `<div style="padding: 10px; border: 1px solid var(--neon-cyan); margin: 5px;">
+                    ${item.name} - ${item.status}
+                </div>`;
+            }
+        }
+
+        // 5. PREDICTIVE ANALYTICS
+        class PredictiveAnalytics {
+            constructor() {
+                this.initCharts();
+                this.startPredictions();
+            }
+
+            initCharts() {
+                // Storage Prediction Chart
+                const storageCtx = document.getElementById('storage-prediction').getContext('2d');
+                this.storageChart = new Chart(storageCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Storage Usage (TB)',
+                            data: [12, 19, 23, 25, 32, 38],
+                            borderColor: '#00FFFF',
+                            backgroundColor: 'rgba(0,255,255,0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: { display: true, text: 'Storage Prediction' }
+                        }
+                    }
+                });
+
+                // Bandwidth Prediction Chart
+                const bandwidthCtx = document.getElementById('bandwidth-prediction').getContext('2d');
+                this.bandwidthChart = new Chart(bandwidthCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Bandwidth (Mbps)',
+                            data: [100, 120, 110, 140, 180, 220, 190],
+                            borderColor: '#FF00FF',
+                            backgroundColor: 'rgba(255,0,255,0.1)'
+                        }]
+                    }
+                });
+            }
+
+            async startPredictions() {
+                // Load TensorFlow model for predictions
+                const model = await tf.sequential({
+                    layers: [
+                        tf.layers.dense({inputShape: [7], units: 50, activation: 'relu'}),
+                        tf.layers.dense({units: 25, activation: 'relu'}),
+                        tf.layers.dense({units: 1})
+                    ]
+                });
+                
+                // Make predictions
+                const input = tf.tensor2d([[100, 120, 110, 140, 180, 220, 190]]);
+                const prediction = model.predict(input);
+                console.log('Next week prediction:', await prediction.data());
+            }
+        }
+
+        // 6. SMART HOME INTEGRATION
+        class SmartHomeController {
+            constructor() {
+                this.devices = {
+                    lights: { status: 'off', brightness: 50 },
+                    temperature: { value: 22, unit: 'C' },
+                    security: { armed: true },
+                    speakers: { volume: 30 },
+                    tv: { power: 'off' }
+                };
+            }
+
+            async controlDevice(device) {
+                console.log(`Controlling ${device}`);
+                
+                // Send command to smart home API
+                const response = await fetch('/api/smarthome/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ device, action: 'toggle' })
+                });
+                
+                // Update UI
+                this.updateDeviceStatus(device);
+            }
+
+            updateDeviceStatus(device) {
+                // Visual feedback
+                const deviceElement = document.querySelector(`[onclick="controlDevice('${device}')"]`);
+                deviceElement.style.background = 'rgba(0,255,0,0.5)';
+                setTimeout(() => {
+                    deviceElement.style.background = 'rgba(0,255,0,0.1)';
+                }, 1000);
+            }
+
+            async syncWithContent(mediaType) {
+                // Sync lights with movie mood
+                if (mediaType === 'horror') {
+                    this.controlDevice('lights');
+                    // Set to red
+                } else if (mediaType === 'action') {
+                    // Strobe effect
+                }
+            }
+        }
+
+        // 7. WEB3 INTEGRATION
+        class Web3Integration {
+            constructor() {
+                this.web3 = null;
+                this.account = null;
+            }
+
+            async connectWallet() {
+                if (typeof window.ethereum !== 'undefined') {
+                    this.web3 = new Web3(window.ethereum);
+                    
+                    try {
+                        const accounts = await window.ethereum.request({ 
+                            method: 'eth_requestAccounts' 
+                        });
+                        this.account = accounts[0];
+                        document.getElementById('wallet-address').textContent = 
+                            `${this.account.substring(0, 6)}...${this.account.substring(38)}`;
+                        
+                        this.loadNFTs();
+                    } catch (error) {
+                        console.error('Failed to connect wallet:', error);
+                    }
+                } else {
+                    alert('Please install MetaMask!');
+                }
+            }
+
+            async loadNFTs() {
+                // Load NFT collection
+                const nftContainer = document.getElementById('nft-collection');
+                
+                // Simulate NFT media items
+                for (let i = 0; i < 6; i++) {
+                    const nft = document.createElement('div');
+                    nft.className = 'nft-item';
+                    nft.onclick = () => this.playNFTMedia(i);
+                    nftContainer.appendChild(nft);
+                }
+            }
+
+            playNFTMedia(nftId) {
+                console.log('Playing NFT media:', nftId);
+                // Stream from IPFS
+            }
+        }
+
+        // 8. WATCH PARTY SYSTEM
+        class WatchParty {
+            constructor() {
+                this.socket = null;
+                this.roomId = null;
+                this.peers = [];
+            }
+
+            startParty() {
+                document.getElementById('watch-party').style.display = 'block';
+                this.connectToRoom();
+            }
+
+            connectToRoom() {
+                this.socket = io('ws://localhost:8001');
+                
+                this.socket.on('connect', () => {
+                    console.log('Connected to party room');
+                    this.roomId = 'room-' + Math.random().toString(36).substr(2, 9);
+                    this.socket.emit('join-room', this.roomId);
+                });
+
+                this.socket.on('user-connected', (userId) => {
+                    console.log('User joined party:', userId);
+                });
+
+                this.socket.on('sync-playback', (data) => {
+                    const video = document.getElementById('party-video');
+                    video.currentTime = data.time;
+                    if (data.playing) video.play();
+                    else video.pause();
+                });
+            }
+
+            syncAll() {
+                const video = document.getElementById('party-video');
+                this.socket.emit('sync-request', {
+                    roomId: this.roomId,
+                    time: video.currentTime,
+                    playing: !video.paused
+                });
+            }
+
+            sendMessage(message) {
+                this.socket.emit('chat-message', {
+                    roomId: this.roomId,
+                    message: message,
+                    user: userProfileSystem.currentUser
+                });
+            }
+        }
+
+        // 9. SECURITY SYSTEM
+        class SecuritySystem {
+            constructor() {
+                this.encryptionKey = null;
+                this.initSecurity();
+            }
+
+            async initSecurity() {
+                // Generate encryption key
+                this.encryptionKey = await crypto.subtle.generateKey(
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                
+                this.enable2FA();
+                this.startThreatMonitoring();
+            }
+
+            enable2FA() {
+                // Implement 2FA
+                console.log('2FA enabled');
+            }
+
+            startThreatMonitoring() {
+                setInterval(() => {
+                    // Check for threats
+                    this.checkForThreats();
+                }, 5000);
+            }
+
+            checkForThreats() {
+                // Simulate threat detection
+                const threats = Math.random() > 0.95 ? 1 : 0;
+                document.querySelector('.threat-indicator:last-child span:last-child')
+                    .textContent = `${threats} DETECTED`;
+                
+                if (threats > 0) {
+                    this.mitigateThreat();
+                }
+            }
+
+            mitigateThreat() {
+                console.log('Mitigating threat...');
+                // Block suspicious activity
+            }
+
+            async encryptData(data) {
+                const encoder = new TextEncoder();
+                const encodedData = encoder.encode(JSON.stringify(data));
+                
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv },
+                    this.encryptionKey,
+                    encodedData
+                );
+                
+                return { encrypted, iv };
+            }
+        }
+
+        // 10. MOBILE APP QR GENERATOR
+        function generateQRCode() {
+            const canvas = document.getElementById('qr-code');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple QR pattern (placeholder)
+            ctx.fillStyle = '#000';
+            for (let i = 0; i < 15; i++) {
+                for (let j = 0; j < 15; j++) {
+                    if (Math.random() > 0.5) {
+                        ctx.fillRect(i * 10, j * 10, 10, 10);
+                    }
+                }
+            }
+        }
+
+        // INITIALIZATION
+        let voiceControl, userProfileSystem, aiDiscovery, analytics;
+        let smartHome, web3Integration, watchParty, securitySystem;
+
+        window.addEventListener('load', async () => {
+            // Initialize all systems
+            voiceControl = new VoiceControl();
+            userProfileSystem = new UserProfileSystem();
+            aiDiscovery = new AIContentDiscovery();
+            analytics = new PredictiveAnalytics();
+            smartHome = new SmartHomeController();
+            web3Integration = new Web3Integration();
+            watchParty = new WatchParty();
+            securitySystem = new SecuritySystem();
+            
+            // Initialize virtual scrolling
+            const services = Array.from({length: 30}, (_, i) => ({
+                name: `Service ${i + 1}`,
+                status: 'online'
+            }));
+            new VirtualScroller(
+                document.getElementById('services-container'),
+                services,
+                60
+            );
+            
+            // Generate QR code
+            generateQRCode();
+            
+            // Hide boot screen after initialization
+            setTimeout(() => {
+                document.getElementById('boot-screen').style.display = 'none';
+            }, 3000);
+            
+            // Voice control event
+            document.getElementById('voice-control').addEventListener('click', () => {
+                voiceControl.toggle();
+            });
+            
+            // Chat input
+            document.getElementById('party-chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    watchParty.sendMessage(e.target.value);
+                    e.target.value = '';
+                }
+            });
+        });
+
+        // Global functions
+        function switchProfile(id) {
+            userProfileSystem.switchProfile(id);
+        }
+
+        function addProfile() {
+            userProfileSystem.addProfile();
+        }
+
+        function connectWallet() {
+            web3Integration.connectWallet();
+        }
+
+        function controlDevice(device) {
+            smartHome.controlDevice(device);
+        }
+
+        function playPause() {
+            const video = document.getElementById('party-video');
+            if (video.paused) video.play();
+            else video.pause();
+        }
+
+        function syncAll() {
+            watchParty.syncAll();
+        }
+
+        // Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>

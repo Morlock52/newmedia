@@ -1,0 +1,81 @@
+# Error Recovery System Dockerfile
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    wget \
+    bash \
+    docker-cli \
+    jq \
+    bc \
+    findutils \
+    coreutils
+
+# Create app directory
+WORKDIR /app
+
+# Create package.json for the error recovery system
+RUN cat > package.json << 'EOF'
+{
+  "name": "media-server-error-recovery",
+  "version": "1.0.0",
+  "description": "Comprehensive error recovery system for media server infrastructure",
+  "main": "error-recovery-system.js",
+  "scripts": {
+    "start": "node error-recovery-system.js",
+    "health": "curl -f http://localhost:3010/health || exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+EOF
+
+# Install Node.js dependencies
+RUN npm install
+
+# Copy the error recovery system
+COPY scripts/error-recovery-system.js ./
+COPY scripts/enhanced-health-checks.sh ./
+
+# Make scripts executable
+RUN chmod +x enhanced-health-checks.sh
+
+# Create directories for logs and data
+RUN mkdir -p /var/log/health-checks/service-logs \
+    && mkdir -p /var/log/health-checks/recovery-logs \
+    && mkdir -p /config
+
+# Create a wrapper script that starts both the Node.js service and shell script monitoring
+RUN cat > start-recovery-system.sh << 'EOF'
+#!/bin/bash
+
+# Start the Node.js error recovery system in the background
+node error-recovery-system.js &
+
+# Start the shell-based health checks in daemon mode
+./enhanced-health-checks.sh daemon 60 &
+
+# Wait for all background processes
+wait
+EOF
+
+RUN chmod +x start-recovery-system.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3010/health || exit 1
+
+# Expose the API port
+EXPOSE 3010
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV HEALTH_CHECK_PORT=3010
+
+# Start the combined recovery system
+CMD ["./start-recovery-system.sh"]

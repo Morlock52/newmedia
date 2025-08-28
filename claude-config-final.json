@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "replicate": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/.nvm/versions/node/v22.16.0/lib/node_modules/@modelcontextprotocol/server-replicate/dist/index.js"],
+      "env": {
+        "REPLICATE_API_TOKEN": "r8_K8ajSOZAkpCDDkC9ngtPGlqPRbQh4ai2smHIN"
+      }
+    },
+    "sqlite": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": [
+        "/Users/morlock/.nvm/versions/node/v22.16.0/lib/node_modules/@modelcontextprotocol/server-sqlite/dist/index.js",
+        "/Users/morlock/databases/example.db"
+      ]
+    },
+    "media-server": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/standalone-mcp.js"],
+      "env": {
+        "DEBUG": "false"
+      }
+    },
+    "sonarr": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/sonarr-mcp-standalone.js"],
+      "env": {
+        "DEBUG": "false",
+        "SONARR_URL": "http://localhost:8989",
+        "SONARR_API_KEY": ""
+      }
+    },
+    "jellyfin": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/jellyfin-mcp-standalone.js"],
+      "env": {
+        "DEBUG": "false",
+        "JELLYFIN_URL": "http://localhost:8096",
+        "JELLYFIN_API_KEY": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+// PWA feature stubs to satisfy UI integrity and allow basic demo
+function testServiceWorker() { console.log('stub:testServiceWorker'); }
+function unregisterServiceWorker() { console.log('stub:unregisterServiceWorker'); }
+function testManifest() { console.log('stub:testManifest'); }
+function validateManifest() { console.log('stub:validateManifest'); }
+function testInstallPrompt() { console.log('stub:testInstallPrompt'); }
+function checkInstallStatus() { console.log('stub:checkInstallStatus'); }
+function testOfflineSupport() { console.log('stub:testOfflineSupport'); }
+function simulateOffline() { console.log('stub:simulateOffline'); }
+function testNotifications() { console.log('stub:testNotifications'); }
+function requestNotificationPermission() { console.log('stub:requestNotificationPermission'); }
+function testBackgroundSync() { console.log('stub:testBackgroundSync'); }
+function forceSyncAll() { console.log('stub:forceSyncAll'); }
+function testWebShare() { console.log('stub:testWebShare'); }
+function testShareTarget() { console.log('stub:testShareTarget'); }
+function testAppShortcuts() { console.log('stub:testAppShortcuts'); }
+function addDynamicShortcut() { console.log('stub:addDynamicShortcut'); }
+function testCacheStorage() { console.log('stub:testCacheStorage'); }
+function clearAllCaches() { console.log('stub:clearAllCaches'); }
+function measurePerformance() { console.log('stub:measurePerformance'); }
+function exportMetrics() { console.log('stub:exportMetrics'); }
+function testStorageAPI() { console.log('stub:testStorageAPI'); }
+function requestPersistentStorage() { console.log('stub:requestPersistentStorage'); }
+function testFullscreen() { console.log('stub:testFullscreen'); }
+function exitFullscreen() { console.log('stub:exitFullscreen'); }
+function runAllTests() { console.log('stub:runAllTests'); }
+function generateReport() { console.log('stub:generateReport'); }

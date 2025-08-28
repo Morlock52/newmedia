@@ -1,0 +1,20 @@
+#!/command/with-contenv bash
+# qBittorrent service runner
+
+set -e
+
+echo "Starting qBittorrent..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/qbittorrent
+
+# Set proper ownership
+chown -R media:media /config/qbittorrent
+
+# Set environment
+export HOME="/config/qbittorrent"
+
+# Run qBittorrent
+exec s6-setuidgid media /usr/bin/qbittorrent-nox \
+    --webui-port=8080 \
+    --profile=/config/qbittorrent

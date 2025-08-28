@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# SABnzbd service cleanup
+
+echo "$(date) [INFO] SABnzbd service stopped" >> /logs/sabnzbd.log

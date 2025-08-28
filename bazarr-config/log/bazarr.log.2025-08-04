@@ -1,0 +1,13 @@
+2025-08-04 02:59:32|INFO    |root                            |Scheduler will use this timezone: America/New_York|
+2025-08-04 02:59:36|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-08-04 02:59:36|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-08-04 09:59:53|WARNING |apscheduler.executors.default   |Run time of job "Check Health (trigger: interval[6:00:00], next run at: 2025-08-04 14:57:03 EDT)" was missed by 1:02:50.320557|
+2025-08-04 09:59:53|WARNING |apscheduler.executors.default   |Run time of job "Update Release Info (trigger: interval[3:00:00], next run at: 2025-08-04 11:49:20 EDT)" was missed by 1:10:33.118401|
+2025-08-04 09:59:53|WARNING |apscheduler.executors.default   |Run time of job "Update Announcements File (trigger: interval[6:00:00], next run at: 2025-08-04 14:58:29 EDT)" was missed by 1:01:24.380947|
+2025-08-04 15:14:13|WARNING |apscheduler.executors.default   |Run time of job "Check Health (trigger: interval[6:00:00], next run at: 2025-08-04 20:57:03 EDT)" was missed by 0:17:10.385735|
+2025-08-04 15:14:13|WARNING |apscheduler.executors.default   |Run time of job "Update Release Info (trigger: interval[3:00:00], next run at: 2025-08-04 17:49:20 EDT)" was missed by 0:24:53.376858|
+2025-08-04 15:14:13|WARNING |apscheduler.executors.default   |Run time of job "Update Announcements File (trigger: interval[6:00:00], next run at: 2025-08-04 20:58:29 EDT)" was missed by 0:15:44.392124|
+2025-08-04 20:47:19|WARNING |apscheduler.executors.default   |Run time of job "Update Release Info (trigger: interval[3:00:00], next run at: 2025-08-04 20:49:20 EDT)" was missed by 2:57:59.370574|
+2025-08-04 21:09:09|WARNING |apscheduler.executors.default   |Run time of job "Check Health (trigger: interval[6:00:00], next run at: 2025-08-05 02:57:03 EDT)" was missed by 0:12:06.384852|
+2025-08-04 21:09:09|WARNING |apscheduler.executors.default   |Run time of job "Update Announcements File (trigger: interval[6:00:00], next run at: 2025-08-05 02:58:29 EDT)" was missed by 0:10:40.389212|
+2025-08-04 22:35:04|INFO    |root                            |BAZARR Running cache maintenance|

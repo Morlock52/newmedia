@@ -1,0 +1,268 @@
+#!/bin/bash
+
+echo "🚀 Starting ALL Media Services"
+echo "=============================="
+
+# Stop any conflicting containers
+docker stop mega-demo ultimate-single ultimate-quick ultimate-dashboard 2>/dev/null
+docker rm mega-demo ultimate-single ultimate-quick ultimate-dashboard 2>/dev/null
+
+# Create the comprehensive docker-compose
+cat > docker-compose-all.yml << 'EOF'
+version: '3.8'
+
+services:
+  # ========== MEDIA SERVERS ==========
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./jellyfin-config:/config
+      - ./media:/media
+    environment:
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  # ========== ARR STACK ==========
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./sonarr-config:/config
+      - ./media/tv:/tv
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - "7878:7878"
+    volumes:
+      - ./radarr-config:/config
+      - ./media/movies:/movies
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    ports:
+      - "8686:8686"
+    volumes:
+      - ./lidarr-config:/config
+      - ./media/music:/music
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./prowlarr-config:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    ports:
+      - "6767:6767"
+    volumes:
+      - ./bazarr-config:/config
+      - ./media:/media
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  # ========== DOWNLOAD CLIENTS ==========
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - ./qbittorrent-config:/config
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - WEBUI_PORT=8080
+    restart: unless-stopped
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./sabnzbd-config:/config
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    volumes:
+      - ./transmission-config:/config
+      - ./downloads:/downloads
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  # ========== REQUEST SERVICES ==========
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    ports:
+      - "5055:5055"
+    volumes:
+      - ./jellyseerr-config:/app/config
+    environment:
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    ports:
+      - "5056:5055"
+    volumes:
+      - ./overseerr-config:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+
+  # ========== MANAGEMENT ==========
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer-data:/data
+    restart: unless-stopped
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy-manager-data:/data
+      - ./nginx-proxy-manager-letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+
+  # ========== MONITORING ==========
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    restart: unless-stopped
+
+  # ========== DASHBOARD ==========
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./homepage-config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - PUID=1000
+      - PGID=1000
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge
+EOF
+
+echo "📝 Docker Compose file created"
+echo ""
+echo "🚀 Starting all services..."
+docker-compose -f docker-compose-all.yml up -d
+
+echo ""
+echo "⏳ Waiting for services to start..."
+sleep 10
+
+echo ""
+echo "✅ All services starting! Check status:"
+docker-compose -f docker-compose-all.yml ps
+
+echo ""
+echo "🌐 Access your services:"
+echo "================================"
+echo "📺 Media:"
+echo "  • Jellyfin: http://localhost:8096"
+echo ""
+echo "📡 Arr Stack:"
+echo "  • Sonarr: http://localhost:8989"
+echo "  • Radarr: http://localhost:7878"
+echo "  • Lidarr: http://localhost:8686"
+echo "  • Prowlarr: http://localhost:9696"
+echo "  • Bazarr: http://localhost:6767"
+echo ""
+echo "💾 Downloads:"
+echo "  • qBittorrent: http://localhost:8080"
+echo "  • SABnzbd: http://localhost:8082"
+echo "  • Transmission: http://localhost:9091"
+echo ""
+echo "🎬 Requests:"
+echo "  • Jellyseerr: http://localhost:5055"
+echo "  • Overseerr: http://localhost:5056"
+echo ""
+echo "🛠️ Management:"
+echo "  • Portainer: http://localhost:9000"
+echo "  • Nginx Proxy Manager: http://localhost:81"
+echo "  • Homepage Dashboard: http://localhost:3000"
+echo "  • Uptime Kuma: http://localhost:3001"
+echo ""
+echo "✅ ALL SERVICES RUNNING!"

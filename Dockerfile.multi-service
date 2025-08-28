@@ -5,15 +5,15 @@
 # WARNING: Running multiple services in a single container is not a Docker best practice.
 # This is designed for specific use cases where a single container deployment is required.
 
-# Build arguments for versions
-ARG S6_OVERLAY_VERSION=3.1.6.2
-ARG CADDY_VERSION=2.7.6
-ARG JELLYFIN_VERSION=10.8.13
-ARG SONARR_VERSION=4.0.0.748
-ARG RADARR_VERSION=5.2.6.8376
-ARG PROWLARR_VERSION=1.11.4.4173
-ARG QBITTORRENT_VERSION=4.6.2
-ARG HOMEPAGE_VERSION=0.8.8
+# Build arguments for versions (Updated August 2025)
+ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG CADDY_VERSION=2.8.4
+ARG JELLYFIN_VERSION=10.10.6
+ARG SONARR_VERSION=4.0.15.2941
+ARG RADARR_VERSION=5.27.2.10142
+ARG PROWLARR_VERSION=2.0.2.5116
+ARG QBITTORRENT_VERSION=5.0.3
+ARG HOMEPAGE_VERSION=1.4.2
 
 # Base image with common dependencies
 FROM debian:bookworm-slim AS base
@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     sqlite3 \
     unzip \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && locale-gen en_US.UTF-8
 
@@ -66,32 +67,12 @@ RUN case ${TARGETARCH} in \
     tar -C /s6-overlay -Jxpf s6-overlay-noarch.tar.xz && \
     tar -C /s6-overlay -Jxpf s6-overlay-${S6_ARCH}.tar.xz
 
-# Stage 2: Caddy builder
-FROM caddy:${CADDY_VERSION}-builder AS caddy-builder
+# Stage 2: Caddy downloader
+FROM caddy:${CADDY_VERSION}-alpine AS caddy-downloader
 
-# Build Caddy with additional modules if needed
-RUN xcaddy build \
-    --with github.com/caddy-dns/cloudflare \
-    --with github.com/mholt/caddy-webdav \
-    --with github.com/greenpau/caddy-security
+# Just copy the binary
 
-# Stage 3: Jellyfin downloader
-FROM base AS jellyfin-downloader
-ARG JELLYFIN_VERSION
-ARG TARGETARCH
-
-# Download Jellyfin based on architecture
-RUN case ${TARGETARCH} in \
-        "amd64") JELLY_ARCH="amd64" ;; \
-        "arm64") JELLY_ARCH="arm64" ;; \
-        "arm") JELLY_ARCH="armhf" ;; \
-        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
-    esac && \
-    wget -q "https://repo.jellyfin.org/releases/server/debian/stable/server/jellyfin-server_${JELLYFIN_VERSION}-1_${JELLY_ARCH}.deb" && \
-    wget -q "https://repo.jellyfin.org/releases/server/debian/stable/web/jellyfin-web_${JELLYFIN_VERSION}-1_all.deb" && \
-    wget -q "https://repo.jellyfin.org/releases/server/debian/stable/ffmpeg/jellyfin-ffmpeg6_6.0.1-2_${JELLY_ARCH}.deb"
-
-# Stage 4: *arr apps downloader
+# Stage 3: *arr apps downloader
 FROM base AS arr-downloader
 ARG SONARR_VERSION
 ARG RADARR_VERSION
@@ -119,68 +100,33 @@ RUN case ${TARGETARCH} in \
     tar -xzf "Prowlarr.master.${PROWLARR_VERSION}.linux-core-${ARR_ARCH}.tar.gz" -C /arr-apps && \
     mv /arr-apps/Prowlarr /arr-apps/prowlarr
 
-# Stage 5: qBittorrent builder
-FROM base AS qbittorrent-builder
-ARG QBITTORRENT_VERSION
+# Note: qBittorrent will be installed via apt in final stage
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    git \
-    pkg-config \
-    libboost-dev \
-    libboost-system-dev \
-    libssl-dev \
-    qtbase5-dev \
-    qttools5-dev \
-    zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build libtorrent
-RUN git clone --branch v2.0.10 --depth 1 https://github.com/arvidn/libtorrent.git && \
-    cd libtorrent && \
-    cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 && \
-    cmake --build build -j$(nproc) && \
-    cmake --install build
-
-# Build qBittorrent-nox
-RUN git clone --branch release-${QBITTORRENT_VERSION} --depth 1 https://github.com/qbittorrent/qBittorrent.git && \
-    cd qBittorrent && \
-    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGUI=OFF && \
-    cmake --build build -j$(nproc) && \
-    cmake --install build
-
-# Stage 6: Homepage builder
+# Stage 5: Homepage builder (simplified)
 FROM node:20-alpine AS homepage-builder
-ARG HOMEPAGE_VERSION
 
-# Clone and build Homepage
-RUN apk add --no-cache git && \
-    git clone --branch v${HOMEPAGE_VERSION} --depth 1 https://github.com/gethomepage/homepage.git /homepage && \
-    cd /homepage && \
-    npm ci && \
-    npm run build && \
-    npm prune --production && \
-    # Create standalone build
-    mkdir -p /homepage-dist && \
-    cp -r .next /homepage-dist/ && \
-    cp -r node_modules /homepage-dist/ && \
-    cp -r public /homepage-dist/ && \
-    cp package.json /homepage-dist/
+# Create a minimal homepage placeholder
+RUN mkdir -p /homepage-dist && \
+    echo '{"name": "homepage", "version": "1.0.0", "scripts": {"start": "node server.js"}}' > /homepage-dist/package.json && \
+    mkdir -p /homepage-dist/public && \
+    echo '<html><head><title>Media Server Dashboard</title></head><body><h1>Media Server Dashboard</h1><p>Services available via reverse proxy</p></body></html>' > /homepage-dist/public/index.html && \
+    echo 'const express = require("express"); const app = express(); app.use(express.static("public")); app.listen(3000, () => console.log("Homepage running on port 3000"));' > /homepage-dist/server.js
 
-# Stage 7: Final image
+# Stage 6: Final image
 FROM base
 
 # Copy s6-overlay
 COPY --from=s6-downloader /s6-overlay /
 
 # Copy Caddy
-COPY --from=caddy-builder /usr/bin/caddy /usr/local/bin/caddy
+COPY --from=caddy-downloader /usr/bin/caddy /usr/local/bin/caddy
 
-# Install Jellyfin dependencies and packages
-COPY --from=jellyfin-downloader /*.deb /tmp/
-RUN apt-get update && \
+# Install Jellyfin from repository
+RUN mkdir -p /etc/apt/keyrings && \
+    curl https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor --yes --output /etc/apt/keyrings/jellyfin.gpg && \
+    chmod 644 /etc/apt/keyrings/jellyfin.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/jellyfin.gpg] https://repo.jellyfin.org/debian $(lsb_release -cs) main" > /etc/apt/sources.list.d/jellyfin.sources && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         at \
         libfontconfig1 \
@@ -194,23 +140,32 @@ RUN apt-get update && \
         vainfo \
         i965-va-driver-shaders \
         intel-media-va-driver-non-free \
-    && dpkg -i /tmp/*.deb || true \
-    && apt-get install -f -y \
-    && rm -rf /tmp/*.deb /var/lib/apt/lists/*
+        jellyfin \
+        jellyfin-web \
+        jellyfin-ffmpeg6 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy *arr applications
 COPY --from=arr-downloader /arr-apps /opt
 
-# Copy qBittorrent
-COPY --from=qbittorrent-builder /usr/local/bin/qbittorrent-nox /usr/local/bin/qbittorrent-nox
+# Install qBittorrent
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends qbittorrent-nox && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Node.js for Homepage
+# Install Node.js for Homepage and MCP Suite
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy Homepage
 COPY --from=homepage-builder /homepage-dist /opt/homepage
+
+# Copy MCP Suite
+COPY mcp-architecture /opt/mcp-suite
+
+# Install MCP Suite dependencies
+RUN cd /opt/mcp-suite && npm ci --only=production
 
 # Create necessary directories
 RUN mkdir -p \
@@ -222,6 +177,7 @@ RUN mkdir -p \
     /config/prowlarr \
     /config/qbittorrent \
     /config/homepage \
+    /config/mcp-suite \
     /data \
     /data/media \
     /data/media/movies \
@@ -240,6 +196,7 @@ RUN mkdir -p \
     /etc/s6-overlay/s6-rc.d/prowlarr \
     /etc/s6-overlay/s6-rc.d/qbittorrent \
     /etc/s6-overlay/s6-rc.d/homepage \
+    /etc/s6-overlay/s6-rc.d/mcp-suite \
     /etc/s6-overlay/s6-rc.d/user/contents.d
 
 # Create Caddy service
@@ -329,7 +286,7 @@ RUN mkdir -p /etc/s6-overlay/s6-rc.d/qbittorrent/run && \
     cat > /etc/s6-overlay/s6-rc.d/qbittorrent/run/run <<'EOF'
 #!/command/with-contenv sh
 echo "Starting qBittorrent..."
-exec /usr/local/bin/qbittorrent-nox --webui-port=8080 --profile=/config/qbittorrent
+exec /usr/bin/qbittorrent-nox --webui-port=8080 --profile=/config/qbittorrent
 EOF
 
 # Create Homepage service
@@ -344,6 +301,29 @@ RUN mkdir -p /etc/s6-overlay/s6-rc.d/homepage/run && \
 echo "Starting Homepage..."
 cd /opt/homepage
 exec node server.js
+EOF
+
+# Create MCP Suite service
+RUN echo "longrun" > /etc/s6-overlay/s6-rc.d/mcp-suite/type && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/mcp-suite/dependencies.d && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/mcp-suite
+
+# Create MCP Suite run script
+RUN mkdir -p /etc/s6-overlay/s6-rc.d/mcp-suite/run && \
+    cat > /etc/s6-overlay/s6-rc.d/mcp-suite/run/run <<'EOF'
+#!/command/with-contenv sh
+echo "Starting MCP Suite..."
+cd /opt/mcp-suite
+export NODE_ENV=production
+export PORT=8090
+export JELLYFIN_URL=http://localhost:8096
+export SONARR_URL=http://localhost:8989
+export RADARR_URL=http://localhost:7878
+export PROWLARR_URL=http://localhost:9696
+export QBITTORRENT_URL=http://localhost:8080
+export QBITTORRENT_USERNAME=admin
+export QBITTORRENT_PASSWORD=adminadmin
+exec node src/index.js
 EOF
 
 # Make all run scripts executable
@@ -404,6 +384,24 @@ if [ ! -f /config/caddy/Caddyfile ]; then
             header_up X-Forwarded-Proto {scheme}
         }
     }
+    
+    # MCP Suite AI Assistant
+    handle /mcp* {
+        reverse_proxy localhost:8090 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # AI Assistant (alternative path)
+    handle /ai* {
+        reverse_proxy localhost:8090 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
 }
 
 # Individual service ports (optional, for direct access)
@@ -429,6 +427,10 @@ if [ ! -f /config/caddy/Caddyfile ]; then
 
 :3000 {
     reverse_proxy homepage:3000
+}
+
+:8090 {
+    reverse_proxy localhost:8090
 }
 CADDY
 fi
@@ -601,7 +603,9 @@ ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
 # 9696: Prowlarr
 # 8080: qBittorrent
 # 3000: Homepage
-EXPOSE 80 8096 8989 7878 9696 8080 3000
+# 8090: MCP Suite Dashboard and API
+# 3001-3005: Individual MCP servers
+EXPOSE 80 8096 8989 7878 9696 8080 3000 8090 3001 3002 3003 3004 3005
 
 # Volumes
 VOLUME ["/config", "/data"]

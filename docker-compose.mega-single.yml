@@ -1,0 +1,235 @@
+# ========================================
+# MEGA SINGLE CONTAINER DOCKER COMPOSE
+# Complete Media Server Stack with Service Mesh
+# ========================================
+
+version: '3.8'
+
+services:
+  mega-media-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mega-single
+    image: mega-media-server:latest
+    container_name: mega-media-server
+    hostname: mega-server
+    
+    # ========================================
+    # NETWORK CONFIGURATION
+    # ========================================
+    networks:
+      - media-network
+    
+    ports:
+      # Main web interfaces
+      - "80:80"           # Traefik HTTP
+      - "443:443"         # Traefik HTTPS
+      - "8080:8080"       # Traefik Dashboard
+      
+      # Direct service access (optional)
+      - "8989:8989"       # Sonarr
+      - "7878:7878"       # Radarr
+      - "8686:8686"       # Lidarr
+      - "8787:8787"       # Readarr
+      - "9696:9696"       # Prowlarr
+      - "6767:6767"       # Bazarr
+      - "8090:8090"       # qBittorrent
+      - "8096:8096"       # Jellyfin
+      - "8181:8181"       # Tautulli
+      
+      # Monitoring and management
+      - "3000:3000"       # Grafana
+      - "9090:9090"       # Prometheus
+      - "3100:3100"       # Loki
+      - "9080:9080"       # Promtail
+      - "9001:9001"       # Supervisor
+      - "9000:9000"       # Portainer
+      - "3001:3001"       # Uptime Kuma
+      - "8888:8888"       # Health Monitor API
+      
+      # Authentication
+      - "9091:9091"       # Authelia
+      
+      # Databases
+      - "5432:5432"       # PostgreSQL
+      - "6379:6379"       # Redis
+      - "15672:15672"     # RabbitMQ Management
+      - "5672:5672"       # RabbitMQ
+    
+    # ========================================
+    # ENVIRONMENT VARIABLES
+    # ========================================
+    environment:
+      # System
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      
+      # Database connections
+      - POSTGRES_HOST=127.0.0.1
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=127.0.0.1
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=127.0.0.1
+      - RABBITMQ_PORT=5672
+      
+      # Service discovery
+      - TRAEFIK_HOST=127.0.0.1
+      - TRAEFIK_PORT=8080
+      - AUTHELIA_HOST=127.0.0.1
+      - AUTHELIA_PORT=9091
+      
+      # *arr service interconnections
+      - SONARR_URL=http://127.0.0.1:8989
+      - RADARR_URL=http://127.0.0.1:7878
+      - LIDARR_URL=http://127.0.0.1:8686
+      - READARR_URL=http://127.0.0.1:8787
+      - PROWLARR_URL=http://127.0.0.1:9696
+      - BAZARR_URL=http://127.0.0.1:6767
+      
+      # Download clients
+      - QBITTORRENT_URL=http://127.0.0.1:8090
+      
+      # Media servers
+      - JELLYFIN_URL=http://127.0.0.1:8096
+      - TAUTULLI_URL=http://127.0.0.1:8181
+      
+      # Monitoring
+      - PROMETHEUS_URL=http://127.0.0.1:9090
+      - GRAFANA_URL=http://127.0.0.1:3000
+      - LOKI_URL=http://127.0.0.1:3100
+      
+      # Service mesh configuration
+      - SERVICE_MESH_ENABLED=true
+      - INTER_SERVICE_COMMUNICATION=enabled
+      - SHARED_AUTHENTICATION=authelia
+      - CENTRALIZED_LOGGING=loki
+      - UNIFIED_DATABASE=postgresql
+      
+      # Security
+      - AUTHELIA_JWT_SECRET=your-jwt-secret-change-this-in-production
+      - AUTHELIA_SESSION_SECRET=your-session-secret-change-this-in-production
+      - GRAFANA_SECRET_KEY=your-grafana-secret-key-change-this
+      
+      # Resource limits
+      - MAX_DOWNLOAD_SPEED=0
+      - MAX_UPLOAD_SPEED=0
+      - POSTGRES_MAX_CONNECTIONS=200
+      - REDIS_MAX_MEMORY=512mb
+    
+    # ========================================
+    # VOLUME MOUNTS
+    # ========================================
+    volumes:
+      # Configuration persistence
+      - ./config:/config
+      - ./data:/data
+      - ./logs:/logs
+      
+      # Media directories
+      - ./data/media/movies:/data/media/movies
+      - ./data/media/tv:/data/media/tv
+      - ./data/media/music:/data/media/music
+      - ./data/media/books:/data/media/books
+      
+      # Download directories
+      - ./data/downloads:/data/downloads
+      
+      # Backup directory
+      - ./data/backups:/data/backups
+      
+      # System directories (for monitoring)
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    
+    # ========================================
+    # RESOURCE LIMITS
+    # ========================================
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    # ========================================
+    # HEALTH CHECK
+    # ========================================
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 3m
+    
+    # ========================================
+    # RESTART POLICY
+    # ========================================
+    restart: unless-stopped
+    
+    # ========================================
+    # SECURITY
+    # ========================================
+    security_opt:
+      - no-new-privileges:true
+    
+    # ========================================
+    # LOGGING
+    # ========================================
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # ========================================
+    # LABELS FOR TRAEFIK (Internal routing)
+    # ========================================
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+      
+      # Main dashboard route
+      - "traefik.http.routers.dashboard.rule=Host(`localhost`) || Host(`dashboard.localhost`)"
+      - "traefik.http.routers.dashboard.service=dashboard"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      
+      # Health check route
+      - "traefik.http.routers.health.rule=PathPrefix(`/health`)"
+      - "traefik.http.routers.health.service=health"
+      - "traefik.http.services.health.loadbalancer.server.port=8888"
+      
+      # Service discovery labels
+      - "mega.service.type=all-in-one"
+      - "mega.service.version=1.0.0"
+      - "mega.service.components=arr,media,monitoring,auth,databases"
+
+# ========================================
+# NETWORKS
+# ========================================
+networks:
+  media-network:
+    driver: bridge
+    name: mega-media-network
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+
+# ========================================
+# NAMED VOLUMES (Optional external storage)
+# ========================================
+volumes:
+  postgres-data:
+    name: mega-postgres-data
+  redis-data:
+    name: mega-redis-data
+  prometheus-data:
+    name: mega-prometheus-data
+  grafana-data:
+    name: mega-grafana-data
+  loki-data:
+    name: mega-loki-data

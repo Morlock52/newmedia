@@ -1,0 +1,262 @@
+# General Alert Rules for Media Server Infrastructure
+# Covers system resources, containers, and general service health
+
+groups:
+  # System Resource Monitoring
+  - name: system_resources
+    rules:
+      - alert: HighCPUUsage
+        expr: media_server:cpu_usage:rate5m > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% for more than 5 minutes on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+          
+      - alert: CriticalCPUUsage
+        expr: media_server:cpu_usage:rate5m > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% for more than 2 minutes on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+
+      - alert: HighMemoryUsage
+        expr: media_server:memory_usage:percentage > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}% for more than 5 minutes on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+          
+      - alert: CriticalMemoryUsage
+        expr: media_server:memory_usage:percentage > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}% for more than 2 minutes on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+
+      - alert: DiskSpaceLow
+        expr: media_server:disk_usage:percentage > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: storage
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+          
+      - alert: DiskSpaceCritical
+        expr: media_server:disk_usage:percentage > 95
+        for: 1m
+        labels:
+          severity: critical
+          service: storage
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+          current_value: "{{ $value }}"
+
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) + rate(node_network_transmit_bytes_total[5m]) > 100000000  # 100MB/s
+        for: 10m
+        labels:
+          severity: warning
+          service: network
+        annotations:
+          summary: "High network traffic on {{ $labels.instance }}"
+          description: "Network I/O is {{ $value | humanize }}B/s for more than 10 minutes"
+
+  # Container Health Monitoring
+  - name: container_health
+    rules:
+      - alert: ContainerDown
+        expr: up{job="docker-containers"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.container_label_com_docker_compose_service }}"
+        annotations:
+          summary: "Container {{ $labels.container_label_com_docker_compose_service }} is down"
+          description: "Container {{ $labels.container_label_com_docker_compose_service }} has been down for more than 1 minute"
+
+      - alert: ContainerHighCPU
+        expr: container:cpu_usage:rate5m > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.name }}"
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value }}% for more than 10 minutes"
+          current_value: "{{ $value }}"
+
+      - alert: ContainerHighMemory
+        expr: container:memory_usage:percentage > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.name }}"
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ $value }}% for more than 5 minutes"
+          current_value: "{{ $value }}"
+
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds[1h]) > 5
+        for: 0m
+        labels:
+          severity: warning
+          service: "{{ $labels.name }}"
+        annotations:
+          summary: "Container {{ $labels.name }} is in restart loop"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in the last hour"
+
+  # Service Availability
+  - name: service_availability
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes"
+
+      - alert: HttpRequestLatencyHigh
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "High HTTP request latency on {{ $labels.job }}"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.job }}"
+
+      - alert: HttpErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "High HTTP error rate on {{ $labels.job }}"
+          description: "HTTP error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
+
+  # SSL Certificate Monitoring
+  - name: ssl_certificates
+    rules:
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7  # 7 days
+        for: 0m
+        labels:
+          severity: warning
+          service: ssl
+        annotations:
+          summary: "SSL certificate expiring soon for {{ $labels.instance }}"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: SSLCertificateExpired
+        expr: probe_ssl_earliest_cert_expiry - time() <= 0
+        for: 0m
+        labels:
+          severity: critical
+          service: ssl
+        annotations:
+          summary: "SSL certificate expired for {{ $labels.instance }}"
+          description: "SSL certificate for {{ $labels.instance }} has expired"
+
+  # Database Health
+  - name: database_health
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been down for more than 2 minutes"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for more than 2 minutes"
+
+      - alert: PostgreSQLTooManyConnections
+        expr: sum by (instance) (pg_stat_activity_count) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "PostgreSQL too many connections"
+          description: "PostgreSQL has {{ $value }} active connections (>80)"
+
+  # Log Monitoring
+  - name: log_monitoring
+    rules:
+      - alert: HighErrorLogRate
+        expr: rate(promtail_read_lines_total{level="error"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: logs
+        annotations:
+          summary: "High error log rate detected"
+          description: "Error log rate is {{ $value }} errors/second for more than 5 minutes"
+
+      - alert: LogIngestionFailed
+        expr: increase(promtail_files_failed_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: promtail
+        annotations:
+          summary: "Log ingestion failed"
+          description: "Promtail failed to ingest {{ $value }} log files in the last 5 minutes"
+
+  # Backup Monitoring
+  - name: backup_monitoring
+    rules:
+      - alert: BackupFailed
+        expr: time() - backup_last_success_timestamp > 86400  # 24 hours
+        for: 0m
+        labels:
+          severity: critical
+          service: backup
+        annotations:
+          summary: "Backup job failed"
+          description: "Backup has not completed successfully for more than 24 hours"
+
+      - alert: BackupSizeUnusual
+        expr: abs(backup_size_bytes - backup_size_bytes offset 24h) / backup_size_bytes offset 24h > 0.5
+        for: 0m
+        labels:
+          severity: warning
+          service: backup
+        annotations:
+          summary: "Unusual backup size detected"
+          description: "Backup size changed by more than 50% compared to yesterday"

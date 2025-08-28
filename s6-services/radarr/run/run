@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+# Radarr service runner
+
+set -e
+
+echo "Starting Radarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/radarr
+
+# Set proper ownership
+chown -R media:media /config/radarr
+
+# Set environment
+export HOME="/config/radarr"
+export XDG_CONFIG_HOME="/config/radarr"
+
+# Run Radarr
+exec s6-setuidgid media /opt/radarr/Radarr \
+    -nobrowser \
+    -data=/config/radarr

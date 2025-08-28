@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Jellyfin service cleanup
+
+echo "$(date) [INFO] Jellyfin service stopped" >> /logs/jellyfin/jellyfin.log

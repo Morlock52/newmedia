@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Sonarr service cleanup
+
+echo "$(date) [INFO] Sonarr service stopped" >> /logs/sonarr.log

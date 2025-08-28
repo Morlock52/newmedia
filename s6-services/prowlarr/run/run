@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+# Prowlarr service runner
+
+set -e
+
+echo "Starting Prowlarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/prowlarr
+
+# Set proper ownership
+chown -R media:media /config/prowlarr
+
+# Set environment
+export HOME="/config/prowlarr"
+export XDG_CONFIG_HOME="/config/prowlarr"
+
+# Run Prowlarr
+exec s6-setuidgid media /opt/prowlarr/Prowlarr \
+    -nobrowser \
+    -data=/config/prowlarr

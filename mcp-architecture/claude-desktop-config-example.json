@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "media-services": {
+      "command": "node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/mcp-media-server.js"],
+      "env": {
+        "MCP_DEBUG": "true",
+        "JELLYFIN_URL": "http://localhost:8096",
+        "JELLYFIN_API_KEY": "your_jellyfin_api_key_here",
+        "SONARR_URL": "http://localhost:8989",
+        "SONARR_API_KEY": "your_sonarr_api_key_here",
+        "RADARR_URL": "http://localhost:7878",
+        "RADARR_API_KEY": "your_radarr_api_key_here",
+        "PROWLARR_URL": "http://localhost:9696",
+        "PROWLARR_API_KEY": "your_prowlarr_api_key_here",
+        "QBITTORRENT_URL": "http://localhost:8080",
+        "QBITTORRENT_USER": "admin",
+        "QBITTORRENT_PASS": "your_qbittorrent_password",
+        "BAZARR_URL": "http://localhost:6767",
+        "BAZARR_API_KEY": "your_bazarr_api_key_here",
+        "LIDARR_URL": "http://localhost:8686",
+        "LIDARR_API_KEY": "your_lidarr_api_key_here"
+      }
+    }
+  }
+}

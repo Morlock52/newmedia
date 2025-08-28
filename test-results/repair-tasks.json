@@ -1,0 +1,121 @@
+{
+  "projectId": "3e6fbcc1-60f6-434b-a45b-e811cc9bb891",
+  "issues": [
+    {
+      "category": "Files",
+      "name": "MobilePWAInterface.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "UnifiedMediaAPI.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "NEXUSAIAssistant.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "ServiceGrid.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "CyberpunkTheme.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "ZeroTrustSecurity.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "Web3Integration.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "SmartHomeHub.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "PerformanceOptimizer.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "MobileSync.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Files",
+      "name": "InfrastructureMonitor.tsx",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "jellyfin.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "plex.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "sonarr.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "radarr.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "prowlarr.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "jellyseerr.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "tautulli.js",
+      "error": "File not found",
+      "severity": "error"
+    },
+    {
+      "category": "Integrations",
+      "name": "netflow.js",
+      "error": "File not found",
+      "severity": "error"
+    }
+  ],
+  "timestamp": "2025-08-18T07:41:11.461Z",
+  "needsSwarmCoordination": true
+}

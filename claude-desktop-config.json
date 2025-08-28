@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "ultimate-media": {
+      "command": "node",
+      "args": [
+        "/Users/morlock/fun/newmedia/mcp-servers/unified-media-mcp.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "claude-flow": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "claude-flow@alpha",
+        "mcp",
+        "start"
+      ]
+    },
+    "ruv-swarm": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ruv-swarm@latest",
+        "mcp",
+        "start"
+      ]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ]
+    },
+    "archon": {
+      "serverUrl": "http://localhost:8051/mcp"
+    }
+  }
+}

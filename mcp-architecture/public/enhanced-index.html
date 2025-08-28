@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server 2025 - Enhanced Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .service-card {
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .status-online { color: #10b981; }
+        .status-offline { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 min-h-screen text-white">
+    
+    <!-- Header -->
+    <header class="glass shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        <i class="fas fa-server mr-2"></i>
+                        Ultimate Media Server 2025
+                    </div>
+                    <div class="glass px-3 py-1 rounded-full text-sm">
+                        v3.0.0 Enhanced
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="systemHealth" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm">System Healthy</span>
+                    </div>
+                    <div class="text-sm">
+                        <span id="serviceCount">0</span> Services Online
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="glass mx-6 mt-6 rounded-lg">
+        <div class="container mx-auto px-6 py-3">
+            <div class="flex space-x-6 overflow-x-auto">
+                <button onclick="showTab('overview')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20 active" data-tab="overview">
+                    <i class="fas fa-tachometer-alt mr-2"></i>Overview
+                </button>
+                <button onclick="showTab('media-servers')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="media-servers">
+                    <i class="fas fa-tv mr-2"></i>Media Servers
+                </button>
+                <button onclick="showTab('content-management')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="content-management">
+                    <i class="fas fa-folder-open mr-2"></i>Content Management
+                </button>
+                <button onclick="showTab('download-clients')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="download-clients">
+                    <i class="fas fa-download mr-2"></i>Download Clients
+                </button>
+                <button onclick="showTab('indexers')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="indexers">
+                    <i class="fas fa-search mr-2"></i>Indexers
+                </button>
+                <button onclick="showTab('requests')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="requests">
+                    <i class="fas fa-hand-paper mr-2"></i>Requests
+                </button>
+                <button onclick="showTab('analytics')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="analytics">
+                    <i class="fas fa-chart-bar mr-2"></i>Analytics
+                </button>
+                <button onclick="showTab('dashboards')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="dashboards">
+                    <i class="fas fa-home mr-2"></i>Dashboards
+                </button>
+                <button onclick="showTab('ai-chat')" class="tab-btn px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white hover:bg-opacity-20" data-tab="ai-chat">
+                    <i class="fas fa-robot mr-2"></i>AI Assistant
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-6">
+        
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-300 text-sm">Total Content</p>
+                            <p class="text-2xl font-bold">45,782</p>
+                        </div>
+                        <i class="fas fa-film text-3xl text-blue-400"></i>
+                    </div>
+                </div>
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-300 text-sm">Storage Used</p>
+                            <p class="text-2xl font-bold">47.3TB</p>
+                        </div>
+                        <i class="fas fa-hdd text-3xl text-green-400"></i>
+                    </div>
+                </div>
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-300 text-sm">Active Streams</p>
+                            <p class="text-2xl font-bold">8</p>
+                        </div>
+                        <i class="fas fa-play text-3xl text-purple-400"></i>
+                    </div>
+                </div>
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-300 text-sm">System Health</p>
+                            <p class="text-2xl font-bold">97.8%</p>
+                        </div>
+                        <i class="fas fa-heartbeat text-3xl text-red-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Categories Overview -->
+            <div class="category-grid mb-8">
+                <div class="glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-tv mr-2 text-blue-400"></i>
+                        Media Servers (3)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span>Jellyfin</span>
+                            <span class="status-online"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Plex</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Emby</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-folder-open mr-2 text-green-400"></i>
+                        Content Management (5)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span>Sonarr (TV)</span>
+                            <span class="status-online"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Radarr (Movies)</span>
+                            <span class="status-online"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Lidarr (Music)</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Readarr (Books)</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Bazarr (Subtitles)</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-download mr-2 text-purple-400"></i>
+                        Download Clients (5)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span>qBittorrent</span>
+                            <span class="status-online"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Transmission</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Deluge</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>NZBGet</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>SABnzbd</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-search mr-2 text-yellow-400"></i>
+                        Indexers & Search (3)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span>Prowlarr</span>
+                            <span class="status-online"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Jackett</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>FlareSolverr</span>
+                            <span class="status-offline"><i class="fas fa-circle"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass p-6 rounded-lg mb-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-clock mr-2 text-blue-400"></i>
+                    Recent Activity
+                </h3>
+                <div class="space-y-3" id="recentActivity">
+                    <div class="flex items-center space-x-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                        <i class="fas fa-download text-green-400"></i>
+                        <div>
+                            <p class="font-medium">The Last of Us S01E08 downloaded</p>
+                            <p class="text-sm text-gray-400">2 minutes ago via Sonarr</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                        <i class="fas fa-play text-blue-400"></i>
+                        <div>
+                            <p class="font-medium">User started watching Oppenheimer</p>
+                            <p class="text-sm text-gray-400">15 minutes ago on Jellyfin</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                        <i class="fas fa-plus text-purple-400"></i>
+                        <div>
+                            <p class="font-medium">Dune: Part Two added to library</p>
+                            <p class="text-sm text-gray-400">1 hour ago via Radarr</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Servers Tab -->
+        <div id="media-servers-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Media Servers</h2>
+            <div class="category-grid">
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-tv mr-2 text-blue-400"></i>
+                            Jellyfin
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-online text-sm"><i class="fas fa-circle mr-1"></i>Online</span>
+                            <button class="px-3 py-1 bg-blue-600 rounded-lg text-sm hover:bg-blue-700" onclick="openService('http://localhost:8096')">
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Version:</span>
+                            <span>10.8.13</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>8096</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Users:</span>
+                            <span>4 active</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Libraries:</span>
+                            <span>Movies, TV, Music</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-play mr-2 text-yellow-400"></i>
+                            Plex
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Version:</span>
+                            <span>1.32.8.7639</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>32400</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable in docker-compose profiles</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-server mr-2 text-green-400"></i>
+                            Emby
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Version:</span>
+                            <span>4.7.14.0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>8097</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable in docker-compose profiles</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Management Tab -->
+        <div id="content-management-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Content Management (*arr Suite)</h2>
+            <div class="category-grid">
+                <!-- Sonarr -->
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-tv mr-2 text-blue-400"></i>
+                            Sonarr
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-online text-sm"><i class="fas fa-circle mr-1"></i>Online</span>
+                            <button class="px-3 py-1 bg-blue-600 rounded-lg text-sm hover:bg-blue-700" onclick="openService('http://localhost:8989')">
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Purpose:</span>
+                            <span>TV Show Management</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Series:</span>
+                            <span>394 monitored</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Episodes:</span>
+                            <span>12,847 total</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Queue:</span>
+                            <span>12 downloads</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Radarr -->
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-film mr-2 text-purple-400"></i>
+                            Radarr
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-online text-sm"><i class="fas fa-circle mr-1"></i>Online</span>
+                            <button class="px-3 py-1 bg-purple-600 rounded-lg text-sm hover:bg-purple-700" onclick="openService('http://localhost:7878')">
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Purpose:</span>
+                            <span>Movie Management</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Movies:</span>
+                            <span>2,847 monitored</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Quality:</span>
+                            <span>4K: 35%, HD: 60%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Queue:</span>
+                            <span>8 downloads</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lidarr -->
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-music mr-2 text-green-400"></i>
+                            Lidarr
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Purpose:</span>
+                            <span>Music Management</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>8686</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile music</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Readarr -->
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-book mr-2 text-yellow-400"></i>
+                            Readarr
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Purpose:</span>
+                            <span>Book Management</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>8787</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile books</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bazarr -->
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-closed-captioning mr-2 text-red-400"></i>
+                            Bazarr
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Purpose:</span>
+                            <span>Subtitle Management</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>6767</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile subtitles</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Clients Tab -->
+        <div id="download-clients-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Download Clients</h2>
+            <div class="category-grid">
+                <!-- qBittorrent -->
+                <div class="glass p-6 rounded-lg service-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-download mr-2 text-blue-400"></i>
+                            qBittorrent
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-online text-sm"><i class="fas fa-circle mr-1"></i>Online</span>
+                            <button class="px-3 py-1 bg-blue-600 rounded-lg text-sm hover:bg-blue-700" onclick="openService('http://localhost:8080')">
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Type:</span>
+                            <span>Torrent Client</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Active:</span>
+                            <span>15 downloads</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Speed:</span>
+                            <span>↓ 45.7 MB/s</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Queue:</span>
+                            <span>3 waiting</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional download clients (disabled) -->
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-arrow-circle-down mr-2 text-red-400"></i>
+                            Transmission
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Type:</span>
+                            <span>Alternative Torrent Client</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>9091</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile transmission</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-cloud-download-alt mr-2 text-yellow-400"></i>
+                            NZBGet
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Type:</span>
+                            <span>Usenet Downloader</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>6789</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile usenet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-lg service-card opacity-60">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-newspaper mr-2 text-green-400"></i>
+                            SABnzbd
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="status-offline text-sm"><i class="fas fa-circle mr-1"></i>Offline</span>
+                            <button class="px-3 py-1 bg-gray-600 rounded-lg text-sm cursor-not-allowed" disabled>
+                                <i class="fas fa-external-link-alt mr-1"></i>Open
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Type:</span>
+                            <span>Alternative Usenet</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Port:</span>
+                            <span>8085</span>
+                        </div>
+                        <div class="text-center py-2">
+                            <span class="text-xs">Enable with --profile usenet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other tabs would follow similar patterns... -->
+        
+        <!-- AI Chat Tab -->
+        <div id="ai-chat-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Chat Interface -->
+                <div class="lg:col-span-2 glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-robot mr-2 text-blue-400"></i>
+                        AI Assistant Chat
+                    </h3>
+                    
+                    <div id="chatMessages" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg space-y-3">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-robot text-sm"></i>
+                            </div>
+                            <div class="bg-gray-700 p-3 rounded-lg max-w-md">
+                                <p>Hello! I'm your AI assistant for the Ultimate Media Server 2025. I can help you with:</p>
+                                <ul class="mt-2 text-sm list-disc list-inside">
+                                    <li>Managing your media libraries</li>
+                                    <li>Troubleshooting services</li>
+                                    <li>Content recommendations</li>
+                                    <li>System optimization</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <input type="text" id="chatInput" placeholder="Ask me anything about your media server..." 
+                               class="flex-1 px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                               onkeypress="handleChatKeypress(event)">
+                        <button onclick="sendMessage()" class="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                        <button onclick="startVoiceInput()" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition-colors" id="voiceBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Agent Voting Panel -->
+                <div class="glass p-6 rounded-lg">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-users mr-2 text-purple-400"></i>
+                        AI Agent Voting
+                    </h3>
+                    
+                    <div class="space-y-4" id="agentVotes">
+                        <div class="p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium">Agent Alpha</span>
+                                <span class="text-sm text-green-400">Active</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">Confidence: 75%</div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium">Agent Beta</span>
+                                <span class="text-sm text-green-400">Active</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="bg-purple-500 h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">Confidence: 60%</div>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-800 bg-opacity-50 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium">Agent Gamma</span>
+                                <span class="text-sm text-yellow-400">Thinking</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full animate-pulse" style="width: 30%"></div>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">Processing...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-3 bg-blue-900 bg-opacity-50 rounded-lg">
+                        <h4 class="font-medium mb-2">Current Consensus</h4>
+                        <p class="text-sm">Optimizing transcoding settings for better performance</p>
+                        <div class="text-xs text-gray-400 mt-1">2 of 3 agents agree</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden tabs for other categories would be here -->
+        <div id="indexers-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Indexers & Search</h2>
+            <p class="text-gray-400">Prowlarr, Jackett, and FlareSolverr configuration panels...</p>
+        </div>
+
+        <div id="requests-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Request Management</h2>
+            <p class="text-gray-400">Overseerr and Requestrr integration panels...</p>
+        </div>
+
+        <div id="analytics-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">Analytics & Monitoring</h2>
+            <p class="text-gray-400">Tautulli statistics and system monitoring...</p>
+        </div>
+
+        <div id="dashboards-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-6">External Dashboards</h2>
+            <p class="text-gray-400">Homepage and Organizr dashboard links...</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass mt-12 py-6">
+        <div class="container mx-auto px-6">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-400">
+                    Ultimate Media Server 2025 v3.0.0 Enhanced | Powered by Enhanced Unified MCP
+                </div>
+                <div class="flex space-x-4 text-sm">
+                    <a href="#" class="text-gray-400 hover:text-white">Documentation</a>
+                    <a href="#" class="text-gray-400 hover:text-white">Support</a>
+                    <a href="http://localhost:8090/health" class="text-gray-400 hover:text-white">Health Check</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Socket.IO connection
+        const socket = io();
+        
+        // Service definitions with enhanced data
+        const services = {
+            'jellyfin': { name: 'Jellyfin', port: 8096, status: 'online', category: 'media-server' },
+            'sonarr': { name: 'Sonarr', port: 8989, status: 'online', category: 'content-management' },
+            'radarr': { name: 'Radarr', port: 7878, status: 'online', category: 'content-management' },
+            'prowlarr': { name: 'Prowlarr', port: 9696, status: 'online', category: 'indexer' },
+            'qbittorrent': { name: 'qBittorrent', port: 8080, status: 'online', category: 'download-client' },
+            'plex': { name: 'Plex', port: 32400, status: 'offline', category: 'media-server' },
+            'emby': { name: 'Emby', port: 8097, status: 'offline', category: 'media-server' },
+            'lidarr': { name: 'Lidarr', port: 8686, status: 'offline', category: 'content-management' },
+            'readarr': { name: 'Readarr', port: 8787, status: 'offline', category: 'content-management' },
+            'bazarr': { name: 'Bazarr', port: 6767, status: 'offline', category: 'content-management' },
+            'jackett': { name: 'Jackett', port: 9117, status: 'offline', category: 'indexer' },
+            'transmission': { name: 'Transmission', port: 9091, status: 'offline', category: 'download-client' },
+            'overseerr': { name: 'Overseerr', port: 5055, status: 'offline', category: 'request-management' },
+            'tautulli': { name: 'Tautulli', port: 8181, status: 'offline', category: 'analytics' },
+            'homepage': { name: 'Homepage', port: 3000, status: 'offline', category: 'dashboard' }
+        };
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'bg-opacity-20');
+            });
+            
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (selectedTab) {
+                selectedTab.classList.remove('hidden');
+            }
+            
+            // Add active class to clicked button
+            const selectedBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.add('bg-white', 'bg-opacity-20');
+            }
+        }
+
+        // Open service in new tab
+        function openService(url) {
+            window.open(url, '_blank');
+        }
+
+        // Chat functionality
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addChatMessage('user', message);
+                input.value = '';
+                
+                // Simulate AI response
+                setTimeout(() => {
+                    const responses = [
+                        "I can help you with that! Let me check your system status...",
+                        "Based on your current setup, I recommend checking the Sonarr logs for any issues.",
+                        "Your media server is running optimally. Here are some suggestions for improvement...",
+                        "I've found 3 new episodes available for download. Would you like me to add them to the queue?"
+                    ];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    addChatMessage('ai', randomResponse);
+                }, 1000);
+            }
+        }
+
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start space-x-3';
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                    <div class="bg-green-700 p-3 rounded-lg max-w-md">
+                        <p>${message}</p>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-gray-700 p-3 rounded-lg max-w-md">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Voice input functionality
+        function startVoiceInput() {
+            if ('webkitSpeechRecognition' in window) {
+                const recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                const voiceBtn = document.getElementById('voiceBtn');
+                voiceBtn.innerHTML = '<i class="fas fa-stop text-red-400"></i>';
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('chatInput').value = transcript;
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                };
+                
+                recognition.onerror = function() {
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    alert('Voice recognition error occurred.');
+                };
+                
+                recognition.onend = function() {
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                };
+                
+                recognition.start();
+            } else {
+                alert('Voice recognition not supported in this browser.');
+            }
+        }
+
+        // Update service count
+        function updateServiceCount() {
+            const onlineServices = Object.values(services).filter(s => s.status === 'online').length;
+            document.getElementById('serviceCount').textContent = onlineServices;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateServiceCount();
+            
+            // Set up real-time updates
+            setInterval(() => {
+                // Simulate some status updates
+                updateServiceCount();
+            }, 5000);
+        });
+
+        // Socket.IO event handlers
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('service-status', function(data) {
+            console.log('Service status update:', data);
+            // Update UI with real service status
+        });
+
+        socket.on('agent-vote', function(data) {
+            console.log('Agent vote update:', data);
+            // Update agent voting display
+        });
+    </script>
+</body>
+</html>

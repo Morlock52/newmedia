@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server - Deployment Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            background: linear-gradient(90deg, #06b6d4, #6366f1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .status-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 10px 20px;
+            border-radius: 30px;
+            margin-top: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .category {
+            margin-bottom: 40px;
+        }
+        
+        .category-title {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #06b6d4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-2px);
+            border-color: #6366f1;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #06b6d4, #6366f1);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+        
+        .service-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .service-name {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #10b981;
+        }
+        
+        .service-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .service-port {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #94a3b8;
+        }
+        
+        .service-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(90deg, #06b6d4, #6366f1);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .service-link:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .quick-links {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .quick-links h2 {
+            margin-bottom: 20px;
+            color: #06b6d4;
+        }
+        
+        .link-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .dashboard-link {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .dashboard-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2em; }
+            .services-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-header">
+            <h1>Ultimate Media Server Stack</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>All Services Running</span>
+            </div>
+        </div>
+
+        <div class="quick-links">
+            <h2>Quick Access</h2>
+            <div class="link-buttons">
+                <a href="http://localhost:3000" class="dashboard-link">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                    Main Dashboard
+                </a>
+                <a href="http://localhost:3000/visual.html" class="dashboard-link">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Visual Showcase
+                </a>
+                <a href="http://localhost:3000/quickstart.html" class="dashboard-link">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Quick Start Guide
+                </a>
+                <a href="http://localhost:9000" class="dashboard-link">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    Portainer
+                </a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/>
+                </svg>
+                Media Servers
+            </h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Jellyfin</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 8096</div>
+                        <a href="http://localhost:8096" class="service-link">
+                            Open Jellyfin →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12 2l-5.5 9h11z M12 22l5.5-9h-11z M12 7.5L8.5 13h7z M12 16.5l3.5-5.5h-7z"/>
+                </svg>
+                Download Automation (*arr Stack)
+            </h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Sonarr</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 8989</div>
+                        <a href="http://localhost:8989" class="service-link">
+                            Open Sonarr →
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Radarr</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 7878</div>
+                        <a href="http://localhost:7878" class="service-link">
+                            Open Radarr →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Lidarr</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 8686</div>
+                        <a href="http://localhost:8686" class="service-link">
+                            Open Lidarr →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Prowlarr</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 9696</div>
+                        <a href="http://localhost:9696" class="service-link">
+                            Open Prowlarr →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Bazarr</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 6767</div>
+                        <a href="http://localhost:6767" class="service-link">
+                            Open Bazarr →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                </svg>
+                Download Clients
+            </h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">qBittorrent</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 8080</div>
+                        <a href="http://localhost:8080" class="service-link">
+                            Open qBittorrent →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Transmission</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 9091</div>
+                        <a href="http://localhost:9091" class="service-link">
+                            Open Transmission →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">SABnzbd</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 8082</div>
+                        <a href="http://localhost:8082" class="service-link">
+                            Open SABnzbd →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Management & Monitoring
+            </h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Portainer</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 9000 / 9443</div>
+                        <a href="http://localhost:9000" class="service-link">
+                            Open Portainer →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Nginx Proxy Manager</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 81</div>
+                        <a href="http://localhost:81" class="service-link">
+                            Open NPM →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-name">Uptime Kuma</span>
+                        <span class="service-status">
+                            <div class="status-dot"></div>
+                            Running
+                        </span>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-port">📍 Port: 3001</div>
+                        <a href="http://localhost:3001" class="service-link">
+                            Open Uptime Kuma →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            document.querySelectorAll('.status-dot').forEach(dot => {
+                dot.style.animation = 'none';
+                setTimeout(() => {
+                    dot.style.animation = 'pulse 2s infinite';
+                }, 10);
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

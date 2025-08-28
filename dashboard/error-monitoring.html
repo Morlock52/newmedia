@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server - Error Recovery Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-healthy { background-color: #10b981; }
+        .status-warning { background-color: #f59e0b; }
+        .status-critical { background-color: #ef4444; }
+        .status-unknown { background-color: #6b7280; }
+        
+        .circuit-breaker-open { 
+            background-color: #fee2e2; 
+            border-color: #fca5a5; 
+        }
+        .circuit-breaker-half-open { 
+            background-color: #fef3c7; 
+            border-color: #fcd34d; 
+        }
+        .circuit-breaker-closed { 
+            background-color: #d1fae5; 
+            border-color: #6ee7b7; 
+        }
+        
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse { animation: pulse 2s infinite; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Error Recovery Dashboard</h1>
+            <p class="text-gray-600">Real-time monitoring and recovery status for media server infrastructure</p>
+        </div>
+
+        <!-- System Status Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6 metric-card">
+                <div id="overall-status" class="flex items-center">
+                    <span class="status-indicator status-unknown"></span>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">System Status</h3>
+                        <p id="status-text" class="text-gray-600">Checking...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6 metric-card">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Active Services</h3>
+                <div class="text-3xl font-bold text-green-600" id="active-services">-</div>
+                <p class="text-sm text-gray-600">of <span id="total-services">-</span> services</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6 metric-card">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Error Rate</h3>
+                <div class="text-3xl font-bold" id="error-rate">-</div>
+                <p class="text-sm text-gray-600">last 5 minutes</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6 metric-card">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Recovery Actions</h3>
+                <div class="text-3xl font-bold text-blue-600" id="recovery-count">-</div>
+                <p class="text-sm text-gray-600">today</p>
+            </div>
+        </div>
+
+        <!-- Service Status Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div id="service-cards" class="col-span-full">
+                <!-- Service cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Circuit Breakers Section -->
+        <div class="bg-white rounded-lg shadow mb-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Circuit Breakers</h2>
+                <p class="text-gray-600">Automatic failure protection for critical services</p>
+            </div>
+            <div class="p-6">
+                <div id="circuit-breakers" class="space-y-4">
+                    <!-- Circuit breaker status will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Timeline Chart -->
+        <div class="bg-white rounded-lg shadow mb-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Error Timeline</h2>
+                <p class="text-gray-600">Error occurrence and recovery over time</p>
+            </div>
+            <div class="p-6">
+                <canvas id="error-timeline-chart" width="800" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Recent Alerts</h2>
+                <p class="text-gray-600">Latest error notifications and recovery actions</p>
+            </div>
+            <div class="divide-y divide-gray-200">
+                <div id="alerts-list">
+                    <!-- Alerts will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ErrorMonitoringDashboard {
+            constructor() {
+                this.apiBaseUrl = 'http://localhost:3010';
+                this.refreshInterval = 5000; // 5 seconds
+                this.chart = null;
+                this.init();
+            }
+
+            async init() {
+                await this.loadInitialData();
+                this.startAutoRefresh();
+                this.initializeChart();
+            }
+
+            async loadInitialData() {
+                try {
+                    await Promise.all([
+                        this.updateSystemStatus(),
+                        this.updateServiceStatus(),
+                        this.updateCircuitBreakers(),
+                        this.updateAlerts()
+                    ]);
+                } catch (error) {
+                    console.error('Failed to load initial data:', error);
+                    this.showError('Failed to load dashboard data. Please check if the error recovery service is running.');
+                }
+            }
+
+            async updateSystemStatus() {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/status`);
+                    const data = await response.json();
+                    
+                    const { services, summary } = data;
+                    const overallHealthy = summary.healthy / summary.total > 0.8;
+                    
+                    // Update overall status
+                    const statusElement = document.getElementById('overall-status');
+                    const statusText = document.getElementById('status-text');
+                    const indicator = statusElement.querySelector('.status-indicator');
+                    
+                    if (overallHealthy) {
+                        indicator.className = 'status-indicator status-healthy';
+                        statusText.textContent = 'All Systems Operational';
+                    } else if (summary.healthy > 0) {
+                        indicator.className = 'status-indicator status-warning';
+                        statusText.textContent = 'Partial Service Degradation';
+                    } else {
+                        indicator.className = 'status-indicator status-critical';
+                        statusText.textContent = 'System Issues Detected';
+                    }
+                    
+                    // Update service counts
+                    document.getElementById('active-services').textContent = summary.healthy;
+                    document.getElementById('total-services').textContent = summary.total;
+                    
+                    // Calculate error rate (placeholder - would need historical data)
+                    const errorRate = ((summary.unhealthy / summary.total) * 100).toFixed(1) + '%';
+                    document.getElementById('error-rate').textContent = errorRate;
+                    
+                } catch (error) {
+                    console.error('Failed to update system status:', error);
+                }
+            }
+
+            async updateServiceStatus() {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/status`);
+                    const data = await response.json();
+                    
+                    const serviceCards = document.getElementById('service-cards');
+                    serviceCards.innerHTML = '';
+                    
+                    Object.entries(data.services).forEach(([name, service]) => {
+                        const card = this.createServiceCard(name, service);
+                        serviceCards.appendChild(card);
+                    });
+                    
+                } catch (error) {
+                    console.error('Failed to update service status:', error);
+                }
+            }
+
+            createServiceCard(name, service) {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-6 metric-card';
+                
+                const statusClass = service.healthy ? 'status-healthy' : 'status-critical';
+                const statusText = service.healthy ? 'Healthy' : 'Unhealthy';
+                const responseTime = service.responseTime ? `${service.responseTime}ms` : 'N/A';
+                const lastCheck = service.lastCheck ? new Date(service.lastCheck).toLocaleTimeString() : 'Never';
+                
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 capitalize">${name}</h3>
+                        <span class="status-indicator ${statusClass}"></span>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Status:</span>
+                            <span class="font-medium ${service.healthy ? 'text-green-600' : 'text-red-600'}">${statusText}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Response Time:</span>
+                            <span class="font-medium">${responseTime}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Last Check:</span>
+                            <span class="text-sm">${lastCheck}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Circuit:</span>
+                            <span class="text-sm font-medium">${service.circuitState || 'CLOSED'}</span>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            async updateCircuitBreakers() {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/circuit-breakers`);
+                    const data = await response.json();
+                    
+                    const container = document.getElementById('circuit-breakers');
+                    container.innerHTML = '';
+                    
+                    Object.entries(data).forEach(([name, breaker]) => {
+                        const element = this.createCircuitBreakerElement(name, breaker);
+                        container.appendChild(element);
+                    });
+                    
+                } catch (error) {
+                    console.error('Failed to update circuit breakers:', error);
+                }
+            }
+
+            createCircuitBreakerElement(name, breaker) {
+                const element = document.createElement('div');
+                const stateClass = `circuit-breaker-${breaker.state.toLowerCase().replace('_', '-')}`;
+                
+                element.className = `border rounded-lg p-4 ${stateClass}`;
+                element.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold capitalize">${name}</h4>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${this.getStateColorClass(breaker.state)}">
+                            ${breaker.state}
+                        </span>
+                    </div>
+                    <div class="mt-2 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Failures:</span>
+                            <span class="font-medium ml-1">${breaker.metrics.failedRequests}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Success:</span>
+                            <span class="font-medium ml-1">${breaker.metrics.successRequests}</span>
+                        </div>
+                    </div>
+                `;
+                
+                return element;
+            }
+
+            getStateColorClass(state) {
+                const stateColors = {
+                    'CLOSED': 'bg-green-100 text-green-800',
+                    'OPEN': 'bg-red-100 text-red-800',
+                    'HALF_OPEN': 'bg-yellow-100 text-yellow-800'
+                };
+                return stateColors[state] || 'bg-gray-100 text-gray-800';
+            }
+
+            async updateAlerts() {
+                try {
+                    // This would fetch from alerts endpoint
+                    const alertsList = document.getElementById('alerts-list');
+                    
+                    // Placeholder - in real implementation, fetch from API
+                    const sampleAlerts = [
+                        {
+                            timestamp: new Date().toISOString(),
+                            service: 'jellyfin',
+                            severity: 'WARNING',
+                            message: 'High response time detected'
+                        },
+                        {
+                            timestamp: new Date(Date.now() - 300000).toISOString(),
+                            service: 'sonarr',
+                            severity: 'INFO',
+                            message: 'Service recovered successfully'
+                        }
+                    ];
+                    
+                    alertsList.innerHTML = sampleAlerts.map(alert => 
+                        this.createAlertElement(alert)
+                    ).join('');
+                    
+                } catch (error) {
+                    console.error('Failed to update alerts:', error);
+                }
+            }
+
+            createAlertElement(alert) {
+                const severityColors = {
+                    'CRITICAL': 'text-red-600 bg-red-50',
+                    'WARNING': 'text-yellow-600 bg-yellow-50',
+                    'INFO': 'text-blue-600 bg-blue-50'
+                };
+                
+                const colorClass = severityColors[alert.severity] || 'text-gray-600 bg-gray-50';
+                
+                return `
+                    <div class="px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full ${colorClass}">
+                                    ${alert.severity}
+                                </span>
+                                <span class="ml-3 font-medium capitalize">${alert.service}</span>
+                            </div>
+                            <span class="text-sm text-gray-500">
+                                ${new Date(alert.timestamp).toLocaleTimeString()}
+                            </span>
+                        </div>
+                        <p class="mt-2 text-gray-700">${alert.message}</p>
+                    </div>
+                `;
+            }
+
+            initializeChart() {
+                const ctx = document.getElementById('error-timeline-chart').getContext('2d');
+                
+                // Sample data - in real implementation, fetch from API
+                const timeLabels = Array.from({length: 24}, (_, i) => {
+                    const date = new Date();
+                    date.setHours(date.getHours() - (23 - i));
+                    return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                });
+                
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [
+                            {
+                                label: 'Errors',
+                                data: Array.from({length: 24}, () => Math.floor(Math.random() * 10)),
+                                borderColor: '#ef4444',
+                                backgroundColor: '#fee2e2',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Recoveries',
+                                data: Array.from({length: 24}, () => Math.floor(Math.random() * 5)),
+                                borderColor: '#10b981',
+                                backgroundColor: '#d1fae5',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Count'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            startAutoRefresh() {
+                setInterval(async () => {
+                    await this.loadInitialData();
+                }, this.refreshInterval);
+            }
+
+            showError(message) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+                alertDiv.innerHTML = `
+                    <div class="flex">
+                        <div class="py-1">
+                            <svg class="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold">Connection Error</p>
+                            <p class="text-sm">${message}</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(alertDiv);
+                
+                setTimeout(() => {
+                    document.body.removeChild(alertDiv);
+                }, 5000);
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ErrorMonitoringDashboard();
+        });
+    </script>
+</body>
+</html>

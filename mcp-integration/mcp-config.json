@@ -1,0 +1,45 @@
+{
+  "mcpServers": {
+    "claude-flow": {
+      "command": "npx",
+      "args": ["claude-flow@alpha", "mcp", "start"],
+      "type": "stdio",
+      "description": "Main orchestration and coordination server"
+    },
+    "media-server": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/standalone-mcp.js"],
+      "env": {
+        "DEBUG": "false"
+      },
+      "description": "Media server management and monitoring"
+    },
+    "sonarr": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node", 
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/sonarr-mcp-standalone.js"],
+      "env": {
+        "DEBUG": "false",
+        "SONARR_URL": "http://localhost:8989",
+        "SONARR_API_KEY": ""
+      },
+      "description": "Sonarr TV series management"
+    },
+    "jellyfin": {
+      "command": "/Users/morlock/.nvm/versions/node/v22.16.0/bin/node",
+      "args": ["/Users/morlock/fun/newmedia/mcp-architecture/jellyfin-mcp-standalone.js"], 
+      "env": {
+        "DEBUG": "false",
+        "JELLYFIN_URL": "http://localhost:8096",
+        "JELLYFIN_API_KEY": ""
+      },
+      "description": "Jellyfin media server integration"
+    }
+  },
+  "integrationSettings": {
+    "retryAttempts": 3,
+    "timeoutMs": 30000,
+    "batchSize": 10,
+    "enableCircuitBreaker": true,
+    "healthCheckInterval": 60000
+  }
+}

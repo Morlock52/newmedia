@@ -1,0 +1,39 @@
+#!/command/with-contenv bash
+# System initialization and user setup
+
+echo "$(date) [INFO] Starting system initialization..." >> /logs/init.log
+
+# Create required users and groups
+if ! id mediauser >/dev/null 2>&1; then
+    groupadd -g ${PGID} mediauser
+    useradd -u ${PUID} -g ${PGID} -d /config -s /bin/bash mediauser
+    echo "$(date) [INFO] Created mediauser (${PUID}:${PGID})" >> /logs/init.log
+fi
+
+# Create directory structure
+mkdir -p \
+    /config/{jellyfin,sonarr,radarr,lidarr,prowlarr,bazarr,qbittorrent,sabnzbd,transmission,uptime-kuma,caddy} \
+    /downloads/{complete,incomplete,torrents,usenet,watch} \
+    /media/{movies,tv,music,books,audiobooks} \
+    /logs \
+    /backups \
+    /watch \
+    /import
+
+# Set permissions
+chown -R mediauser:mediauser \
+    /config \
+    /downloads \
+    /media \
+    /logs \
+    /backups \
+    /watch \
+    /import \
+    /var/www/dashboard \
+    /opt/api
+
+# Set appropriate permissions for logs
+chmod 755 /logs
+chmod 644 /logs/*.log 2>/dev/null || true
+
+echo "$(date) [INFO] System initialization completed" >> /logs/init.log

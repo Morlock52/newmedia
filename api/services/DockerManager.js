@@ -8,6 +8,7 @@ const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const yaml = require('js-yaml');
+const axios = require('axios');
 
 const execAsync = promisify(exec);
 
@@ -98,7 +99,8 @@ class DockerManager {
                 description: 'TV Show Manager',
                 category: 'arr',
                 port: 8989,
-                healthEndpoint: '/api/v3/health',
+                healthEndpoint: '/api/v3/system/status',
+                apiKeyPath: '/api/v3/config/host',
                 icon: '📺',
                 webUrl: 'http://localhost:8989',
                 priority: 2
@@ -108,7 +110,8 @@ class DockerManager {
                 description: 'Movie Manager',
                 category: 'arr',
                 port: 7878,
-                healthEndpoint: '/api/v3/health',
+                healthEndpoint: '/api/v3/system/status',
+                apiKeyPath: '/api/v3/config/host',
                 icon: '🍿',
                 webUrl: 'http://localhost:7878',
                 priority: 2
@@ -236,12 +239,12 @@ class DockerManager {
         };
     }
 
-    async getAllServices() {
+    async getAllServices(options = {}) {
         try {
             const services = [];
             
             for (const serviceName of this.availableServices) {
-                const status = await this.getServiceStatus(serviceName);
+                const status = await this.getServiceStatus(serviceName, options);
                 services.push(status);
             }
             
@@ -259,10 +262,11 @@ class DockerManager {
         }
     }
 
-    async getServiceStatus(serviceName) {
-        // Check cache first
+    async getServiceStatus(serviceName, options = {}) {
+        // Check cache first (unless force refresh requested)
         const cached = this.serviceCache.get(serviceName);
-        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+        const force = options && (options.force === true);
+        if (!force && cached && Date.now() - cached.timestamp < this.cacheTimeout) {
             return cached.data;
         }
 
@@ -367,32 +371,21 @@ class DockerManager {
         const startTime = Date.now();
         
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
             const url = `http://localhost:${serviceDefinition.port}${serviceDefinition.healthEndpoint}`;
-            const response = await fetch(url, {
-                method: 'GET',
-                signal: controller.signal,
-                headers: { 'Accept': 'application/json' }
+            const response = await axios.get(url, {
+                timeout: 5000,
+                headers: { 'Accept': 'application/json' },
+                validateStatus: (status) => status < 500 // Accept all status codes < 500
             });
 
-            clearTimeout(timeoutId);
             const responseTime = Date.now() - startTime;
 
-            if (response.ok) {
-                let data = null;
-                try {
-                    data = await response.json();
-                } catch (e) {
-                    // Some endpoints don't return JSON
-                }
-
+            if (response.status >= 200 && response.status < 400) {
                 return {
                     status: 'healthy',
                     responseTime,
                     httpStatus: response.status,
-                    data
+                    data: response.data
                 };
             } else {
                 return {
@@ -405,11 +398,25 @@ class DockerManager {
         } catch (error) {
             const responseTime = Date.now() - startTime;
             
-            return {
-                status: error.name === 'AbortError' ? 'timeout' : 'unreachable',
-                responseTime,
-                error: error.message
-            };
+            if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+                return {
+                    status: 'unreachable',
+                    responseTime,
+                    error: 'Connection refused or service not found'
+                };
+            } else if (error.code === 'ETIMEDOUT') {
+                return {
+                    status: 'timeout',
+                    responseTime,
+                    error: 'Request timeout (5s)'
+                };
+            } else {
+                return {
+                    status: 'error',
+                    responseTime,
+                    error: error.message
+                };
+            }
         }
     }
 

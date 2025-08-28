@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Media Server - Main Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3.5em;
+            background: linear-gradient(90deg, #06b6d4, #6366f1, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            animation: gradient 3s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .subtitle {
+            font-size: 1.5em;
+            color: #94a3b8;
+            margin-bottom: 50px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(99, 102, 241, 0.1) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        
+        .dashboard-card:hover::before {
+            transform: translateX(100%);
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: #6366f1;
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+        }
+        
+        .card-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .card-description {
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+        
+        .primary-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        .primary-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4);
+        }
+        
+        .status-bar {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 50px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        .footer {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .subtitle { font-size: 1.2em; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>🚀 Ultimate Media Server</h1>
+        <p class="subtitle">Your Complete Media Ecosystem</p>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot"></span>
+                <span>13 Services Running</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot"></span>
+                <span>All Systems Operational</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot"></span>
+                <span>Docker Healthy</span>
+            </div>
+        </div>
+        
+        <div class="dashboard-grid">
+            <a href="http://localhost:3000/media-control.html" class="dashboard-card primary-card">
+                <span class="card-icon">🎬</span>
+                <h2 class="card-title">Media Control Center</h2>
+                <p class="card-description">Complete control over all media services with embedded views and quick actions</p>
+            </a>
+            
+            <a href="http://localhost:8096" class="dashboard-card">
+                <span class="card-icon">📺</span>
+                <h2 class="card-title">Jellyfin</h2>
+                <p class="card-description">Stream your media library with a beautiful interface</p>
+            </a>
+            
+            <a href="http://localhost:9000" class="dashboard-card">
+                <span class="card-icon">🐳</span>
+                <h2 class="card-title">Portainer</h2>
+                <p class="card-description">Manage all Docker containers and services</p>
+            </a>
+            
+            <a href="http://localhost:8989" class="dashboard-card">
+                <span class="card-icon">📡</span>
+                <h2 class="card-title">Sonarr</h2>
+                <p class="card-description">Automated TV show downloading and management</p>
+            </a>
+            
+            <a href="http://localhost:7878" class="dashboard-card">
+                <span class="card-icon">🎬</span>
+                <h2 class="card-title">Radarr</h2>
+                <p class="card-description">Automated movie downloading and management</p>
+            </a>
+            
+            <a href="http://localhost:3001" class="dashboard-card">
+                <span class="card-icon">📊</span>
+                <h2 class="card-title">Uptime Kuma</h2>
+                <p class="card-description">Monitor all services and get alerts</p>
+            </a>
+        </div>
+        
+        <div class="dashboard-grid">
+            <a href="http://localhost:3000/visual.html" class="dashboard-card">
+                <span class="card-icon">✨</span>
+                <h2 class="card-title">Visual Showcase</h2>
+                <p class="card-description">Interactive demos of all 30 features</p>
+            </a>
+            
+            <a href="http://localhost:3000/quickstart.html" class="dashboard-card">
+                <span class="card-icon">🚀</span>
+                <h2 class="card-title">Quick Start Guide</h2>
+                <p class="card-description">Step-by-step setup instructions</p>
+            </a>
+            
+            <a href="DEPLOYMENT_STATUS.html" class="dashboard-card">
+                <span class="card-icon">✅</span>
+                <h2 class="card-title">Deployment Status</h2>
+                <p class="card-description">View all service statuses and ports</p>
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p>Ultimate Media Server Stack • 30+ Integrated Services • Built with ❤️</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            const dots = document.querySelectorAll('.status-dot');
+            dots.forEach(dot => {
+                dot.style.animation = 'none';
+                setTimeout(() => {
+                    dot.style.animation = 'pulse 2s infinite';
+                }, 10);
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

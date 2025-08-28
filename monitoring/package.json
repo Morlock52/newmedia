@@ -1,0 +1,25 @@
+{
+  "name": "monitoring-system",
+  "version": "1.0.0",
+  "description": "Comprehensive monitoring and logging system",
+  "main": "monitoring-dashboard.js",
+  "scripts": {
+    "start": "node monitoring-dashboard.js",
+    "demo": "node demo-test.js",
+    "logs": "node log-aggregator.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "systeminformation": "^5.21.20",
+    "dockerode": "^4.0.2",
+    "axios": "^1.6.0",
+    "tail": "^2.2.6",
+    "chokidar": "^3.5.3"
+  },
+  "keywords": ["monitoring", "logging", "dashboard", "metrics"],
+  "author": "Media Server Team",
+  "license": "MIT"
+}

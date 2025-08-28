@@ -1,0 +1,268 @@
+# ========================================
+# MEGA SINGLE CONTAINER - 30+ SERVICES
+# Complete Media Server + Monitoring + Auth Stack
+# ========================================
+
+FROM ubuntu:22.04
+
+LABEL maintainer="Integration Specialist"
+LABEL description="Complete media server stack with 30+ interconnected services"
+LABEL version="1.0.0"
+
+# ========================================
+# SYSTEM PREPARATION
+# ========================================
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+ENV PUID=1000
+ENV PGID=1000
+
+# Install base system packages and dependencies
+RUN apt-get update && apt-get install -y \
+    # System tools
+    supervisor wget curl unzip software-properties-common \
+    gnupg2 ca-certificates lsb-release apt-transport-https \
+    build-essential git python3 python3-pip nodejs npm \
+    # Database clients
+    postgresql-client redis-tools \
+    # Monitoring tools
+    htop iotop netstat-nat net-tools \
+    # Security
+    fail2ban \
+    # Logging
+    rsyslog logrotate \
+    # Process management
+    systemd-sysv init-system-helpers \
+    # Networking
+    dnsutils iputils-ping telnet netcat \
+    && rm -rf /var/lib/apt/lists/*
+
+# ========================================
+# SERVICE INSTALLATIONS
+# ========================================
+
+# Add repositories and keys
+RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg && \
+    echo "deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+
+# Install PostgreSQL 15
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && apt-get install -y postgresql-15 postgresql-client-15 postgresql-contrib-15
+
+# Install Redis
+RUN apt-get update && apt-get install -y redis-server
+
+# Install Go (for Traefik and other Go apps)
+RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz && \
+    rm go1.21.5.linux-amd64.tar.gz
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Install Java (for some services)
+RUN apt-get update && apt-get install -y openjdk-17-jre-headless
+
+# Install .NET (for some services)
+RUN apt-get update && apt-get install -y dotnet-runtime-7.0
+
+# ========================================
+# DOWNLOAD AND INSTALL SERVICES
+# ========================================
+
+WORKDIR /opt
+
+# Create service directories
+RUN mkdir -p /opt/{sonarr,radarr,lidarr,readarr,prowlarr,bazarr} && \
+    mkdir -p /opt/{qbittorrent,transmission,deluge} && \
+    mkdir -p /opt/{jellyfin,plex,tautulli,ombi} && \
+    mkdir -p /opt/{traefik,authelia,kong} && \
+    mkdir -p /opt/{prometheus,grafana,loki,promtail,jaeger} && \
+    mkdir -p /opt/{rabbitmq,nginx,caddy} && \
+    mkdir -p /opt/{portainer,uptime-kuma,heimdall} && \
+    mkdir -p /opt/scripts && \
+    mkdir -p /config && \
+    mkdir -p /data && \
+    mkdir -p /logs
+
+# Install *arr applications
+RUN wget https://github.com/Sonarr/Sonarr/releases/download/v3.0.10.1567/Sonarr.main.3.0.10.1567.linux-x64.tar.gz && \
+    tar -xzf Sonarr.main.3.0.10.1567.linux-x64.tar.gz -C /opt/ && \
+    rm Sonarr.main.3.0.10.1567.linux-x64.tar.gz
+
+RUN wget https://github.com/Radarr/Radarr/releases/download/v4.7.5.7809/Radarr.master.4.7.5.7809.linux-core-x64.tar.gz && \
+    tar -xzf Radarr.master.4.7.5.7809.linux-core-x64.tar.gz -C /opt/ && \
+    rm Radarr.master.4.7.5.7809.linux-core-x64.tar.gz
+
+RUN wget https://github.com/lidarr/Lidarr/releases/download/v1.4.3.3666/Lidarr.master.1.4.3.3666.linux-core-x64.tar.gz && \
+    tar -xzf Lidarr.master.1.4.3.3666.linux-core-x64.tar.gz -C /opt/ && \
+    rm Lidarr.master.1.4.3.3666.linux-core-x64.tar.gz
+
+RUN wget https://github.com/Readarr/Readarr/releases/download/v0.3.14.2358/Readarr.develop.0.3.14.2358.linux-core-x64.tar.gz && \
+    tar -xzf Readarr.develop.0.3.14.2358.linux-core-x64.tar.gz -C /opt/ && \
+    rm Readarr.develop.0.3.14.2358.linux-core-x64.tar.gz
+
+RUN wget https://github.com/Prowlarr/Prowlarr/releases/download/v1.10.5.4116/Prowlarr.master.1.10.5.4116.linux-core-x64.tar.gz && \
+    tar -xzf Prowlarr.master.1.10.5.4116.linux-core-x64.tar.gz -C /opt/ && \
+    rm Prowlarr.master.1.10.5.4116.linux-core-x64.tar.gz
+
+RUN wget https://github.com/morpheus65535/bazarr/releases/download/v1.4.0/bazarr.zip && \
+    unzip bazarr.zip -d /opt/bazarr && \
+    rm bazarr.zip
+
+# Install Download Clients
+RUN add-apt-repository ppa:qbittorrent-team/qbittorrent-stable && \
+    apt-get update && apt-get install -y qbittorrent-nox
+
+# Install Jellyfin
+RUN wget -O- https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor | tee /usr/share/keyrings/jellyfin-archive-keyring.gpg >/dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/jellyfin-archive-keyring.gpg] https://repo.jellyfin.org/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/jellyfin.list && \
+    apt-get update && apt-get install -y jellyfin
+
+# Install Traefik
+RUN wget https://github.com/traefik/traefik/releases/download/v3.0.0/traefik_v3.0.0_linux_amd64.tar.gz && \
+    tar -xzf traefik_v3.0.0_linux_amd64.tar.gz -C /opt/traefik/ && \
+    rm traefik_v3.0.0_linux_amd64.tar.gz && \
+    chmod +x /opt/traefik/traefik
+
+# Install Authelia
+RUN wget https://github.com/authelia/authelia/releases/download/v4.37.5/authelia-v4.37.5-linux-amd64.tar.gz && \
+    tar -xzf authelia-v4.37.5-linux-amd64.tar.gz -C /opt/authelia/ && \
+    rm authelia-v4.37.5-linux-amd64.tar.gz && \
+    chmod +x /opt/authelia/authelia
+
+# Install Prometheus
+RUN wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz && \
+    tar -xzf prometheus-2.45.0.linux-amd64.tar.gz -C /opt/ && \
+    mv /opt/prometheus-2.45.0.linux-amd64 /opt/prometheus && \
+    rm prometheus-2.45.0.linux-amd64.tar.gz
+
+# Install Grafana
+RUN wget https://dl.grafana.com/enterprise/release/grafana-enterprise-10.1.5.linux-amd64.tar.gz && \
+    tar -xzf grafana-enterprise-10.1.5.linux-amd64.tar.gz -C /opt/ && \
+    mv /opt/grafana-v10.1.5 /opt/grafana && \
+    rm grafana-enterprise-10.1.5.linux-amd64.tar.gz
+
+# Install Loki
+RUN wget https://github.com/grafana/loki/releases/download/v2.9.2/loki-linux-amd64.zip && \
+    unzip loki-linux-amd64.zip -d /opt/loki/ && \
+    rm loki-linux-amd64.zip && \
+    chmod +x /opt/loki/loki-linux-amd64 && \
+    mv /opt/loki/loki-linux-amd64 /opt/loki/loki
+
+# Install Promtail
+RUN wget https://github.com/grafana/loki/releases/download/v2.9.2/promtail-linux-amd64.zip && \
+    unzip promtail-linux-amd64.zip -d /opt/promtail/ && \
+    rm promtail-linux-amd64.zip && \
+    chmod +x /opt/promtail/promtail-linux-amd64 && \
+    mv /opt/promtail/promtail-linux-amd64 /opt/promtail/promtail
+
+# Install RabbitMQ
+RUN apt-get update && apt-get install -y rabbitmq-server
+
+# Install additional services
+RUN npm install -g pm2 && \
+    pip3 install flask gunicorn redis celery
+
+# Install Tautulli
+RUN git clone https://github.com/Tautulli/Tautulli.git /opt/tautulli
+
+# Install Heimdall
+RUN git clone https://github.com/linuxserver/Heimdall.git /opt/heimdall && \
+    cd /opt/heimdall && composer install --no-dev
+
+# Install Portainer
+RUN wget https://github.com/portainer/portainer/releases/download/2.19.4/portainer-2.19.4-linux-amd64.tar.gz && \
+    tar -xzf portainer-2.19.4-linux-amd64.tar.gz -C /opt/ && \
+    rm portainer-2.19.4-linux-amd64.tar.gz
+
+# Install Uptime Kuma
+RUN git clone https://github.com/louislam/uptime-kuma.git /opt/uptime-kuma && \
+    cd /opt/uptime-kuma && npm ci --production
+
+# ========================================
+# SERVICE CONFIGURATION
+# ========================================
+
+# Create configuration directories
+RUN mkdir -p /config/{sonarr,radarr,lidarr,readarr,prowlarr,bazarr} && \
+    mkdir -p /config/{qbittorrent,jellyfin,tautulli} && \
+    mkdir -p /config/{traefik,authelia,prometheus,grafana,loki,promtail} && \
+    mkdir -p /config/{postgresql,redis,rabbitmq} && \
+    mkdir -p /config/scripts && \
+    mkdir -p /data/{media,downloads,backups} && \
+    mkdir -p /data/media/{movies,tv,music,books} && \
+    mkdir -p /data/downloads/{complete,incomplete} && \
+    mkdir -p /logs/{apps,system,access}
+
+# Set permissions
+RUN chown -R 1000:1000 /config /data /logs /opt && \
+    chmod -R 755 /config /data /logs
+
+# ========================================
+# NETWORKING AND SERVICE DISCOVERY
+# ========================================
+
+# Setup internal DNS resolution
+RUN echo "127.0.0.1 sonarr radarr lidarr readarr prowlarr bazarr" >> /etc/hosts && \
+    echo "127.0.0.1 qbittorrent jellyfin tautulli ombi" >> /etc/hosts && \
+    echo "127.0.0.1 traefik authelia kong" >> /etc/hosts && \
+    echo "127.0.0.1 prometheus grafana loki promtail jaeger" >> /etc/hosts && \
+    echo "127.0.0.1 rabbitmq redis postgres" >> /etc/hosts && \
+    echo "127.0.0.1 portainer uptime-kuma heimdall" >> /etc/hosts
+
+# ========================================
+# EXPOSE PORTS
+# ========================================
+
+# Web interfaces
+EXPOSE 80 443 8080
+
+# Individual service ports for direct access
+# *arr apps
+EXPOSE 8989 7878 8686 8787 9696 6767
+# Media servers and requests
+EXPOSE 8090 8096 8181 5055
+# Monitoring stack
+EXPOSE 9090 3000 3100 9080
+# RabbitMQ
+EXPOSE 5672 15672
+# Databases
+EXPOSE 5432 6379
+# Management tools
+EXPOSE 9000 3001
+
+# ========================================
+# VOLUMES
+# ========================================
+
+VOLUME ["/config", "/data", "/logs"]
+
+# ========================================
+# STARTUP SCRIPTS AND SUPERVISOR
+# ========================================
+
+# Copy supervisor configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create startup scripts directory
+RUN mkdir -p /opt/scripts
+
+# ========================================
+# HEALTH CHECK
+# ========================================
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
+    CMD curl -f http://localhost:8080/ping || exit 1
+
+# ========================================
+# ENTRY POINT
+# ========================================
+
+COPY entrypoint.sh /opt/scripts/
+RUN chmod +x /opt/scripts/entrypoint.sh
+
+CMD ["/opt/scripts/entrypoint.sh"]

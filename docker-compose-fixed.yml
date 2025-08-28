@@ -1,0 +1,231 @@
+version: '3.9'
+
+networks:
+  media-net:
+    external: true
+  downloads-net:
+    external: true
+  monitoring-net:
+    external: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  jellyfin-config:
+  sonarr-config:
+  radarr-config:
+  prowlarr-config:
+  qbittorrent-config:
+
+services:
+  # Database Services
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mediaserver}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Media Server
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - jellyfin-config:/config
+      - ./media:/media
+      - /dev/dri:/dev/dri
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+      - "7359:7359/udp"
+      - "1900:1900/udp"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Content Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - sonarr-config:/config
+      - ./media:/media
+      - ./downloads:/downloads
+    ports:
+      - "8989:8989"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - radarr-config:/config
+      - ./media:/media
+      - ./downloads:/downloads
+    ports:
+      - "7878:7878"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - prowlarr-config:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Download Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent-config:/config
+      - ./downloads:/downloads
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - media-net
+      - downloads-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Server
+  api-server:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-server
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3002
+      - CORS_ORIGIN=http://localhost:3030
+      - API_KEY=${API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-mediaserver}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./api:/app
+    ports:
+      - "3002:3002"
+    networks:
+      - media-net
+      - monitoring-net
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Dashboard
+  media-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: media-dashboard
+    environment:
+      - NODE_ENV=production
+      - API_BASE_URL=http://api-server:3002
+      - WS_URL=ws://api-server:3002
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3002
+    ports:
+      - "3030:3000"
+    networks:
+      - media-net
+    depends_on:
+      - api-server
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Icon Generator - Media Server</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .icon-preview {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        canvas {
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(45deg, #4ecdc4, #06b6d4);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 PWA Icon Generator</h1>
+    <p>Generating icons for Ultimate Media Server 2025 PWA</p>
+    
+    <div id="icons-container"></div>
+    
+    <button onclick="generateAllIcons()" class="download-btn">
+        🎨 Generate All Icons
+    </button>
+    
+    <button onclick="downloadAllIcons()" class="download-btn">
+        📥 Download All Icons
+    </button>
+
+    <script>
+        const iconSizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const iconsContainer = document.getElementById('icons-container');
+        const generatedIcons = {};
+
+        function createIcon(size) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#4ecdc4');
+            gradient.addColorStop(0.5, '#06b6d4');
+            gradient.addColorStop(1, '#8b5cf6');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add rounded corners
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            const cornerRadius = size * 0.2;
+            ctx.roundRect(0, 0, size, size, cornerRadius);
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Add media server icon
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw media server symbol
+            const centerX = size / 2;
+            const centerY = size / 2;
+            
+            // Draw server icon
+            ctx.fillText('🖥️', centerX, centerY * 0.7);
+            
+            // Draw signal waves
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = size * 0.03;
+            
+            for (let i = 1; i <= 3; i++) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY * 1.3, i * size * 0.1, -Math.PI * 0.3, -Math.PI * 0.7, true);
+                ctx.stroke();
+            }
+            
+            return canvas;
+        }
+
+        function generateAllIcons() {
+            iconsContainer.innerHTML = '';
+            
+            iconSizes.forEach(size => {
+                const canvas = createIcon(size);
+                generatedIcons[`icon-${size}x${size}`] = canvas;
+                
+                const preview = document.createElement('div');
+                preview.className = 'icon-preview';
+                preview.innerHTML = `
+                    <h3>${size}x${size}</h3>
+                    ${canvas.outerHTML}
+                    <br>
+                    <button onclick="downloadIcon('icon-${size}x${size}')" class="download-btn">
+                        Download ${size}x${size}
+                    </button>
+                `;
+                
+                iconsContainer.appendChild(preview);
+            });
+            
+            console.log('✅ All icons generated');
+        }
+
+        function downloadIcon(iconName) {
+            const canvas = generatedIcons[iconName];
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = `${iconName}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+        }
+
+        function downloadAllIcons() {
+            Object.keys(generatedIcons).forEach(iconName => {
+                setTimeout(() => downloadIcon(iconName), 100);
+            });
+        }
+
+        // Add roundRect polyfill for older browsers
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                this.beginPath();
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.lineTo(x + width, y + height - radius);
+                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.lineTo(x + radius, y + height);
+                this.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.lineTo(x, y + radius);
+                this.quadraticCurveTo(x, y, x + radius, y);
+                this.closePath();
+            };
+        }
+
+        // Auto-generate icons on page load
+        window.addEventListener('load', generateAllIcons);
+    </script>
+</body>
+</html>

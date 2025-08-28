@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Radarr service cleanup
+
+echo "$(date) [INFO] Radarr service stopped" >> /logs/radarr.log

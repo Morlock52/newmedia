@@ -19,12 +19,28 @@ services:
       # - --certificatesresolvers.letsencrypt.acme.email=${EMAIL}
       # - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --entrypoints.web.http.middlewares=default-headers@docker
+    labels:
+      - "traefik.enable=true"
+      # Traefik dashboard/API routers
+      - "traefik.http.routers.traefik-api.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.traefik-api.entrypoints=traefik"
+      - "traefik.http.routers.traefik-api.service=api@internal"
+      - "traefik.http.routers.traefik-web.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-web.entrypoints=web"
+      - "traefik.http.routers.traefik-web.service=api@internal"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      # Basic auth middleware (usersfile mounted via secrets)
+      - "traefik.http.middlewares.basic-auth.basicauth.usersfile=/run/secrets/traefik_dashboard_auth"
+    secrets:
+      - traefik_dashboard_auth
   webui:
     build:
       context: ./webui
     container_name: media-stack-webui
-    ports:
-      - "3000:3000"
+    # Expose via Traefik only
     environment:
       - STACK_DIR=/app/compose
     volumes:
@@ -37,22 +53,15 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik-web.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.traefik-web.entrypoints=web"
-      - "traefik.http.routers.traefik-web.service=api@internal"
-      - "traefik.http.routers.traefik-web.middlewares=authelia"
-      - "traefik.http.routers.api.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.api.entrypoints=traefik"
-      - "traefik.http.routers.api.service=api@internal"
-      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.routers.traefik-secure.middlewares=authelia"
-      - "traefik.http.routers.traefik-secure.tls=true"
-      # - "traefik.http.routers.traefik-secure.tls.certresolver=letsencrypt" # Disabled for Cloudflare tunnel
-      - "traefik.http.middlewares.auth.basicauth.usersfile=/run/secrets/traefik_dashboard_auth"
-    secrets:
-      - traefik_dashboard_auth
+      # WebUI exposure
+      - "traefik.http.routers.webui.rule=Host(`setup.${DOMAIN}`) || Host(`webui.${DOMAIN}`)"
+      - "traefik.http.routers.webui.entrypoints=web"
+      - "traefik.http.services.webui.loadbalancer.server.port=3000"
+      - "traefik.docker.network=media-server-stack_traefik_network"
+      - "traefik.http.routers.webui-secure.rule=Host(`setup.${DOMAIN}`) || Host(`webui.${DOMAIN}`)"
+      - "traefik.http.routers.webui-secure.entrypoints=websecure"
+      - "traefik.http.routers.webui-secure.tls=true"
+      - "traefik.http.routers.webui-secure.middlewares=basic-auth@docker"
 
   # VPN Gateway
   gluetun:
@@ -423,12 +432,12 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.test-web.rule=Host(`test.${DOMAIN}`)"
       - "traefik.http.routers.test-web.entrypoints=web"
-      - "traefik.http.routers.test-web.middlewares=authelia"
+      - "traefik.http.routers.test-web.middlewares=basic-auth@docker"
       - "traefik.http.services.test.loadbalancer.server.port=80"
       - "traefik.docker.network=media-server-stack_traefik_network"
       - "traefik.http.routers.test-secure.rule=Host(`test.${DOMAIN}`)"
       - "traefik.http.routers.test-secure.entrypoints=websecure"
-      - "traefik.http.routers.test-secure.middlewares=authelia"
+      - "traefik.http.routers.test-secure.middlewares=basic-auth@docker"
       - "traefik.http.routers.test-secure.tls=true"
 
 

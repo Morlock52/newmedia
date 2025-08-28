@@ -1,0 +1,254 @@
+version: '3.8'
+
+services:
+  # MediaServer MCP Suite - Main Application
+  mediaserver-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mediaserver-mcp-suite
+    restart: unless-stopped
+    ports:
+      - "8090:8090"   # Main dashboard and API
+      - "3001:3001"   # Jellyfin MCP Server
+      - "3002:3002"   # Sonarr MCP Server
+      - "3003:3003"   # Radarr MCP Server
+      - "3004:3004"   # Prowlarr MCP Server
+      - "3005:3005"   # qBittorrent MCP Server
+    environment:
+      - NODE_ENV=production
+      - PORT=8090
+      - LOG_LEVEL=info
+      
+      # OpenAI Configuration (Required)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=o1-mini
+      
+      # Media Server URLs (using service names)
+      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      
+      - SONARR_URL=http://sonarr:8989
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      
+      - RADARR_URL=http://radarr:7878
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      
+      - PROWLARR_URL=http://prowlarr:9696
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      
+      - QBITTORRENT_URL=http://qbittorrent:8080
+      - QBITTORRENT_USERNAME=admin
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      
+      # AI Configuration
+      - CONSENSUS_THRESHOLD=0.7
+      - VOTE_TIMEOUT_MINUTES=5
+      
+      # Social Media APIs (Optional)
+      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET}
+      
+    volumes:
+      - mcp-logs:/app/logs
+      - mcp-data:/app/data
+    networks:
+      - mediaserver
+    depends_on:
+      - jellyfin
+      - sonarr
+      - radarr
+      - prowlarr
+      - qbittorrent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Jellyfin - Media Server
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    ports:
+      - "8096:8096"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      - ./media:/media:ro
+      - ./downloads:/downloads:ro
+    networks:
+      - mediaserver
+    devices:
+      - /dev/dri:/dev/dri # For hardware acceleration (optional)
+
+  # Sonarr - TV Show Management
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - sonarr-config:/config
+      - ./media/tv:/tv
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Radarr - Movie Management
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - radarr-config:/config
+      - ./media/movies:/movies
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Prowlarr - Indexer Management
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    ports:
+      - "9696:9696"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - prowlarr-config:/config
+    networks:
+      - mediaserver
+
+  # qBittorrent - Torrent Client
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent-config:/config
+      - ./downloads:/downloads
+    networks:
+      - mediaserver
+
+  # Gluetun VPN (Optional - for secure downloading)
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8888:8888/tcp" # HTTP proxy
+      - "8388:8388/tcp" # Shadowsocks
+      - "8388:8388/udp" # Shadowsocks
+    volumes:
+      - gluetun-config:/gluetun
+    environment:
+      # VPN Configuration - Update with your VPN provider settings
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-surfshark}
+      - VPN_TYPE=${VPN_TYPE:-wireguard}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_REGIONS=${VPN_REGIONS:-United States}
+      # DNS
+      - DOT=off
+    networks:
+      - mediaserver
+    profiles:
+      - vpn # Only start if vpn profile is specified
+
+  # Watchtower - Auto Updates (Optional)
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400 # 24 hours
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    networks:
+      - mediaserver
+    profiles:
+      - auto-update # Only start if auto-update profile is specified
+
+volumes:
+  # MCP Suite Data
+  mcp-logs:
+    driver: local
+  mcp-data:
+    driver: local
+    
+  # Media Services Data
+  jellyfin-config:
+    driver: local
+  jellyfin-cache:
+    driver: local
+  sonarr-config:
+    driver: local
+  radarr-config:
+    driver: local
+  prowlarr-config:
+    driver: local
+  qbittorrent-config:
+    driver: local
+  gluetun-config:
+    driver: local
+
+networks:
+  mediaserver:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Usage:
+# 1. Copy .env.example to .env and configure your settings
+# 2. Create media and downloads directories:
+#    mkdir -p media/{movies,tv} downloads
+# 3. Start core services:
+#    docker-compose up -d
+# 4. Start with VPN (optional):
+#    docker-compose --profile vpn up -d
+# 5. Start with auto-updates (optional):
+#    docker-compose --profile auto-update up -d
+# 6. Access the MCP Suite dashboard at http://localhost:8090
+# 7. Configure each service through their web interfaces
+# 8. Get API keys from each service and update your .env file
+# 9. Restart the MCP suite: docker-compose restart mediaserver-mcp

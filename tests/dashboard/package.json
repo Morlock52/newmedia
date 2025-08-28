@@ -1,0 +1,68 @@
+{
+  "name": "dashboard-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive dashboard test suite for MediaFlow dashboard",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --verbose",
+    "test:all": "./run-dashboard-tests.sh",
+    "test:dashboard": "jest dashboard.test.js --verbose",
+    "test:responsive": "jest responsive.test.js --verbose",
+    "test:api": "jest api-integration.test.js --verbose",
+    "test:services": "jest service-integration.test.js --verbose",
+    "test:performance": "jest performance.test.js --verbose",
+    "test:browser": "jest cross-browser.test.js --verbose",
+    "test:websocket": "jest websocket.test.js --verbose",
+    "test:fast": "./run-dashboard-tests.sh --fast",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "clean": "rm -rf reports/* coverage/*",
+    "report": "./run-dashboard-tests.sh --no-report && node generate-report.js"
+  },
+  "keywords": [
+    "dashboard",
+    "testing",
+    "responsive",
+    "api",
+    "performance",
+    "cross-browser",
+    "websocket",
+    "integration"
+  ],
+  "author": "Dashboard Test Team",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "puppeteer": "^21.6.1",
+    "jsdom": "^23.0.1",
+    "axios": "^1.6.2",
+    "ws": "^8.14.2",
+    "@types/jest": "^29.5.11",
+    "jest-html-reporter": "^3.10.2"
+  },
+  "dependencies": {},
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": ["<rootDir>/setup.js"],
+    "collectCoverage": false,
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "verbose": true,
+    "reporters": [
+      "default",
+      [
+        "jest-html-reporter",
+        {
+          "pageTitle": "Dashboard Test Report",
+          "outputPath": "./reports/jest-report.html",
+          "includeFailureMsg": true,
+          "includeSuiteFailure": true
+        }
+      ]
+    ]
+  }
+}

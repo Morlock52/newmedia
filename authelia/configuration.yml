@@ -1,0 +1,300 @@
+# Authelia Configuration for Media Server
+# Provides 2FA authentication and advanced access control
+
+# Server configuration
+server:
+  host: 0.0.0.0
+  port: 9091
+  path: ""
+  read_buffer_size: 4096
+  write_buffer_size: 4096
+  enable_pprof: false
+  enable_expvars: false
+
+# Logging configuration
+log:
+  level: info
+  format: text
+  file_path: ""
+  keep_stdout: true
+
+# TOTP (Time-based One-Time Password) Configuration
+totp:
+  issuer: "Media Server Auth"
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+  secret_size: 32
+
+# DUO Push API (optional)
+# duo_api:
+#   hostname: ${DUO_HOSTNAME}
+#   integration_key: ${DUO_INTEGRATION_KEY}
+#   secret_key: ${DUO_SECRET_KEY}
+#   enable_self_enrollment: false
+
+# Authentication backend configuration
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    watch: true
+    search:
+      email: false
+      case_insensitive: false
+    password:
+      algorithm: argon2id
+      iterations: 3
+      salt_length: 16
+      parallelism: 4
+      memory: 64
+
+# Password policy
+password_policy:
+  standard:
+    enabled: false
+    min_length: 8
+    max_length: 0
+    require_uppercase: true
+    require_lowercase: true
+    require_number: true
+    require_special: true
+  zxcvbn:
+    enabled: true
+    min_score: 3
+
+# Access Control Configuration
+access_control:
+  default_policy: deny
+  networks:
+    - name: internal
+      networks:
+        - 172.30.0.0/16
+        - 172.31.0.0/16
+        - 172.32.0.0/16
+        - 172.33.0.0/16
+        - 172.34.0.0/16
+        - 172.35.0.0/16
+    - name: localhost
+      networks:
+        - 127.0.0.1/32
+        - ::1/128
+
+  rules:
+    # Bypass auth for health checks and API endpoints
+    - domain: 
+        - "*.${DOMAIN}"
+      policy: bypass
+      resources:
+        - "^/api/health.*"
+        - "^/health.*"
+        - "^/ping.*"
+        - "^/metrics.*"
+
+    # Admin access - requires 2FA
+    - domain:
+        - "grafana.${DOMAIN}"
+        - "prometheus.${DOMAIN}"
+        - "alertmanager.${DOMAIN}"
+        - "traefik.${DOMAIN}"
+        - "uptime.${DOMAIN}"
+        - "backup.${DOMAIN}"
+      policy: two_factor
+      subject: "group:admins"
+
+    # VPN and security services - admin only
+    - domain:
+        - "vpn.${DOMAIN}"
+        - "auth.${DOMAIN}"
+        - "webhooks.${DOMAIN}"
+      policy: two_factor
+      subject: "group:admins"
+
+    # Media management - power users with 2FA
+    - domain:
+        - "sonarr.${DOMAIN}"
+        - "radarr.${DOMAIN}"
+        - "prowlarr.${DOMAIN}"
+        - "bazarr.${DOMAIN}"
+      policy: two_factor
+      subject: 
+        - "group:admins"
+        - "group:power_users"
+
+    # Download clients - admin and power users
+    - domain:
+        - "qbittorrent.${DOMAIN}"
+        - "transmission.${DOMAIN}"
+        - "sabnzbd.${DOMAIN}"
+      policy: two_factor
+      subject:
+        - "group:admins"
+        - "group:power_users"
+
+    # Media servers - regular users (1FA)
+    - domain:
+        - "jellyfin.${DOMAIN}"
+        - "plex.${DOMAIN}"
+        - "emby.${DOMAIN}"
+      policy: one_factor
+      subject:
+        - "group:admins"
+        - "group:power_users"
+        - "group:users"
+
+    # Request services - all authenticated users
+    - domain:
+        - "jellyseerr.${DOMAIN}"
+        - "overseerr.${DOMAIN}"
+        - "ombi.${DOMAIN}"
+      policy: one_factor
+      subject:
+        - "group:admins"
+        - "group:power_users"
+        - "group:users"
+
+    # Media processing - power users
+    - domain:
+        - "fileflows.${DOMAIN}"
+        - "tdarr.${DOMAIN}"
+      policy: two_factor
+      subject:
+        - "group:admins"
+        - "group:power_users"
+
+    # Public dashboards - read-only access
+    - domain:
+        - "dashboard.${DOMAIN}"
+        - "homarr.${DOMAIN}"
+      policy: one_factor
+      subject:
+        - "group:admins"
+        - "group:power_users"
+        - "group:users"
+        - "group:guests"
+
+    # Internal network bypass for local access
+    - domain: "*.${DOMAIN}"
+      policy: bypass
+      networks:
+        - 192.168.0.0/16
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+      resources:
+        - "^/api/.*"
+
+# Session configuration
+session:
+  name: authelia_session
+  same_site: lax
+  secret: ${AUTHELIA_SESSION_SECRET}
+  expiration: 1h
+  inactivity: 30m
+  remember_me_duration: 1M
+  cookies:
+    - domain: ${DOMAIN}
+      authelia_url: https://auth.${DOMAIN}
+      default_redirection_url: https://dashboard.${DOMAIN}
+
+# Redis session storage
+redis:
+  host: redis
+  port: 6379
+  username: ""
+  password: ""
+  database_index: 1
+  maximum_active_connections: 8
+  minimum_idle_connections: 0
+
+# Storage configuration
+storage:
+  encryption_key: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+  postgres:
+    host: postgres
+    port: 5432
+    database: authelia
+    schema: public
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    timeout: 5s
+
+# Notifier configuration (email)
+notifier:
+  disable_startup_check: false
+  smtp:
+    host: ${SMTP_SERVER}
+    port: ${SMTP_PORT}
+    timeout: 5s
+    username: ${SMTP_USER}
+    password: ${AUTHELIA_NOTIFIER_SMTP_PASSWORD}
+    sender: "Media Server <${ALERT_EMAIL_FROM}>"
+    identifier: "Media Server Authelia"
+    subject: "[Media Server] {title}"
+    startup_check_address: ${ADMIN_EMAIL}
+    disable_require_tls: false
+    disable_html_emails: false
+
+# Regulation configuration (brute force protection)
+regulation:
+  max_retries: 3
+  find_time: 2m
+  ban_time: 5m
+
+# NTP configuration
+ntp:
+  address: time.cloudflare.com:123
+  version: 4
+  max_desync: 3s
+  disable_startup_check: false
+  disable_failure: false
+
+# Misc configuration
+theme: auto
+default_redirection_url: https://dashboard.${DOMAIN}
+
+# Identity providers (optional OIDC configuration)
+# identity_providers:
+#   oidc:
+#     cors:
+#       endpoints:
+#         - authorization
+#         - token
+#         - revocation
+#         - introspection
+#       allowed_origins:
+#         - https://dashboard.${DOMAIN}
+#       allowed_origins_from_client_redirect_uris: true
+#     clients:
+#       - id: media-dashboard
+#         description: Media Server Dashboard
+#         secret: ${OIDC_CLIENT_SECRET}
+#         public: false
+#         authorization_policy: two_factor
+#         redirect_uris:
+#           - https://dashboard.${DOMAIN}/api/auth/callback/authelia
+#         scopes:
+#           - openid
+#           - profile
+#           - email
+#           - groups
+#         response_types:
+#           - code
+#         grant_types:
+#           - authorization_code
+#         response_modes:
+#           - form_post
+#           - query
+#           - fragment
+
+# Telemetry
+telemetry:
+  metrics:
+    enabled: true
+    address: tcp://0.0.0.0:9959
+    buffers:
+      read: 4096
+      write: 4096
+    timeouts:
+      read: 6s
+      write: 6s
+      idle: 30s

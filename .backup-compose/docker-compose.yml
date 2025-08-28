@@ -1,0 +1,1317 @@
+version: '3.9'
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+networks:
+  media-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  vpn-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  # Media volumes
+  media-data:
+    driver: local
+  downloads:
+    driver: local
+  torrents:
+    driver: local
+  usenet:
+    driver: local
+  
+  # App config volumes
+  plex-config:
+    driver: local
+  jellyfin-config:
+    driver: local
+  emby-config:
+    driver: local
+  sonarr-config:
+    driver: local
+  radarr-config:
+    driver: local
+  lidarr-config:
+    driver: local
+  readarr-config:
+    driver: local
+  bazarr-config:
+    driver: local
+  prowlarr-config:
+    driver: local
+  qbittorrent-config:
+    driver: local
+  transmission-config:
+    driver: local
+  sabnzbd-config:
+    driver: local
+  nzbget-config:
+    driver: local
+  
+  # Monitoring volumes
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  
+  # Database volumes
+  postgres-data:
+    driver: local
+  mariadb-data:
+    driver: local
+  redis-data:
+    driver: local
+
+services:
+  # ==================== MEDIA SERVERS ====================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      <<: *common-variables
+    volumes:
+      - jellyfin-config:/config
+      - media-data:/media
+      - /dev/dri:/dev/dri # Hardware acceleration
+    ports:
+      - "8096:8096"
+      - "8920:8920" # HTTPS
+      - "7359:7359/udp" # Discovery
+      - "1900:1900/udp" # DLNA
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Jellyfin"
+      - "homepage.icon=jellyfin.png"
+      - "homepage.href=http://jellyfin:8096"
+      - "homepage.description=Free Media Server"
+
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    environment:
+      <<: *common-variables
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+      ADVERTISE_IP: ${ADVERTISE_IP:-}
+    volumes:
+      - plex-config:/config
+      - media-data:/media
+      - /dev/dri:/dev/dri
+    ports:
+      - "32400:32400"
+      - "1900:1900/udp"
+      - "3005:3005"
+      - "5353:5353/udp"
+      - "8324:8324"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
+      - "32469:32469"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Plex"
+      - "homepage.icon=plex.png"
+      - "homepage.href=http://plex:32400/web"
+      - "homepage.description=Premium Media Server"
+
+  emby:
+    image: emby/embyserver:latest
+    container_name: emby
+    environment:
+      <<: *common-variables
+    volumes:
+      - emby-config:/config
+      - media-data:/media
+      - /dev/dri:/dev/dri
+    ports:
+      - "8097:8096"
+      - "8921:8920"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Emby"
+      - "homepage.icon=emby.png"
+      - "homepage.href=http://emby:8096"
+      - "homepage.description=Media Server Alternative"
+
+  # ==================== *ARR SERVICES ====================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - sonarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "8989:8989"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Sonarr"
+      - "homepage.icon=sonarr.png"
+      - "homepage.href=http://sonarr:8989"
+      - "homepage.description=TV Show Management"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - radarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "7878:7878"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Radarr"
+      - "homepage.icon=radarr.png"
+      - "homepage.href=http://radarr:7878"
+      - "homepage.description=Movie Management"
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - lidarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "8686:8686"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Lidarr"
+      - "homepage.icon=lidarr.png"
+      - "homepage.href=http://lidarr:8686"
+      - "homepage.description=Music Management"
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - readarr-config:/config
+      - media-data:/media
+      - downloads:/downloads
+    ports:
+      - "8787:8787"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Readarr"
+      - "homepage.icon=readarr.png"
+      - "homepage.href=http://readarr:8787"
+      - "homepage.description=Book Management"
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - bazarr-config:/config
+      - media-data:/media
+    ports:
+      - "6767:6767"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Bazarr"
+      - "homepage.icon=bazarr.png"
+      - "homepage.href=http://bazarr:6767"
+      - "homepage.description=Subtitle Management"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      <<: *common-variables
+    volumes:
+      - prowlarr-config:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Media Management"
+      - "homepage.name=Prowlarr"
+      - "homepage.icon=prowlarr.png"
+      - "homepage.href=http://prowlarr:9696"
+      - "homepage.description=Indexer Management"
+
+  # ==================== REQUEST SERVICES ====================
+  
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      <<: *common-variables
+      LOG_LEVEL: info
+    volumes:
+      - ./jellyseerr-config:/app/config
+    ports:
+      - "5055:5055"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Request"
+      - "homepage.name=Jellyseerr"
+      - "homepage.icon=jellyseerr.png"
+      - "homepage.href=http://jellyseerr:5055"
+      - "homepage.description=Media Requests for Jellyfin"
+
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      <<: *common-variables
+      LOG_LEVEL: info
+    volumes:
+      - ./overseerr-config:/app/config
+    ports:
+      - "5056:5055"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Request"
+      - "homepage.name=Overseerr"
+      - "homepage.icon=overseerr.png"
+      - "homepage.href=http://overseerr:5055"
+      - "homepage.description=Media Requests for Plex"
+
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./ombi-config:/config
+    ports:
+      - "3579:3579"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Request"
+      - "homepage.name=Ombi"
+      - "homepage.icon=ombi.png"
+      - "homepage.href=http://ombi:3579"
+      - "homepage.description=Media Request Management"
+
+  # ==================== DOWNLOAD SERVICES ====================
+  
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    environment:
+      <<: *common-variables
+      VPN_SERVICE_PROVIDER: ${VPN_PROVIDER:-nordvpn}
+      VPN_TYPE: ${VPN_TYPE:-openvpn}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_COUNTRY:-Switzerland}
+    volumes:
+      - ./gluetun-config:/gluetun
+    ports:
+      - "8888:8888/tcp" # HTTP proxy
+      - "8388:8388/tcp" # Shadowsocks
+      - "8388:8388/udp" # Shadowsocks
+      - "8080:8080" # qBittorrent
+      - "9091:9091" # Transmission
+    networks:
+      - vpn-net
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=Gluetun VPN"
+      - "homepage.icon=gluetun.png"
+      - "homepage.href=http://gluetun:8000"
+      - "homepage.description=VPN Container"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      <<: *common-variables
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent-config:/config
+      - downloads:/downloads
+      - torrents:/torrents
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=qBittorrent"
+      - "homepage.icon=qbittorrent.png"
+      - "homepage.href=http://localhost:8080"
+      - "homepage.description=Torrent Client"
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    network_mode: "service:gluetun"
+    environment:
+      <<: *common-variables
+    volumes:
+      - transmission-config:/config
+      - downloads:/downloads
+      - torrents:/watch
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=Transmission"
+      - "homepage.icon=transmission.png"
+      - "homepage.href=http://localhost:9091"
+      - "homepage.description=Alternative Torrent Client"
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      <<: *common-variables
+    volumes:
+      - sabnzbd-config:/config
+      - downloads:/downloads
+      - usenet:/incomplete-downloads
+    ports:
+      - "8081:8080"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=SABnzbd"
+      - "homepage.icon=sabnzbd.png"
+      - "homepage.href=http://sabnzbd:8080"
+      - "homepage.description=Usenet Downloader"
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    environment:
+      <<: *common-variables
+    volumes:
+      - nzbget-config:/config
+      - downloads:/downloads
+    ports:
+      - "6789:6789"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=NZBGet"
+      - "homepage.icon=nzbget.png"
+      - "homepage.href=http://nzbget:6789"
+      - "homepage.description=Alternative Usenet Client"
+
+  # ==================== MONITORING SERVICES ====================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus-config:/etc/prometheus
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Prometheus"
+      - "homepage.icon=prometheus.png"
+      - "homepage.href=http://prometheus:9090"
+      - "homepage.description=Metrics Collection"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-config:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Grafana"
+      - "homepage.icon=grafana.png"
+      - "homepage.href=http://grafana:3000"
+      - "homepage.description=Metrics Visualization"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config:/etc/loki
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Loki"
+      - "homepage.icon=loki.png"
+      - "homepage.href=http://loki:3100"
+      - "homepage.description=Log Aggregation"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail-config:/etc/promtail
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    ports:
+      - "3001:3001"
+    networks:
+      - monitoring-net
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Uptime Kuma"
+      - "homepage.icon=uptime-kuma.png"
+      - "homepage.href=http://uptime-kuma:3001"
+      - "homepage.description=Service Monitoring"
+
+  scrutiny:
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    container_name: scrutiny
+    cap_add:
+      - SYS_RAWIO
+    ports:
+      - "8082:8080"
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./scrutiny-config:/opt/scrutiny/config
+      - ./scrutiny-influxdb:/opt/scrutiny/influxdb
+    devices:
+      - /dev/sda
+      - /dev/sdb
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Scrutiny"
+      - "homepage.icon=scrutiny.png"
+      - "homepage.href=http://scrutiny:8080"
+      - "homepage.description=HDD Health Monitoring"
+
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    pid: host
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/os-release:/etc/os-release:ro
+    ports:
+      - "61208:61208"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Glances"
+      - "homepage.icon=glances.png"
+      - "homepage.href=http://glances:61208"
+      - "homepage.description=System Monitoring"
+
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - ./netdata-config:/etc/netdata
+      - ./netdata-lib:/var/lib/netdata
+      - ./netdata-cache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "19999:19999"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Netdata"
+      - "homepage.icon=netdata.png"
+      - "homepage.href=http://netdata:19999"
+      - "homepage.description=Real-time Performance"
+
+  # ==================== MANAGEMENT SERVICES ====================
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer-data:/data
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Portainer"
+      - "homepage.icon=portainer.png"
+      - "homepage.href=https://portainer:9443"
+      - "homepage.description=Docker Management"
+
+  yacht:
+    image: selfhostedpro/yacht:latest
+    container_name: yacht
+    volumes:
+      - ./yacht-config:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8001:8000"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Yacht"
+      - "homepage.icon=yacht.png"
+      - "homepage.href=http://yacht:8000"
+      - "homepage.description=Container Management"
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    environment:
+      DB_MYSQL_HOST: "mariadb"
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: "npm"
+      DB_MYSQL_PASSWORD: ${NPM_DB_PASSWORD:-npm}
+      DB_MYSQL_NAME: "npm"
+    volumes:
+      - ./npm-data:/data
+      - ./npm-letsencrypt:/etc/letsencrypt
+    networks:
+      - media-net
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Nginx Proxy Manager"
+      - "homepage.icon=nginx-proxy-manager.png"
+      - "homepage.href=http://nginx-proxy-manager:81"
+      - "homepage.description=Reverse Proxy Management"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${EMAIL_FROM}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${EMAIL_TO}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=${SMTP_SERVER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=${SMTP_PORT:-587}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${SMTP_USER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${SMTP_PASSWORD}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Watchtower"
+      - "homepage.icon=watchtower.png"
+      - "homepage.description=Auto Update Containers"
+
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    command: serve
+    volumes:
+      - ./diun-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - LOG_JSON=false
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Management"
+      - "homepage.name=Diun"
+      - "homepage.icon=diun.png"
+      - "homepage.description=Update Notifications"
+
+  # ==================== CONTENT LIBRARIES ====================
+  
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      <<: *common-variables
+      DOCKER_MODS: linuxserver/mods:universal-calibre
+    volumes:
+      - ./calibre-web-config:/config
+      - media-data:/books
+    ports:
+      - "8083:8083"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Calibre-Web"
+      - "homepage.icon=calibre-web.png"
+      - "homepage.href=http://calibre-web:8083"
+      - "homepage.description=E-Book Library"
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./audiobookshelf-config:/config
+      - ./audiobookshelf-metadata:/metadata
+      - media-data:/audiobooks
+      - media-data:/podcasts
+    ports:
+      - "13378:80"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Audiobookshelf"
+      - "homepage.icon=audiobookshelf.png"
+      - "homepage.href=http://audiobookshelf"
+      - "homepage.description=Audiobook & Podcast Server"
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: info
+      ND_SESSIONTIMEOUT: 24h
+      ND_BASEURL: ""
+    volumes:
+      - ./navidrome-data:/data
+      - media-data:/music:ro
+    ports:
+      - "4533:4533"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Navidrome"
+      - "homepage.icon=navidrome.png"
+      - "homepage.href=http://navidrome:4533"
+      - "homepage.description=Music Server"
+
+  airsonic-advanced:
+    image: lscr.io/linuxserver/airsonic-advanced:latest
+    container_name: airsonic
+    environment:
+      <<: *common-variables
+      JAVA_OPTS: -Xmx256m
+    volumes:
+      - ./airsonic-config:/config
+      - media-data:/music
+      - media-data:/playlists
+      - media-data:/podcasts
+    ports:
+      - "4040:4040"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Airsonic"
+      - "homepage.icon=airsonic.png"
+      - "homepage.href=http://airsonic:4040"
+      - "homepage.description=Alternative Music Server"
+
+  photoprism:
+    image: photoprism/photoprism:latest
+    container_name: photoprism
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    environment:
+      PHOTOPRISM_ADMIN_USER: ${PHOTOPRISM_USER:-admin}
+      PHOTOPRISM_ADMIN_PASSWORD: ${PHOTOPRISM_PASSWORD:-insecure}
+      PHOTOPRISM_AUTH_MODE: "password"
+      PHOTOPRISM_SITE_URL: "http://localhost:2342/"
+      PHOTOPRISM_ORIGINALS_LIMIT: 5000
+      PHOTOPRISM_HTTP_COMPRESSION: "gzip"
+      PHOTOPRISM_DATABASE_DRIVER: "mysql"
+      PHOTOPRISM_DATABASE_SERVER: "mariadb:3306"
+      PHOTOPRISM_DATABASE_NAME: "photoprism"
+      PHOTOPRISM_DATABASE_USER: "photoprism"
+      PHOTOPRISM_DATABASE_PASSWORD: ${PHOTOPRISM_DB_PASSWORD:-photoprism}
+    volumes:
+      - ./photoprism-storage:/photoprism/storage
+      - media-data:/photoprism/originals
+    ports:
+      - "2342:2342"
+    networks:
+      - media-net
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=PhotoPrism"
+      - "homepage.icon=photoprism.png"
+      - "homepage.href=http://photoprism:2342"
+      - "homepage.description=Photo Management"
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    command: [ "start.sh", "immich" ]
+    volumes:
+      - ./immich-upload:/usr/src/app/upload
+      - media-data:/photos
+    environment:
+      DB_HOSTNAME: postgres
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      UPLOAD_LOCATION: /usr/src/app/upload
+    ports:
+      - "2283:3001"
+    networks:
+      - media-net
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Immich"
+      - "homepage.icon=immich.png"
+      - "homepage.href=http://immich-server:3001"
+      - "homepage.description=Google Photos Alternative"
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-microservices
+    command: [ "start.sh", "microservices" ]
+    volumes:
+      - ./immich-upload:/usr/src/app/upload
+      - media-data:/photos
+    environment:
+      DB_HOSTNAME: postgres
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      UPLOAD_LOCATION: /usr/src/app/upload
+    networks:
+      - media-net
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-machine-learning
+    volumes:
+      - ./immich-ml-cache:/cache
+    networks:
+      - media-net
+    restart: unless-stopped
+
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_DBHOST: postgres
+      PAPERLESS_DBUSER: ${POSTGRES_USER:-postgres}
+      PAPERLESS_DBPASS: ${POSTGRES_PASSWORD:-postgres}
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:-changeme}
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_PASSWORD:-admin}
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_TIME_ZONE: ${TZ}
+    volumes:
+      - ./paperless-data:/usr/src/paperless/data
+      - ./paperless-media:/usr/src/paperless/media
+      - ./paperless-export:/usr/src/paperless/export
+      - ./paperless-consume:/usr/src/paperless/consume
+    ports:
+      - "8010:8000"
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Paperless-ngx"
+      - "homepage.icon=paperless-ngx.png"
+      - "homepage.href=http://paperless-ngx:8000"
+      - "homepage.description=Document Management"
+
+  komga:
+    image: gotson/komga:latest
+    container_name: komga
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./komga-config:/config
+      - media-data:/data
+    ports:
+      - "8090:8080"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Libraries"
+      - "homepage.name=Komga"
+      - "homepage.icon=komga.png"
+      - "homepage.href=http://komga:8080"
+      - "homepage.description=Comics/Manga Server"
+
+  # ==================== UTILITIES ====================
+  
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_USER:-admin}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_PASSWORD:-admin}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_DOMAIN:-localhost}
+    volumes:
+      - ./nextcloud-data:/var/www/html
+      - media-data:/data
+    ports:
+      - "8084:80"
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Nextcloud"
+      - "homepage.icon=nextcloud.png"
+      - "homepage.href=http://nextcloud"
+      - "homepage.description=Personal Cloud Storage"
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    environment:
+      - DOMAIN=${VAULTWARDEN_DOMAIN:-http://localhost}
+      - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS:-true}
+      - ADMIN_TOKEN=${VAULTWARDEN_TOKEN:-changeme}
+    volumes:
+      - ./vaultwarden-data:/data
+    ports:
+      - "8085:80"
+      - "3012:3012"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Vaultwarden"
+      - "homepage.icon=bitwarden.png"
+      - "homepage.href=http://vaultwarden"
+      - "homepage.description=Password Manager"
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    hostname: pihole
+    environment:
+      <<: *common-variables
+      WEBPASSWORD: ${PIHOLE_PASSWORD:-admin}
+      PIHOLE_DNS_: 1.1.1.1;1.0.0.1
+    volumes:
+      - ./pihole-etc:/etc/pihole
+      - ./pihole-dnsmasq:/etc/dnsmasq.d
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8053:80/tcp"
+    cap_add:
+      - NET_ADMIN
+    networks:
+      media-net:
+        ipv4_address: 172.20.0.253
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Pi-hole"
+      - "homepage.icon=pi-hole.png"
+      - "homepage.href=http://pihole/admin"
+      - "homepage.description=Network Ad Blocker"
+
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    volumes:
+      - ./adguard-work:/opt/adguardhome/work
+      - ./adguard-conf:/opt/adguardhome/conf
+    ports:
+      - "54:53/tcp"
+      - "54:53/udp"
+      - "8054:80/tcp"
+      - "3380:3000/tcp"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=AdGuard Home"
+      - "homepage.icon=adguard-home.png"
+      - "homepage.href=http://adguardhome:3000"
+      - "homepage.description=Alternative Ad Blocker"
+
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    hostname: syncthing
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./syncthing-config:/config
+      - media-data:/data
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Syncthing"
+      - "homepage.icon=syncthing.png"
+      - "homepage.href=http://syncthing:8384"
+      - "homepage.description=File Synchronization"
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    environment:
+      <<: *common-variables
+    volumes:
+      - media-data:/srv
+      - ./filebrowser-db:/database
+      - ./filebrowser-config:/config
+    ports:
+      - "8086:80"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=FileBrowser"
+      - "homepage.icon=filebrowser.png"
+      - "homepage.href=http://filebrowser"
+      - "homepage.description=Web File Manager"
+
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      <<: *common-variables
+      PASSWORD: ${CODE_SERVER_PASSWORD:-password}
+      SUDO_PASSWORD: ${CODE_SERVER_SUDO_PASSWORD:-password}
+    volumes:
+      - ./code-server-config:/config
+      - media-data:/data
+    ports:
+      - "8443:8443"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Code Server"
+      - "homepage.icon=code-server.png"
+      - "homepage.href=http://code-server:8443"
+      - "homepage.description=VS Code in Browser"
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    environment:
+      - USER_UID=${PUID:-1000}
+      - USER_GID=${PGID:-1000}
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=${POSTGRES_USER:-postgres}
+      - GITEA__database__PASSWD=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./gitea-data:/data
+      - ./gitea-config:/etc/gitea
+    ports:
+      - "3002:3000"
+      - "2222:22"
+    networks:
+      - media-net
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Utilities"
+      - "homepage.name=Gitea"
+      - "homepage.icon=gitea.png"
+      - "homepage.href=http://gitea:3000"
+      - "homepage.description=Git Server"
+
+  # ==================== DASHBOARDS ====================
+  
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    volumes:
+      - ./homarr-configs:/app/data/configs
+      - ./homarr-data:/data
+      - ./homarr-icons:/app/public/icons
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "7575:7575"
+    env_file:
+      - ./homarr-env.env
+    environment:
+      - BASE_URL=${HOMARR_URL:-http://localhost:7575}
+      - EDIT_MODE_PASSWORD=${HOMARR_PASSWORD:-}
+      - NODE_ENV=production
+      - DATABASE_URL=file:/data/db.sqlite
+      - AUTH_TRUST_HOST=true
+      - NEXTAUTH_URL=http://localhost:7575
+      - NEXTAUTH_SECRET=your-secret-key-here-change-in-production
+      - NEXT_PUBLIC_DEFAULT_COLOR_SCHEME=dark
+      - NEXT_PUBLIC_DISABLE_ANALYTICS=true
+      - NEXT_PUBLIC_DEFAULT_BOARD_NAME=default
+      - DATA_DIR=/data
+      - CONFIG_DIR=/app/data/configs
+      - DEFAULT_BOARD=default
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Dashboards"
+      - "homepage.name=Homarr"
+      - "homepage.icon=homarr.png"
+      - "homepage.href=http://homarr:7575"
+      - "homepage.description=Main Dashboard"
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      <<: *common-variables
+    volumes:
+      - ./homepage-config:/app/config
+      - media-data:/media:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "3003:3000"
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Dashboards"
+      - "homepage.name=Homepage"
+      - "homepage.icon=homepage.png"
+      - "homepage.href=http://homepage:3000"
+      - "homepage.description=Alternative Dashboard"
+
+  dashy:
+    image: lissy93/dashy:latest
+    container_name: dashy
+    volumes:
+      - ./dashy-config:/app/public
+    ports:
+      - "4000:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - media-net
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Dashboards"
+      - "homepage.name=Dashy"
+      - "homepage.icon=dashy.png"
+      - "homepage.href=http://dashy"
+      - "homepage.description=Feature-rich Dashboard"
+
+  # ==================== DATABASE SERVICES ====================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_MULTIPLE_DATABASES: immich,paperless,nextcloud,gitea
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: npm
+      MYSQL_USER: npm
+      MYSQL_PASSWORD: ${NPM_DB_PASSWORD:-npm}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./mariadb-init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - media-net
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

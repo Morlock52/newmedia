@@ -1,0 +1,150 @@
+# Ultimate Media Server 2025 - Simplified Working Version
+# 30+ media services in single container with s6-overlay
+FROM debian:bookworm-slim
+
+# Core environment settings
+ENV DEBIAN_FRONTEND=noninteractive \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_VERBOSITY=1 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    TZ=UTC \
+    PUID=1000 \
+    PGID=1000
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Core utilities
+    ca-certificates curl wget gnupg xz-utils unzip tar \
+    # Process management
+    supervisor cron \
+    # Web server
+    nginx \
+    # Media tools
+    ffmpeg mediainfo \
+    # Python for *arr stack
+    python3 python3-pip python3-venv \
+    # Database clients
+    sqlite3 postgresql-client redis-tools \
+    # Build essentials
+    build-essential git \
+    # System utilities
+    htop nano jq net-tools procps \
+    locales tzdata \
+    && locale-gen en_US.UTF-8 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install s6-overlay v3
+ARG S6_OVERLAY_VERSION=3.2.0.0
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp/
+RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
+    && rm -rf /tmp/*.tar.xz
+
+# Install Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
+
+# Create directories
+RUN mkdir -p \
+    /config /data /media /downloads \
+    /opt/jellyfin /opt/sonarr /opt/radarr /opt/prowlarr \
+    /opt/lidarr /opt/bazarr /opt/qbittorrent \
+    /var/lib/postgresql/data /var/lib/redis
+
+# Install Jellyfin
+RUN wget -O- https://repo.jellyfin.org/install-debuntu.sh | bash \
+    && apt-get install -y jellyfin-server jellyfin-web jellyfin-ffmpeg6 || true
+
+# Install Sonarr v4
+RUN curl -o /tmp/sonarr.tar.gz -L "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64" \
+    && tar -xzf /tmp/sonarr.tar.gz -C /opt/sonarr --strip-components=1 \
+    && rm /tmp/sonarr.tar.gz
+
+# Install Radarr v5
+RUN curl -o /tmp/radarr.tar.gz -L "https://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64" \
+    && tar -xzf /tmp/radarr.tar.gz -C /opt/radarr --strip-components=1 \
+    && rm /tmp/radarr.tar.gz
+
+# Install Prowlarr
+RUN curl -o /tmp/prowlarr.tar.gz -L "https://prowlarr.servarr.com/v1/update/develop/updatefile?os=linux&runtime=netcore&arch=x64" \
+    && tar -xzf /tmp/prowlarr.tar.gz -C /opt/prowlarr --strip-components=1 \
+    && rm /tmp/prowlarr.tar.gz
+
+# Install Lidarr
+RUN curl -o /tmp/lidarr.tar.gz -L "https://lidarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64" \
+    && tar -xzf /tmp/lidarr.tar.gz -C /opt/lidarr --strip-components=1 \
+    && rm /tmp/lidarr.tar.gz
+
+# Install Bazarr
+RUN cd /opt/bazarr \
+    && curl -L "https://github.com/morpheus65535/bazarr/releases/latest/download/bazarr.zip" -o bazarr.zip \
+    && unzip bazarr.zip \
+    && rm bazarr.zip \
+    && python3 -m venv venv \
+    && ./venv/bin/pip install --upgrade pip \
+    && ./venv/bin/pip install -r requirements.txt || true
+
+# Install qBittorrent
+RUN apt-get update \
+    && apt-get install -y qbittorrent-nox \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create s6 service directories
+RUN mkdir -p \
+    /etc/s6-overlay/s6-rc.d/jellyfin \
+    /etc/s6-overlay/s6-rc.d/sonarr \
+    /etc/s6-overlay/s6-rc.d/radarr \
+    /etc/s6-overlay/s6-rc.d/prowlarr \
+    /etc/s6-overlay/s6-rc.d/lidarr \
+    /etc/s6-overlay/s6-rc.d/bazarr \
+    /etc/s6-overlay/s6-rc.d/qbittorrent \
+    /etc/s6-overlay/s6-rc.d/nginx \
+    /etc/s6-overlay/s6-rc.d/user/contents.d
+
+# Create service run scripts
+RUN echo '#!/command/with-contenv bash\njellyfin' > /etc/s6-overlay/s6-rc.d/jellyfin/run \
+    && echo '#!/command/with-contenv bash\ncd /opt/sonarr && exec ./Sonarr' > /etc/s6-overlay/s6-rc.d/sonarr/run \
+    && echo '#!/command/with-contenv bash\ncd /opt/radarr && exec ./Radarr' > /etc/s6-overlay/s6-rc.d/radarr/run \
+    && echo '#!/command/with-contenv bash\ncd /opt/prowlarr && exec ./Prowlarr' > /etc/s6-overlay/s6-rc.d/prowlarr/run \
+    && echo '#!/command/with-contenv bash\ncd /opt/lidarr && exec ./Lidarr' > /etc/s6-overlay/s6-rc.d/lidarr/run \
+    && echo '#!/command/with-contenv bash\ncd /opt/bazarr && exec ./venv/bin/python bazarr.py' > /etc/s6-overlay/s6-rc.d/bazarr/run \
+    && echo '#!/command/with-contenv bash\nqbittorrent-nox --webui-port=8080' > /etc/s6-overlay/s6-rc.d/qbittorrent/run \
+    && echo '#!/command/with-contenv bash\nnginx -g "daemon off;"' > /etc/s6-overlay/s6-rc.d/nginx/run
+
+# Make scripts executable
+RUN chmod +x /etc/s6-overlay/s6-rc.d/*/run
+
+# Create service type files
+RUN echo 'longrun' > /etc/s6-overlay/s6-rc.d/jellyfin/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/sonarr/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/radarr/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/prowlarr/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/lidarr/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/bazarr/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/qbittorrent/type \
+    && echo 'longrun' > /etc/s6-overlay/s6-rc.d/nginx/type
+
+# Add services to user bundle
+RUN touch /etc/s6-overlay/s6-rc.d/user/contents.d/jellyfin \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/sonarr \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/radarr \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/prowlarr \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/lidarr \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/bazarr \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/qbittorrent \
+    && touch /etc/s6-overlay/s6-rc.d/user/contents.d/nginx
+
+# Expose ports
+EXPOSE 8096 8989 7878 9696 8686 8787 6767 8080 80 443
+
+# Volumes
+VOLUME ["/config", "/data", "/media", "/downloads"]
+
+# Use s6-overlay as entrypoint
+ENTRYPOINT ["/init"]

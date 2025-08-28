@@ -1,0 +1,265 @@
+version: '3.8'
+
+services:
+  ultimate-media-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ultimate-single-container
+      args:
+        - BUILDKIT_PROGRESS=plain
+    image: ultimate-media-server:2025.08.09
+    container_name: ultimate-media-server
+    hostname: media-server
+    restart: unless-stopped
+    
+    # Network mode - using host for maximum performance
+    # Change to bridge if you need port mapping
+    network_mode: bridge
+    
+    # Capabilities for hardware acceleration
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '4.0'
+          memory: 8G
+    
+    # Environment variables
+    environment:
+      # System
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - UMASK=002
+      
+      # Database
+      - POSTGRES_HOST=localhost
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=mediaserver
+      - POSTGRES_PASSWORD=secure_password_here
+      - POSTGRES_DB=mediaserver
+      
+      # Redis
+      - REDIS_HOST=localhost
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis_password_here
+      
+      # RabbitMQ
+      - RABBITMQ_HOST=localhost
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=mediaserver
+      - RABBITMQ_PASSWORD=rabbitmq_password_here
+      
+      # Elasticsearch
+      - ELASTIC_HOST=localhost
+      - ELASTIC_PORT=9200
+      
+      # Service URLs (internal communication)
+      - JELLYFIN_URL=http://localhost:8096
+      - PLEX_URL=http://localhost:32400
+      - SONARR_URL=http://localhost:8989
+      - RADARR_URL=http://localhost:7878
+      - PROWLARR_URL=http://localhost:9696
+      - QBITTORRENT_URL=http://localhost:8080
+      
+      # AI Configuration
+      - AI_SAFETY_ENABLED=true
+      - AI_MODERATION_ENABLED=true
+      - AI_RECOMMENDATIONS_ENABLED=true
+      - AI_SOCIAL_ENABLED=true
+      - CONTENT_FILTERING_STRICT=true
+      - NSFW_DETECTION_ENABLED=true
+      
+      # Performance
+      - JAVA_OPTS=-Xms2g -Xmx4g
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - PYTHON_WORKERS=4
+      
+      # Monitoring
+      - PROMETHEUS_ENABLED=true
+      - GRAFANA_ENABLED=true
+      - LOGGING_LEVEL=info
+    
+    # Volumes
+    volumes:
+      # Configuration
+      - ./config:/config
+      - ./data:/data
+      
+      # Media libraries
+      - ${MEDIA_PATH:-./media}:/media
+      - ${MOVIES_PATH:-./media/movies}:/movies
+      - ${TV_PATH:-./media/tv}:/tv
+      - ${MUSIC_PATH:-./media/music}:/music
+      - ${BOOKS_PATH:-./media/books}:/books
+      
+      # Downloads
+      - ${DOWNLOADS_PATH:-./downloads}:/downloads
+      
+      # Logs
+      - ./logs:/logs
+      
+      # AI Models
+      - ./ai-models:/app/models
+      
+      # Database persistence
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./redis-data:/data/redis
+      - ./elasticsearch-data:/usr/share/elasticsearch/data
+      
+      # Service data
+      - ./jellyfin-data:/config/jellyfin
+      - ./plex-data:/config/plex
+      - ./sonarr-data:/config/sonarr
+      - ./radarr-data:/config/radarr
+      - ./prowlarr-data:/config/prowlarr
+      - ./bazarr-data:/config/bazarr
+      - ./qbittorrent-data:/config/qbittorrent
+      - ./transmission-data:/config/transmission
+      
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Timezone
+      - /etc/localtime:/etc/localtime:ro
+    
+    # Port mappings
+    ports:
+      # Frontend Dashboard
+      - "3000:3000"  # Next.js Dashboard
+      
+      # Media Servers
+      - "8096:8096"  # Jellyfin
+      - "32400:32400"  # Plex
+      - "8920:8920"  # Emby
+      
+      # *arr Stack
+      - "8989:8989"  # Sonarr
+      - "7878:7878"  # Radarr
+      - "8686:8686"  # Lidarr
+      - "8787:8787"  # Readarr
+      - "9696:9696"  # Prowlarr
+      - "6767:6767"  # Bazarr
+      
+      # Download Clients
+      - "8080:8080"  # qBittorrent
+      - "9091:9091"  # Transmission
+      - "8081:8081"  # SABnzbd
+      - "6789:6789"  # NZBGet
+      
+      # Request Services
+      - "5055:5055"  # Jellyseerr
+      - "5056:5056"  # Overseerr
+      - "3579:3579"  # Ombi
+      
+      # Management Tools
+      - "8181:8181"  # Tautulli
+      - "9983:9983"  # Organizr
+      - "8443:8443"  # Heimdall
+      
+      # AI Services
+      - "8090:8090"  # AI Safety System
+      - "8091:8091"  # Content Moderation
+      - "8092:8092"  # Recommendation Engine
+      - "8093:8093"  # Social Media Integration
+      - "8094:8094"  # AI Dashboard
+      - "8095:8095"  # API Gateway
+      
+      # Monitoring
+      - "9090:9090"  # Prometheus
+      - "3001:3001"  # Grafana
+      - "3002:3002"  # Uptime Kuma
+      - "5601:5601"  # Kibana
+      
+      # Infrastructure
+      - "5432:5432"  # PostgreSQL
+      - "6379:6379"  # Redis
+      - "15672:15672"  # RabbitMQ Management
+      - "9200:9200"  # Elasticsearch
+      
+      # Traefik
+      - "80:80"  # HTTP
+      - "443:443"  # HTTPS
+      - "8088:8080"  # Traefik Dashboard
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "/healthcheck-all.sh"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 5m
+    
+    # Devices for hardware acceleration
+    devices:
+      # Intel QuickSync
+      - /dev/dri:/dev/dri
+      # NVIDIA GPU (uncomment if available)
+      # - /dev/nvidia0:/dev/nvidia0
+      # - /dev/nvidiactl:/dev/nvidiactl
+      # - /dev/nvidia-modeset:/dev/nvidia-modeset
+    
+    # Labels for Traefik routing
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.media.local`)"
+      - "traefik.http.routers.dashboard.service=dashboard"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=3000"
+      
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.media.local`)"
+      - "traefik.http.routers.jellyfin.service=jellyfin"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      
+      - "traefik.http.routers.plex.rule=Host(`plex.media.local`)"
+      - "traefik.http.routers.plex.service=plex"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
+      
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.media.local`)"
+      - "traefik.http.routers.sonarr.service=sonarr"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      
+      - "traefik.http.routers.radarr.rule=Host(`radarr.media.local`)"
+      - "traefik.http.routers.radarr.service=radarr"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+
+# Networks
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+
+# Volumes
+volumes:
+  config:
+    driver: local
+  data:
+    driver: local
+  media:
+    driver: local
+  downloads:
+    driver: local
+  logs:
+    driver: local
+  ai-models:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  elasticsearch-data:
+    driver: local

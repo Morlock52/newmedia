@@ -1,0 +1,55 @@
+{
+  "name": "unified-media-mcp-server",
+  "version": "1.0.0",
+  "description": "Unified MCP Server for comprehensive media management",
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "unified-mcp": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --inspect server.js",
+    "test": "node test.js",
+    "build": "echo 'No build step required for ES modules'",
+    "install-global": "npm install -g .",
+    "docker-build": "docker build -t unified-mcp-server .",
+    "docker-run": "docker run -it --network host unified-mcp-server"
+  },
+  "keywords": [
+    "mcp",
+    "media",
+    "server",
+    "sonarr",
+    "radarr", 
+    "jellyfin",
+    "plex",
+    "docker",
+    "automation"
+  ],
+  "author": "MCP Integration System",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.6.0",
+    "dockerode": "^4.0.0",
+    "fs-extra": "^11.2.0",
+    "node-cron": "^3.0.3",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/unified-media-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/unified-media-mcp/issues"
+  },
+  "homepage": "https://github.com/your-org/unified-media-mcp#readme"
+}

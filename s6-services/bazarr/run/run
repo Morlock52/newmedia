@@ -1,0 +1,20 @@
+#!/command/with-contenv bash
+# Bazarr service runner
+
+set -e
+
+echo "Starting Bazarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/bazarr
+
+# Set proper ownership
+chown -R media:media /config/bazarr
+
+# Set environment
+export HOME="/config/bazarr"
+
+# Run Bazarr
+exec s6-setuidgid media python3 /opt/bazarr/bazarr.py \
+    --no-update \
+    --config /config/bazarr

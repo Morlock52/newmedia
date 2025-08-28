@@ -1,0 +1,301 @@
+/* Simple Cyberpunk Styles - Guaranteed to Work */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0a0e1b !important;
+  color: #00ffff !important;
+  font-family: 'Orbitron', monospace !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(157, 0, 255, 0.2) 0%, transparent 50%);
+  animation: float 20s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-20px, -30px) scale(1.1); }
+  66% { transform: translate(20px, 20px) scale(0.9); }
+}
+
+/* Main Container */
+.cyber-container {
+  position: relative;
+  z-index: 2;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* Glowing Title */
+.cyber-title {
+  font-size: 3rem !important;
+  font-weight: 900 !important;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 2rem;
+  background: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s linear infinite;
+  filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.7));
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Service Cards */
+.service-card {
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.05)) !important;
+  border: 2px solid #00ffff !important;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(255, 0, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.service-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: #ff00ff !important;
+  box-shadow: 
+    0 0 50px rgba(255, 0, 255, 0.5),
+    inset 0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #00ffff, #ff00ff, #9d00ff, #00ff88);
+  border-radius: 12px;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  animation: rotate-gradient 3s linear infinite;
+}
+
+.service-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes rotate-gradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Service Title */
+.service-name {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #00ffff !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 15px currentColor;
+}
+
+/* Status Indicators */
+.status-online {
+  color: #00ff88 !important;
+  text-shadow: 0 0 10px #00ff88;
+}
+
+.status-offline {
+  color: #ff0040 !important;
+  text-shadow: 0 0 10px #ff0040;
+}
+
+.status-checking {
+  color: #ffff00 !important;
+  text-shadow: 0 0 10px #ffff00;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Terminal */
+.cyber-terminal {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 2px solid #00ff88 !important;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 2rem auto;
+  max-width: 800px;
+  font-family: 'Courier New', monospace !important;
+  color: #00ff88 !important;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 136, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-terminal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 136, 0.03) 50%,
+    transparent 100%
+  );
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* Buttons */
+.cyber-button {
+  background: linear-gradient(45deg, #00ffff, #ff00ff) !important;
+  color: #000 !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.7);
+}
+
+.cyber-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.cyber-button:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Grid Layout */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+/* Metrics */
+.metric-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+  position: relative;
+}
+
+.metric-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ffff, #ff00ff);
+  border-radius: 4px;
+  transition: width 1s ease;
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Scanlines Effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 255, 0.03) 2px,
+    rgba(0, 255, 255, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* Loading Animation */
+.cyber-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #00ffff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Make sure text is visible */
+h1, h2, h3, h4, h5, h6, p, span, div {
+  color: inherit !important;
+}
+
+/* Override any conflicting styles */
+.cyberpunk-theme * {
+  color: inherit;
+}

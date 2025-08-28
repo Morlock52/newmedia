@@ -1,0 +1,10 @@
+#!/command/with-contenv bash
+# API server service
+
+# Wait for config directory
+s6-svwait -U /run/s6/services/init-api
+
+# Start API server
+cd /opt/api
+exec s6-setuidgid mediauser \
+    node server.js

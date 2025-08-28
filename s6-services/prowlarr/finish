@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Prowlarr service cleanup
+
+echo "$(date) [INFO] Prowlarr service stopped" >> /logs/prowlarr.log

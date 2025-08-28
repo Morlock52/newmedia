@@ -1,0 +1,156 @@
+# Fail2ban Security Configuration for Media Server
+# Custom jails for protecting various services
+
+[DEFAULT]
+# Global settings
+bantime = 3600
+findtime = 600
+maxretry = 3
+backend = auto
+usedns = warn
+logencoding = auto
+enabled = false
+mode = normal
+filter = %(__name__)s[mode=%(mode)s]
+
+# Email notifications
+destemail = ${SECURITY_ALERT_EMAIL}
+sender = fail2ban@${DOMAIN}
+mta = mail
+action = %(action_mwl)s
+
+# Custom actions
+action_mwl = %(banaction)s[name=%(__name__)s, bantime="%(bantime)s", port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+             %(mta)s-whois-lines[name=%(__name__)s, sender="%(sender)s", dest="%(destemail)s", logpath="%(logpath)s", chain="%(chain)s"]
+
+[sshd]
+enabled = true
+port = ssh
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 7200
+
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+port = http,https
+logpath = /var/log/nginx/*error.log
+maxretry = 5
+bantime = 3600
+
+[nginx-limit-req]
+enabled = true
+filter = nginx-limit-req
+port = http,https
+logpath = /var/log/nginx/*error.log
+maxretry = 10
+findtime = 600
+bantime = 7200
+
+[nginx-botsearch]
+enabled = true
+filter = nginx-botsearch
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 2
+bantime = 86400
+
+[nginx-noscript]
+enabled = true
+filter = nginx-noscript
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 6
+bantime = 86400
+
+[nginx-badbots]
+enabled = true
+filter = nginx-badbots
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 2
+bantime = 86400
+
+[nginx-noproxy]
+enabled = true
+filter = nginx-noproxy
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 2
+bantime = 86400
+
+# Custom jail for Jellyfin
+[jellyfin]
+enabled = true
+filter = jellyfin-auth
+port = 8096,8920
+logpath = /var/log/jellyfin/jellyfin*.log
+maxretry = 3
+bantime = 86400
+findtime = 600
+
+# Custom jail for Sonarr/Radarr API abuse
+[arr-services]
+enabled = true
+filter = arr-services
+port = 8989,7878,9696
+logpath = /var/log/nginx/*access.log
+maxretry = 10
+findtime = 300
+bantime = 3600
+
+# Custom jail for qBittorrent
+[qbittorrent]
+enabled = true
+filter = qbittorrent-auth
+port = 8080
+logpath = /var/log/apps/qbittorrent.log
+maxretry = 5
+bantime = 7200
+
+# Custom jail for Grafana
+[grafana]
+enabled = true
+filter = grafana-auth
+port = 3000
+logpath = /var/log/grafana/grafana.log
+maxretry = 5
+bantime = 3600
+
+# Custom jail for excessive API requests
+[api-abuse]
+enabled = true
+filter = nginx-api-abuse
+port = http,https
+logpath = /var/log/nginx/*access.log
+maxretry = 50
+findtime = 300
+bantime = 7200
+
+# Custom jail for Docker container attacks
+[docker-attacks]
+enabled = true
+filter = docker-attacks
+logpath = /var/log/docker.log
+maxretry = 3
+bantime = 86400
+
+# Custom jail for port scanning
+[portscan]
+enabled = true
+filter = portscan
+logpath = /var/log/syslog
+maxretry = 6
+findtime = 600
+bantime = 86400
+
+# Recidive jail for repeat offenders
+[recidive]
+enabled = true
+filter = recidive
+logpath = /var/log/fail2ban.log
+action = %(banaction)s[name=%(__name__)s]
+         %(mta)s-whois-lines[name=%(__name__)s, sender="%(sender)s", dest="%(destemail)s"]
+bantime = 604800  ; 1 week
+findtime = 86400  ; 1 day
+maxretry = 5

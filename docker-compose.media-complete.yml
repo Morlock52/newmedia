@@ -1,0 +1,425 @@
+version: '3.9'
+
+# ============================================================================
+# COMPLETE MEDIA SERVER STACK WITH ARCHON INTEGRATION
+# Version: 2025.08
+# ============================================================================
+
+x-common-variables: &common-variables
+  TZ: ${TZ:-America/New_York}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+networks:
+  media-net:
+    name: media-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  download-net:
+    name: download-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+  archon-net:
+    name: archon-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+volumes:
+  # Media volumes
+  media-movies:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MEDIA_PATH:-./media}/movies
+
+  media-tv:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MEDIA_PATH:-./media}/tv
+
+  media-music:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MEDIA_PATH:-./media}/music
+
+  # Download volumes
+  downloads-complete:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DOWNLOADS_PATH:-./downloads}/complete
+
+  downloads-incomplete:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DOWNLOADS_PATH:-./downloads}/incomplete
+
+  # Configuration volumes (named volumes for persistence)
+  jellyfin-config:
+  sonarr-config:
+  radarr-config:
+  lidarr-config:
+  prowlarr-config:
+  bazarr-config:
+  qbittorrent-config:
+  overseerr-config:
+  tautulli-config:
+  homepage-config:
+
+services:
+  # ============================================================================
+  # MEDIA SERVERS
+  # ============================================================================
+  
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+      JELLYFIN_PublishedServerUrl: ${JELLYFIN_URL:-http://localhost:8096}
+    volumes:
+      - jellyfin-config:/config
+      - media-movies:/data/movies:ro
+      - media-tv:/data/tvshows:ro
+      - media-music:/data/music:ro
+      - /dev/shm:/transcoding  # RAM transcoding for performance
+    ports:
+      - "8096:8096"
+      - "8920:8920"  # HTTPS
+      - "1900:1900/udp"  # DLNA
+      - "7359:7359/udp"  # Client discovery
+    devices:
+      - /dev/dri:/dev/dri  # Hardware acceleration
+    networks:
+      - media-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "homepage.group=Media"
+      - "homepage.name=Jellyfin"
+      - "homepage.icon=jellyfin.png"
+      - "homepage.href=http://localhost:8096"
+      - "homepage.description=Media Streaming Server"
+
+  # ============================================================================
+  # AUTOMATION SERVICES (*ARR SUITE)
+  # ============================================================================
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - sonarr-config:/config
+      - media-tv:/tv
+      - downloads-complete:/downloads/complete
+      - downloads-incomplete:/downloads/incomplete
+    ports:
+      - "8989:8989"
+    networks:
+      - media-net
+      - download-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8989/api/v3/system/status?apikey=${SONARR_API_KEY:-}"]
+    depends_on:
+      - prowlarr
+      - qbittorrent
+    labels:
+      - "homepage.group=Automation"
+      - "homepage.name=Sonarr"
+      - "homepage.icon=sonarr.png"
+      - "homepage.href=http://localhost:8989"
+      - "homepage.description=TV Show Management"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - radarr-config:/config
+      - media-movies:/movies
+      - downloads-complete:/downloads/complete
+      - downloads-incomplete:/downloads/incomplete
+    ports:
+      - "7878:7878"
+    networks:
+      - media-net
+      - download-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:7878/api/v3/system/status?apikey=${RADARR_API_KEY:-}"]
+    depends_on:
+      - prowlarr
+      - qbittorrent
+    labels:
+      - "homepage.group=Automation"
+      - "homepage.name=Radarr"
+      - "homepage.icon=radarr.png"
+      - "homepage.href=http://localhost:7878"
+      - "homepage.description=Movie Management"
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - lidarr-config:/config
+      - media-music:/music
+      - downloads-complete:/downloads/complete
+      - downloads-incomplete:/downloads/incomplete
+    ports:
+      - "8686:8686"
+    networks:
+      - media-net
+      - download-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8686/api/v1/system/status?apikey=${LIDARR_API_KEY:-}"]
+    depends_on:
+      - prowlarr
+      - qbittorrent
+    labels:
+      - "homepage.group=Automation"
+      - "homepage.name=Lidarr"
+      - "homepage.icon=lidarr.png"
+      - "homepage.href=http://localhost:8686"
+      - "homepage.description=Music Management"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - prowlarr-config:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-net
+      - download-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:9696/api/v1/system/status?apikey=${PROWLARR_API_KEY:-}"]
+    labels:
+      - "homepage.group=Automation"
+      - "homepage.name=Prowlarr"
+      - "homepage.icon=prowlarr.png"
+      - "homepage.href=http://localhost:9696"
+      - "homepage.description=Indexer Management"
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - bazarr-config:/config
+      - media-movies:/movies
+      - media-tv:/tv
+    ports:
+      - "6767:6767"
+    networks:
+      - media-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:6767/api/system/status?apikey=${BAZARR_API_KEY:-}"]
+    labels:
+      - "homepage.group=Automation"
+      - "homepage.name=Bazarr"
+      - "homepage.icon=bazarr.png"
+      - "homepage.href=http://localhost:6767"
+      - "homepage.description=Subtitle Management"
+
+  # ============================================================================
+  # DOWNLOAD SERVICES WITH VPN
+  # ============================================================================
+  
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    <<: *restart-policy
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-nordvpn}
+      - VPN_TYPE=${VPN_TYPE:-openvpn}
+      - OPENVPN_USER=${VPN_USER}
+      - OPENVPN_PASSWORD=${VPN_PASSWORD}
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
+      - FIREWALL_OUTBOUND_SUBNETS=172.20.0.0/16,172.21.0.0/16  # Allow local network
+      - DOT=off  # Disable DNS over TLS for compatibility
+    ports:
+      - "8080:8080"  # qBittorrent WebUI
+      - "6881:6881"  # qBittorrent TCP
+      - "6881:6881/udp"  # qBittorrent UDP
+    networks:
+      - download-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "https://api.ipify.org"]
+    labels:
+      - "homepage.group=Network"
+      - "homepage.name=Gluetun VPN"
+      - "homepage.icon=gluetun.png"
+      - "homepage.description=VPN Tunnel"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    <<: *restart-policy
+    network_mode: "service:gluetun"
+    environment:
+      <<: *common-variables
+      WEBUI_PORT: 8080
+    volumes:
+      - qbittorrent-config:/config
+      - downloads-complete:/downloads/complete
+      - downloads-incomplete:/downloads/incomplete
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    labels:
+      - "homepage.group=Downloads"
+      - "homepage.name=qBittorrent"
+      - "homepage.icon=qbittorrent.png"
+      - "homepage.href=http://localhost:8080"
+      - "homepage.description=Torrent Client"
+
+  # ============================================================================
+  # REQUEST MANAGEMENT
+  # ============================================================================
+  
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - overseerr-config:/config
+    ports:
+      - "5055:5055"
+    networks:
+      - media-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+    labels:
+      - "homepage.group=Media"
+      - "homepage.name=Overseerr"
+      - "homepage.icon=overseerr.png"
+      - "homepage.href=http://localhost:5055"
+      - "homepage.description=Media Requests"
+
+  # ============================================================================
+  # MONITORING & DASHBOARDS
+  # ============================================================================
+  
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+    volumes:
+      - tautulli-config:/config
+    ports:
+      - "8181:8181"
+    networks:
+      - media-net
+    depends_on:
+      - jellyfin
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "curl", "-f", "http://localhost:8181/status"]
+    labels:
+      - "homepage.group=Monitoring"
+      - "homepage.name=Tautulli"
+      - "homepage.icon=tautulli.png"
+      - "homepage.href=http://localhost:8181"
+      - "homepage.description=Media Analytics"
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    <<: *restart-policy
+    environment:
+      <<: *common-variables
+      HOMEPAGE_VAR_JELLYFIN_API_KEY: ${JELLYFIN_API_KEY:-}
+      HOMEPAGE_VAR_SONARR_API_KEY: ${SONARR_API_KEY:-}
+      HOMEPAGE_VAR_RADARR_API_KEY: ${RADARR_API_KEY:-}
+      HOMEPAGE_VAR_PROWLARR_API_KEY: ${PROWLARR_API_KEY:-}
+    volumes:
+      - homepage-config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For Docker integration
+    ports:
+      - "3000:3000"
+    networks:
+      - media-net
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+    labels:
+      - "homepage.group=System"
+      - "homepage.name=Homepage"
+      - "homepage.icon=homepage.png"
+      - "homepage.href=http://localhost:3000"
+      - "homepage.description=Service Dashboard"
+
+  # ============================================================================
+  # ARCHON INTEGRATION (Optional - Uncomment to enable)
+  # ============================================================================
+  
+  # archon-connector:
+  #   image: archon/connector:latest
+  #   container_name: archon-connector
+  #   <<: *restart-policy
+  #   environment:
+  #     ARCHON_URL: http://archon-server:8181
+  #     MEDIA_SERVICES: jellyfin,sonarr,radarr,prowlarr
+  #   networks:
+  #     - media-net
+  #     - archon-net
+  #   depends_on:
+  #     - jellyfin
+  #     - sonarr
+  #     - radarr

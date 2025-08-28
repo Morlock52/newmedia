@@ -1,0 +1,28 @@
+#!/command/with-contenv bash
+# Jellyfin service runner
+
+set -e
+
+echo "Starting Jellyfin Media Server..."
+
+# Wait for config directory
+s6-setuidgid media mkdir -p /config/jellyfin/{config,data,log,cache}
+
+# Set environment variables
+export JELLYFIN_DATA_DIR="/config/jellyfin/data"
+export JELLYFIN_CONFIG_DIR="/config/jellyfin/config"  
+export JELLYFIN_LOG_DIR="/config/jellyfin/log"
+export JELLYFIN_CACHE_DIR="/config/jellyfin/cache"
+export JELLYFIN_WEB_DIR="/usr/share/jellyfin/web"
+
+# Set proper ownership
+chown -R media:media /config/jellyfin
+
+# Run Jellyfin as media user
+exec s6-setuidgid media /usr/bin/jellyfin \
+    --datadir "$JELLYFIN_DATA_DIR" \
+    --configdir "$JELLYFIN_CONFIG_DIR" \
+    --logdir "$JELLYFIN_LOG_DIR" \
+    --cachedir "$JELLYFIN_CACHE_DIR" \
+    --webdir "$JELLYFIN_WEB_DIR" \
+    --service

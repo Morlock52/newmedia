@@ -1,0 +1,209 @@
+# Promtail Configuration for Media Server Log Collection
+# Collects logs from Docker containers and system files
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker container logs
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
+    
+    relabel_configs:
+      # Use container name as job
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'job'
+        replacement: '${1}'
+      
+      # Add container labels
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'compose_service'
+      
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        target_label: 'compose_project'
+      
+      # Add instance label
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'instance'
+        replacement: '${1}'
+      
+      # Add container ID
+      - source_labels: ['__meta_docker_container_id']
+        target_label: 'container_id'
+        regex: '(.{12})'
+        replacement: '${1}'
+
+    pipeline_stages:
+      # Parse different log formats
+      - match:
+          selector: '{compose_service="jellyfin"}'
+          stages:
+            - regex:
+                expression: '^\[(?P<timestamp>.*?)\]\s+\[(?P<level>.*?)\]\s+(?P<message>.*)'
+            - labels:
+                level:
+            - timestamp:
+                source: timestamp
+                format: '2006-01-02 15:04:05.000'
+      
+      - match:
+          selector: '{compose_service=~"sonarr|radarr|prowlarr|lidarr|bazarr"}'
+          stages:
+            - regex:
+                expression: '^\[(?P<level>.*?)\]\s+(?P<timestamp>.*?)\s+(?P<message>.*)'
+            - labels:
+                level:
+            - timestamp:
+                source: timestamp
+                format: '2006-01-02 15:04:05.0'
+      
+      - match:
+          selector: '{compose_service="qbittorrent"}'
+          stages:
+            - regex:
+                expression: '^\((?P<level>.*?)\)\s+(?P<timestamp>.*?):\s+(?P<message>.*)'
+            - labels:
+                level:
+            - timestamp:
+                source: timestamp
+                format: '2006-01-02T15:04:05'
+      
+      - match:
+          selector: '{compose_service="traefik"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  timestamp: time
+                  message: msg
+                  method: method
+                  status_code: status_code
+                  response_time: duration
+            - labels:
+                level:
+                method:
+                status_code:
+            - timestamp:
+                source: timestamp
+                format: RFC3339
+
+  # System logs
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w+\s+\d+\s+\d+:\d+:\d+)\s+(?P<hostname>\S+)\s+(?P<service>\S+):\s+(?P<message>.*)'
+      - labels:
+          hostname:
+          service:
+      - timestamp:
+          source: timestamp
+          format: 'Jan 02 15:04:05'
+
+  # Auth logs
+  - job_name: auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: auth
+          __path__: /var/log/auth.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w+\s+\d+\s+\d+:\d+:\d+)\s+(?P<hostname>\S+)\s+(?P<service>\S+):\s+(?P<message>.*)'
+      - labels:
+          hostname:
+          service:
+
+  # Kernel logs
+  - job_name: kernel
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: kernel
+          __path__: /var/log/kern.log
+
+  # Apache/Nginx access logs (if present)
+  - job_name: access_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: access_logs
+          __path__: /var/log/nginx/access.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<remote_addr>\S+)\s+\S+\s+\S+\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>\S+)\s+(?P<path>\S+)\s+(?P<protocol>\S+)"\s+(?P<status>\d+)\s+(?P<body_bytes_sent>\d+)\s+"(?P<http_referer>[^"]*)"\s+"(?P<http_user_agent>[^"]*)"'
+      - labels:
+          method:
+          status:
+          remote_addr:
+      - timestamp:
+          source: timestamp
+          format: '02/Jan/2006:15:04:05 -0700'
+
+  # Error logs
+  - job_name: error_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: error_logs
+          __path__: /var/log/nginx/error.log
+
+  # Custom application logs
+  - job_name: webhook_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: webhook_logs
+          __path__: /var/log/webhooks/*.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^\[(?P<timestamp>.*?)\]\s+(?P<message>.*)'
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+
+  # Health check logs
+  - job_name: health_check_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: health_checks
+          __path__: /var/log/health-checks/*.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^\[(?P<timestamp>.*?)\]\s+(?P<level>\w+):\s+(?P<message>.*)'
+      - labels:
+          level:
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'

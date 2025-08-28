@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Server Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .service-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        .service-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .media-icon { background: #ff6b6b; }
+        .arr-icon { background: #4ecdc4; }
+        .download-icon { background: #45b7d1; }
+        .monitor-icon { background: #96ceb4; }
+        
+        .service-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        .service-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .status-ready { background: #d4edda; color: #155724; }
+        .status-setup { background: #fff3cd; color: #856404; }
+        
+        .service-link {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+        .service-link:hover {
+            opacity: 0.9;
+        }
+        .setup-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .setup-step {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 1rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Media Server Dashboard</h1>
+        
+        <div class="services-grid">
+            <!-- Media Servers -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon media-icon">🎬</div>
+                    <div class="service-name">Jellyfin</div>
+                </div>
+                <div class="service-status status-setup">Needs Setup</div>
+                <a href="http://localhost:8096" target="_blank" class="service-link">Open Jellyfin</a>
+            </div>
+            
+            <!-- Arr Services -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon arr-icon">📺</div>
+                    <div class="service-name">Sonarr</div>
+                </div>
+                <div class="service-status status-ready">Ready</div>
+                <a href="http://localhost:8989" target="_blank" class="service-link">Open Sonarr</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon arr-icon">🎥</div>
+                    <div class="service-name">Radarr</div>
+                </div>
+                <div class="service-status status-ready">Ready</div>
+                <a href="http://localhost:7878" target="_blank" class="service-link">Open Radarr</a>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon arr-icon">🔍</div>
+                    <div class="service-name">Prowlarr</div>
+                </div>
+                <div class="service-status status-ready">Ready</div>
+                <a href="http://localhost:9696" target="_blank" class="service-link">Open Prowlarr</a>
+            </div>
+            
+            <!-- Download Clients -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon download-icon">⬇️</div>
+                    <div class="service-name">qBittorrent</div>
+                </div>
+                <div class="service-status status-ready">Ready</div>
+                <a href="http://localhost:8080" target="_blank" class="service-link">Open qBittorrent</a>
+            </div>
+        </div>
+        
+        <div class="setup-section">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">⚡ Quick Setup Guide</h2>
+            
+            <div class="setup-step">
+                <span class="step-number">1</span>
+                <strong>Jellyfin:</strong> Complete setup wizard, create admin user (admin/admin123)
+            </div>
+            
+            <div class="setup-step">
+                <span class="step-number">2</span>
+                <strong>Prowlarr:</strong> Add indexers (1337x, TPB, etc.), then sync to Sonarr/Radarr
+            </div>
+            
+            <div class="setup-step">
+                <span class="step-number">3</span>
+                <strong>Sonarr:</strong> Set root folder to /media/tv, add qBittorrent as download client
+            </div>
+            
+            <div class="setup-step">
+                <span class="step-number">4</span>
+                <strong>Radarr:</strong> Set root folder to /media/movies, add qBittorrent as download client
+            </div>
+            
+            <div class="setup-step">
+                <span class="step-number">5</span>
+                <strong>qBittorrent:</strong> Login with admin/adminadmin, configure download paths
+            </div>
+            
+            <div class="setup-step" style="background: #d4edda; border-left-color: #28a745;">
+                <span class="step-number" style="background: #28a745;">✓</span>
+                <strong>Test:</strong> Search for content in Sonarr/Radarr and verify download workflow
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            console.log('Checking service status...');
+            // In production, this would check actual service status
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+#!/command/with-contenv bash
+# Service dependency initialization
+
+echo "$(date) [INFO] Starting service dependency setup..." >> /logs/init.log
+
+# Wait for filesystem to be ready
+while [ ! -d /config ] || [ ! -d /downloads ] || [ ! -d /media ]; do
+    echo "$(date) [WARN] Waiting for filesystem to be ready..." >> /logs/init.log
+    sleep 2
+done
+
+# Create service-specific init services for s6
+mkdir -p /run/s6/services
+
+# Create init services for each application
+for service in jellyfin sonarr radarr lidarr prowlarr bazarr qbittorrent sabnzbd transmission api uptime-kuma; do
+    mkdir -p /run/s6/services/init-${service}
+    echo "oneshot" > /run/s6/services/init-${service}/type
+    
+    cat > /run/s6/services/init-${service}/up << EOF
+#!/command/with-contenv bash
+# Initialize ${service} service dependencies
+
+echo "\$(date) [INFO] Initializing ${service} dependencies..." >> /logs/init.log
+
+# Ensure config directory exists
+mkdir -p /config/${service}
+chown mediauser:mediauser /config/${service}
+
+# Create service-specific directories
+case "${service}" in
+    "jellyfin")
+        mkdir -p /config/jellyfin/{config,data,cache,log,plugins}
+        mkdir -p /media/{movies,tv,music,books}
+        ;;
+    "sonarr"|"radarr"|"lidarr")
+        mkdir -p /downloads/{complete,incomplete}
+        mkdir -p /media/{tv,movies,music}
+        ;;
+    "prowlarr")
+        # Prowlarr manages indexers for other *arr apps
+        ;;
+    "bazarr")
+        mkdir -p /media/{movies,tv}
+        ;;
+    "qbittorrent")
+        mkdir -p /downloads/qbittorrent/{complete,incomplete,watch}
+        ;;
+    "sabnzbd")
+        mkdir -p /downloads/sabnzbd/{complete,incomplete,watch,backup}
+        ;;
+    "transmission")
+        mkdir -p /downloads/transmission/{complete,incomplete,watch}
+        ;;
+    "api")
+        # API server dependencies are handled during build
+        ;;
+    "uptime-kuma")
+        mkdir -p /config/uptime-kuma
+        ;;
+esac
+
+# Set ownership
+chown -R mediauser:mediauser /config/${service} /downloads 2>/dev/null || true
+chown -R mediauser:mediauser /media 2>/dev/null || true
+
+echo "\$(date) [INFO] ${service} dependencies initialized" >> /logs/init.log
+EOF
+    
+    chmod +x /run/s6/services/init-${service}/up
+    
+done
+
+echo "$(date) [INFO] Service dependency setup completed" >> /logs/init.log

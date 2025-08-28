@@ -1,0 +1,20 @@
+#!/command/with-contenv bash
+# Ollama AI service runner
+
+set -e
+
+echo "Starting Ollama..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/ollama /models/ollama
+
+# Set proper ownership
+chown -R media:media /config/ollama /models/ollama
+
+# Set environment
+export OLLAMA_DATA_DIR="/config/ollama"
+export OLLAMA_MODELS="/models/ollama"
+export OLLAMA_HOST="0.0.0.0:11434"
+
+# Run Ollama
+exec s6-setuidgid media ollama serve

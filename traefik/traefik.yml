@@ -1,0 +1,115 @@
+# Traefik Static Configuration for Media Server
+# Advanced reverse proxy and load balancer configuration
+
+# Global configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# API and dashboard configuration
+api:
+  dashboard: true
+  debug: true
+  insecure: false
+
+# Entry points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      middlewares:
+        - security-headers@file
+        - rate-limit@file
+      tls:
+        options: modern@file
+        certResolver: letsencrypt
+
+  metrics:
+    address: ":8080"
+
+  traefik:
+    address: ":8081"
+
+# Certificate resolvers
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${ACME_EMAIL}
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+      # Alternative: DNS challenge for wildcard certificates
+      # dnsChallenge:
+      #   provider: cloudflare
+      #   resolvers:
+      #     - "1.1.1.1:53"
+      #     - "1.0.0.1:53"
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: security-net
+    watch: true
+    swarmMode: false
+
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Logging
+log:
+  level: INFO
+  format: json
+  filePath: "/var/log/traefik/traefik.log"
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  filters:
+    statusCodes:
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+
+# Metrics
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Tracing (optional)
+# tracing:
+#   jaeger:
+#     samplingServerURL: http://jaeger:14268/api/sampling
+#     localAgentHostPort: jaeger:6831
+
+# Ping endpoint for health checks
+ping:
+  entryPoint: "traefik"
+
+# Cluster configuration (if using multiple Traefik instances)
+# cluster:
+#   store: consul
+#   prefix: traefik
+
+# Pilot (Traefik Hub integration) - optional
+# pilot:
+#   token: "your-pilot-token"

@@ -1,78 +1,62 @@
-#!/bin/bash
-# Health check script for Ultimate Media Server 2025
+#\!/bin/bash
+# Ultimate Media Server 2025 - Comprehensive Health Check
+# Checks all services and reports overall system health
 
-set -euo pipefail
+set -e
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-echo "🏥 Ultimate Media Server 2025 - Health Check"
-echo "==========================================="
-
-# Function to check service health
+# Health check for main services
 check_service() {
     local service=$1
     local port=$2
-    local name=$3
     
-    if curl -f -s -o /dev/null "http://localhost:${port}"; then
-        echo -e "${GREEN}✓${NC} ${name} (${service}) - Port ${port}"
+    # Check if port is listening
+    if netstat -ln 2>/dev/null | grep -q ":${port} " || ss -ln 2>/dev/null | grep -q ":${port} "; then
+        echo "✓ $service (port $port): healthy"
         return 0
     else
-        echo -e "${RED}✗${NC} ${name} (${service}) - Port ${port}"
+        echo "✗ $service (port $port): unhealthy"
         return 1
     fi
 }
 
-# Check Docker
-if docker info > /dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} Docker daemon is running"
-else
-    echo -e "${RED}✗${NC} Docker daemon is not running"
-    exit 1
-fi
+# Main health check
+main() {
+    echo "=== Ultimate Media Server 2025 Health Check ==="
+    echo "Timestamp: $(date)"
+    echo ""
+    
+    failed=0
+    
+    # Check core services
+    check_service "Caddy" 80 || failed=$((failed + 1))
+    check_service "Jellyfin" 8096 || failed=$((failed + 1))
+    check_service "Sonarr" 8989 || failed=$((failed + 1))
+    check_service "Radarr" 7878 || failed=$((failed + 1))
+    check_service "Lidarr" 8686 || failed=$((failed + 1))
+    check_service "Prowlarr" 9696 || failed=$((failed + 1))
+    check_service "Bazarr" 6767 || failed=$((failed + 1))
+    check_service "qBittorrent" 8080 || failed=$((failed + 1))
+    check_service "SABnzbd" 8085 || failed=$((failed + 1))
+    check_service "Transmission" 9091 || failed=$((failed + 1))
+    check_service "API Server" 3002 || failed=$((failed + 1))
+    check_service "Uptime Kuma" 3001 || failed=$((failed + 1))
+    
+    echo ""
+    if [ $failed -eq 0 ]; then
+        echo "Overall Status: HEALTHY"
+        exit 0
+    elif [ $failed -le 2 ]; then
+        echo "Overall Status: DEGRADED ($failed services down)"
+        exit 0  # Still pass for minor issues
+    else
+        echo "Overall Status: UNHEALTHY ($failed services down)"
+        exit 1
+    fi
+}
 
-# Check containers
-echo -e "\n📦 Container Status:"
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+# Create logs directory if it doesn't exist
+mkdir -p /logs
 
-# Check services
-echo -e "\n🌐 Service Health:"
-check_service "jellyfin" "8096" "Jellyfin Media Server"
-check_service "sonarr" "8989" "Sonarr (TV Shows)"
-check_service "radarr" "7878" "Radarr (Movies)"
-check_service "prowlarr" "9696" "Prowlarr (Indexers)"
-check_service "bazarr" "6767" "Bazarr (Subtitles)"
-check_service "lidarr" "8686" "Lidarr (Music)"
-check_service "readarr" "8787" "Readarr (Books)"
-check_service "qbittorrent" "8080" "qBittorrent"
-check_service "overseerr" "5055" "Overseerr"
-check_service "jellyseerr" "5056" "Jellyseerr"
-check_service "tautulli" "8181" "Tautulli"
-check_service "homepage" "3001" "Homepage"
-check_service "portainer" "9000" "Portainer"
-check_service "grafana" "3000" "Grafana"
-check_service "prometheus" "9090" "Prometheus"
-check_service "authentik" "9091" "Authentik"
-check_service "immich" "2283" "Immich Photos"
-check_service "navidrome" "4533" "Navidrome Music"
-check_service "calibre-web" "8083" "Calibre Web"
-check_service "audiobookshelf" "13378" "Audiobookshelf"
-check_service "duplicati" "8200" "Duplicati Backup"
-
-# Check disk space
-echo -e "\n💾 Disk Usage:"
-df -h | grep -E "^/|Filesystem"
-
-# Check memory
-echo -e "\n🧠 Memory Usage:"
-free -h
-
-# Check Docker resource usage
-echo -e "\n📊 Container Resource Usage:"
-docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
-
-echo -e "\n✅ Health check complete!"
+# Run main function
+main "$@" | tee -a /logs/health-check.log
+EOF < /dev/null

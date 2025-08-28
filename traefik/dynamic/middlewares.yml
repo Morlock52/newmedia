@@ -1,0 +1,204 @@
+# Traefik Dynamic Configuration - Middlewares
+# Security headers, rate limiting, and authentication middlewares
+
+http:
+  middlewares:
+    # Security headers middleware
+    security-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+          - PATCH
+        accessControlMaxAge: 100
+        hostsProxyHeaders:
+          - X-Forwarded-Host
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsSeconds: 31536000
+        stsPreload: true
+        customFrameOptionsValue: "SAMEORIGIN"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          server: "Media Server"
+
+    # Rate limiting middleware
+    rate-limit:
+      rateLimit:
+        burst: 100
+        average: 50
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # API rate limiting (more restrictive)
+    api-rate-limit:
+      rateLimit:
+        burst: 20
+        average: 10
+        period: 1m
+
+    # Admin rate limiting (very restrictive)
+    admin-rate-limit:
+      rateLimit:
+        burst: 5
+        average: 2
+        period: 1m
+
+    # Authelia forward auth middleware
+    authelia-auth:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Remote-User"
+          - "Remote-Groups"
+          - "Remote-Name"
+          - "Remote-Email"
+
+    # Basic auth for fallback access
+    basic-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$your-hashed-password-here"  # Change this!
+
+    # IP allowlist for admin services
+    admin-allowlist:
+      ipAllowList:
+        sourceRange:
+          - "192.168.0.0/16"
+          - "172.16.0.0/12"
+          - "10.0.0.0/8"
+
+    # Compression middleware
+    compression:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"
+          - "video/*"
+          - "audio/*"
+
+    # Error pages middleware
+    error-pages:
+      errors:
+        status:
+          - "400-599"
+        service: error-pages-service
+        query: "/{status}.html"
+
+    # Redirect to HTTPS
+    https-redirect:
+      redirectScheme:
+        scheme: "https"
+        permanent: true
+
+    # CORS headers for API endpoints
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "https://*.${DOMAIN}"
+          - "https://${DOMAIN}"
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+          - "X-API-Key"
+        accessControlExposeHeaders:
+          - "Content-Length"
+          - "Content-Range"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 86400
+
+    # Circuit breaker for unreliable services
+    circuit-breaker:
+      circuitBreaker:
+        interval: 30s
+        ratio: 0.3
+        checkPeriod: 10s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+
+    # Retry middleware for transient failures
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # Buffer middleware for large uploads
+    buffering:
+      buffering:
+        maxRequestBodyBytes: 100000000  # 100MB
+        memRequestBodyBytes: 2000000    # 2MB
+        maxResponseBodyBytes: 100000000 # 100MB
+        memResponseBodyBytes: 2000000   # 2MB
+        retryExpression: "IsNetworkError() && Attempts() < 3"
+
+    # Forward auth for media services (less strict)
+    media-auth:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?rd=https://auth.${DOMAIN}&rm=GET"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Remote-User"
+          - "Remote-Groups"
+
+    # VPN-only access middleware
+    vpn-only:
+      ipAllowList:
+        sourceRange:
+          - "172.32.0.0/16"  # VPN network only
+
+    # Media streaming optimizations
+    media-headers:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=31536000"
+          X-Content-Type-Options: "nosniff"
+          Accept-Ranges: "bytes"
+
+tls:
+  options:
+    modern:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+      sniStrict: false
+
+    intermediate:
+      minVersion: "VersionTLS10"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"
+        - "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_RSA_WITH_AES_128_CBC_SHA"
+        - "TLS_RSA_WITH_AES_256_CBC_SHA"

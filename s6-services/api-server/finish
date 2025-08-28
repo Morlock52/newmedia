@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# API server service cleanup
+
+echo "$(date) [INFO] API server service stopped" >> /logs/api.log

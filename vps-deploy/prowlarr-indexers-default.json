@@ -1,0 +1,46 @@
+[
+  {
+    "name": "1337x",
+    "implementation": "TorrentLeech",
+    "configContract": "TorrentLeechSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://1337x.to" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  },
+  {
+    "name": "The Pirate Bay",
+    "implementation": "ThePirateBay",
+    "configContract": "ThePirateBaySettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://thepiratebay.org" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  },
+  {
+    "name": "Nyaa",
+    "implementation": "Nyaa",
+    "configContract": "NyaaSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://nyaa.si" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  },
+  {
+    "name": "YTS",
+    "implementation": "Yts",
+    "configContract": "YtsSettings",
+    "fields": [
+      { "name": "baseUrl", "value": "https://yts.mx" }
+    ],
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true
+  }
+]

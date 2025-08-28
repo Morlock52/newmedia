@@ -1,0 +1,306 @@
+[
+  {
+    "id": "sonarr-download-complete",
+    "execute-command": "/scripts/sonarr-post-process.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "parse-parameters-as-json": [
+      {
+        "source": "payload",
+        "name": "payload"
+      }
+    ],
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.eventType"
+      },
+      {
+        "source": "payload", 
+        "name": "payload.series.title"
+      },
+      {
+        "source": "payload",
+        "name": "payload.episodes[0].title"
+      },
+      {
+        "source": "payload",
+        "name": "payload.episodeFile.path"
+      }
+    ],
+    "trigger-rule": {
+      "and": [
+        {
+          "match": {
+            "type": "payload-hmac-sha256",
+            "secret": "${SONARR_WEBHOOK_SECRET}",
+            "parameter": {
+              "source": "header",
+              "name": "X-Sonarr-Signature"
+            }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "Download",
+            "parameter": {
+              "source": "payload",
+              "name": "payload.eventType"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "radarr-download-complete",
+    "execute-command": "/scripts/radarr-post-process.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "parse-parameters-as-json": [
+      {
+        "source": "payload",
+        "name": "payload"
+      }
+    ],
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.eventType"
+      },
+      {
+        "source": "payload",
+        "name": "payload.movie.title"
+      },
+      {
+        "source": "payload",
+        "name": "payload.movieFile.path"
+      }
+    ],
+    "trigger-rule": {
+      "and": [
+        {
+          "match": {
+            "type": "payload-hmac-sha256",
+            "secret": "${RADARR_WEBHOOK_SECRET}",
+            "parameter": {
+              "source": "header",
+              "name": "X-Radarr-Signature"
+            }
+          }
+        },
+        {
+          "match": {
+            "type": "value",
+            "value": "Download",
+            "parameter": {
+              "source": "payload",
+              "name": "payload.eventType"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "jellyseerr-request",
+    "execute-command": "/scripts/jellyseerr-request-handler.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "parse-parameters-as-json": [
+      {
+        "source": "payload",
+        "name": "payload"
+      }
+    ],
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.notification_type"
+      },
+      {
+        "source": "payload",
+        "name": "payload.subject"
+      },
+      {
+        "source": "payload",
+        "name": "payload.message"
+      },
+      {
+        "source": "payload",
+        "name": "payload.request.id"
+      }
+    ],
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "MEDIA_REQUESTED",
+        "parameter": {
+          "source": "payload",
+          "name": "payload.notification_type"
+        }
+      }
+    }
+  },
+  {
+    "id": "jellyfin-library-scan",
+    "execute-command": "/scripts/jellyfin-library-scan.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.library_type"
+      }
+    ]
+  },
+  {
+    "id": "system-health-check",
+    "execute-command": "/scripts/system-health-check.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["GET", "POST"],
+    "include-command-output-in-response": true,
+    "response-headers": [
+      {
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ]
+  },
+  {
+    "id": "critical-alert",
+    "execute-command": "/scripts/critical-alert-handler.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "parse-parameters-as-json": [
+      {
+        "source": "payload",
+        "name": "payload"
+      }
+    ],
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.alerts[0].status"
+      },
+      {
+        "source": "payload",
+        "name": "payload.alerts[0].labels.alertname"
+      },
+      {
+        "source": "payload",
+        "name": "payload.alerts[0].annotations.summary"
+      }
+    ],
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "firing",
+        "parameter": {
+          "source": "payload",
+          "name": "payload.alerts[0].status"
+        }
+      }
+    }
+  },
+  {
+    "id": "backup-trigger",
+    "execute-command": "/scripts/trigger-backup.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.backup_type"
+      }
+    ],
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "manual",
+        "parameter": {
+          "source": "payload",
+          "name": "payload.backup_type"
+        }
+      }
+    }
+  },
+  {
+    "id": "container-restart",
+    "execute-command": "/scripts/container-restart.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.container_name"
+      }
+    ],
+    "trigger-rule": {
+      "and": [
+        {
+          "match": {
+            "type": "value",
+            "value": "restart",
+            "parameter": {
+              "source": "payload",
+              "name": "payload.action"
+            }
+          }
+        },
+        {
+          "match": {
+            "type": "regex",
+            "regex": "^(jellyfin|sonarr|radarr|prowlarr|qbittorrent|transmission)$",
+            "parameter": {
+              "source": "payload",
+              "name": "payload.container_name"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "vpn-reconnect",
+    "execute-command": "/scripts/vpn-reconnect.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "vpn_reconnect",
+        "parameter": {
+          "source": "payload",
+          "name": "payload.action"
+        }
+      }
+    }
+  },
+  {
+    "id": "media-optimize",
+    "execute-command": "/scripts/media-optimize.sh",
+    "command-working-directory": "/scripts",
+    "http-methods": ["POST"],
+    "include-command-output-in-response": true,
+    "pass-arguments-to-command": [
+      {
+        "source": "payload",
+        "name": "payload.file_path"
+      },
+      {
+        "source": "payload", 
+        "name": "payload.optimization_level"
+      }
+    ]
+  }
+]

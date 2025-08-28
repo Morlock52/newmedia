@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+# Lidarr service runner
+
+set -e
+
+echo "Starting Lidarr..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/lidarr
+
+# Set proper ownership
+chown -R media:media /config/lidarr
+
+# Set environment
+export HOME="/config/lidarr"
+export XDG_CONFIG_HOME="/config/lidarr"
+
+# Run Lidarr
+exec s6-setuidgid media /opt/lidarr/Lidarr \
+    -nobrowser \
+    -data=/config/lidarr

@@ -1,0 +1,397 @@
+{
+  "timestamp": "2025-08-09T07:31:04.103Z",
+  "totalTests": 45,
+  "passed": 17,
+  "failed": 28,
+  "warnings": 0,
+  "tests": [
+    {
+      "name": "Jellyfin Media Server - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (75ms)",
+      "data": {
+        "responseTime": 75,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.024Z"
+    },
+    {
+      "name": "Plex Media Server - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.028Z"
+    },
+    {
+      "name": "Sonarr TV Shows - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (95ms)",
+      "data": {
+        "responseTime": 95,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.123Z"
+    },
+    {
+      "name": "Radarr Movies - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (87ms)",
+      "data": {
+        "responseTime": 87,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.210Z"
+    },
+    {
+      "name": "Lidarr Music - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.211Z"
+    },
+    {
+      "name": "Bazarr Subtitles - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.213Z"
+    },
+    {
+      "name": "Prowlarr Indexer - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (102ms)",
+      "data": {
+        "responseTime": 102,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.315Z"
+    },
+    {
+      "name": "qBittorrent Client - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (20ms)",
+      "data": {
+        "responseTime": 20,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.335Z"
+    },
+    {
+      "name": "Transmission Client - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.337Z"
+    },
+    {
+      "name": "SABnzbd Usenet - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.339Z"
+    },
+    {
+      "name": "Media Server API - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.340Z"
+    },
+    {
+      "name": "Media Dashboard - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.341Z"
+    },
+    {
+      "name": "Prometheus Monitoring - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.342Z"
+    },
+    {
+      "name": "Grafana Dashboards - Health Check",
+      "status": "NOT_ACCESSIBLE",
+      "passed": false,
+      "message": "Service not running or port closed",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.344Z"
+    },
+    {
+      "name": "Uptime Kuma - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (53ms)",
+      "data": {
+        "responseTime": 53,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.397Z"
+    },
+    {
+      "name": "Portainer Docker UI - Health Check",
+      "status": "ACCESSIBLE",
+      "passed": true,
+      "message": "Service accessible (41ms)",
+      "data": {
+        "responseTime": 41,
+        "status": 200
+      },
+      "timestamp": "2025-08-09T07:31:05.438Z"
+    },
+    {
+      "name": "Jellyfin - API Authentication",
+      "status": "NO_AUTH_REQUIRED",
+      "passed": true,
+      "message": "Jellyfin API accessible without authentication",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.480Z"
+    },
+    {
+      "name": "Sonarr - API Authentication",
+      "status": "AUTH_FAILED",
+      "passed": false,
+      "message": "Invalid API key",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.492Z"
+    },
+    {
+      "name": "Radarr - API Authentication",
+      "status": "AUTH_FAILED",
+      "passed": false,
+      "message": "Invalid API key",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.503Z"
+    },
+    {
+      "name": "Lidarr - API Authentication",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.505Z"
+    },
+    {
+      "name": "Bazarr - API Authentication",
+      "status": "NO_API_KEY",
+      "passed": false,
+      "message": "API key not found",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.505Z"
+    },
+    {
+      "name": "Prowlarr - API Authentication",
+      "status": "AUTH_FAILED",
+      "passed": false,
+      "message": "Invalid API key",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.521Z"
+    },
+    {
+      "name": "qBittorrent - API Authentication",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 403",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.527Z"
+    },
+    {
+      "name": "Transmission - API Authentication",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.536Z"
+    },
+    {
+      "name": "SABnzbd - API Authentication",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.539Z"
+    },
+    {
+      "name": "Prowlarr Integration Tests",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 401",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.548Z"
+    },
+    {
+      "name": "Sonarr - Download Clients",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 401",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.552Z"
+    },
+    {
+      "name": "Radarr - Download Clients",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 401",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.555Z"
+    },
+    {
+      "name": "Lidarr - Download Clients",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.556Z"
+    },
+    {
+      "name": "Jellyfin API Endpoints - System Info",
+      "status": "SUCCESS",
+      "passed": true,
+      "message": "Jellyfin version: 10.10.7",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.568Z"
+    },
+    {
+      "name": "Jellyfin API Endpoints - Library",
+      "status": "SUCCESS",
+      "passed": true,
+      "message": "Library endpoint accessible",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.605Z"
+    },
+    {
+      "name": "Plex API Endpoints",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.606Z"
+    },
+    {
+      "name": "Custom Media API Server",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.607Z"
+    },
+    {
+      "name": "PostgreSQL Database",
+      "status": "RUNNING",
+      "passed": true,
+      "message": "PostgreSQL appears to be running (non-HTTP response expected)",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.684Z"
+    },
+    {
+      "name": "Redis Database",
+      "status": "RUNNING",
+      "passed": true,
+      "message": "Redis appears to be running (non-HTTP response expected)",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.708Z"
+    },
+    {
+      "name": "MariaDB Database",
+      "status": "SERVICE_DOWN",
+      "passed": false,
+      "message": "MariaDB service not accessible",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.711Z"
+    },
+    {
+      "name": "Container Network Communication",
+      "status": "DOCKER_NETWORK",
+      "passed": true,
+      "message": "Services should communicate via Docker network (manual verification needed)",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.711Z"
+    },
+    {
+      "name": "Sonarr Webhooks",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 401",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.718Z"
+    },
+    {
+      "name": "Radarr Webhooks",
+      "status": "ERROR",
+      "passed": false,
+      "message": "Request failed with status code 401",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.723Z"
+    },
+    {
+      "name": "Lidarr Webhooks",
+      "status": "ERROR",
+      "passed": false,
+      "message": "",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.725Z"
+    },
+    {
+      "name": "Jellyfin Media Server - Response Time",
+      "status": "GOOD_PERFORMANCE",
+      "passed": true,
+      "message": "Average response time: 14.67ms",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.769Z"
+    },
+    {
+      "name": "Sonarr TV Shows - Response Time",
+      "status": "GOOD_PERFORMANCE",
+      "passed": true,
+      "message": "Average response time: 3.33ms",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.779Z"
+    },
+    {
+      "name": "Radarr Movies - Response Time",
+      "status": "GOOD_PERFORMANCE",
+      "passed": true,
+      "message": "Average response time: 3.00ms",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.788Z"
+    },
+    {
+      "name": "Prowlarr Indexer - Response Time",
+      "status": "GOOD_PERFORMANCE",
+      "passed": true,
+      "message": "Average response time: 4.33ms",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.801Z"
+    },
+    {
+      "name": "Media Server API - Response Time",
+      "status": "SLOW_PERFORMANCE",
+      "passed": false,
+      "message": "Average response time: 10000.00ms (slow)",
+      "data": null,
+      "timestamp": "2025-08-09T07:31:05.805Z"
+    }
+  ],
+  "summary": {},
+  "recommendations": [
+    "Start missing services: docker-compose up -d",
+    "Configure API keys for *ARR services in their respective web interfaces",
+    "Consider optimizing system resources or increasing timeout values",
+    "Verify database services are running and accessible"
+  ]
+}

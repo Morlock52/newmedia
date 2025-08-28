@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Caddy reverse proxy service
+
+exec s6-setuidgid mediauser caddy run --config /etc/caddy/Caddyfile --adapter caddyfile

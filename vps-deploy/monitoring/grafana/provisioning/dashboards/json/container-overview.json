@@ -1,0 +1,33 @@
+{
+  "title": "Container Overview (Minimal)",
+  "uid": "container-overview-min",
+  "schemaVersion": 38,
+  "version": 1,
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "cAdvisor CPU (per container)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{image!\"\"}[2m])) by (name)", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "cAdvisor Memory (per container)",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{image!\"\"}", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Node CPU (node-exporter)",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "CPU %" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "title": "cAdvisor Containers Overview (Compact)",
+  "uid": "cadvisor-containers-compact",
+  "schemaVersion": 38,
+  "version": 1,
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Container CPU (rate)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{image!\"\"}[2m]))", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Container Memory",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (name) (container_memory_usage_bytes{image!\"\"})", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Container Network (bytes/s)",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (name) (irate(container_network_receive_bytes_total{image!\"\"}[2m]))", "legendFormat": "{{name}} rx" },
+        { "expr": "sum by (name) (irate(container_network_transmit_bytes_total{image!\"\"}[2m]))", "legendFormat": "{{name}} tx" }
+      ]
+    }
+  ]
+}

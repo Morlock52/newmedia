@@ -1,0 +1,286 @@
+# Blackbox Exporter Configuration for Media Server
+# Monitors external endpoints, SSL certificates, and network connectivity
+
+modules:
+  # HTTP 2xx responses
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202, 204]
+      method: GET
+      headers:
+        Host: "{{ .Target }}"
+        User-Agent: "Blackbox Exporter"
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # HTTP with basic authentication
+  http_2xx_auth:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 401]  # 401 is expected for auth-protected endpoints
+      method: GET
+      headers:
+        Host: "{{ .Target }}"
+      basic_auth:
+        username: "${HTTP_AUTH_USER}"
+        password: "${HTTP_AUTH_PASSWORD}"
+      no_follow_redirects: false
+      fail_if_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+
+  # HTTPS with SSL verification
+  https_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202, 204]
+      method: GET
+      headers:
+        Host: "{{ .Target }}"
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: true
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # HTTP POST for API endpoints
+  http_post_2xx:
+    prober: http
+    timeout: 15s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202]
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: '{}'
+      no_follow_redirects: false
+
+  # TCP connection test
+  tcp_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+
+  # ICMP ping test
+  icmp:
+    prober: icmp
+    timeout: 10s
+    icmp:
+      preferred_ip_protocol: "ip4"
+
+  # DNS resolution test
+  dns_query:
+    prober: dns
+    timeout: 10s
+    dns:
+      preferred_ip_protocol: "ip4"
+      query_name: "{{ .Target }}"
+      query_type: "A"
+
+  # Media server specific HTTP checks
+  jellyfin_health:
+    prober: http
+    timeout: 15s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "application/json"
+      body_format: "json"
+      fail_if_body_not_matches_regexp:
+        - ".*\"status\".*"
+      no_follow_redirects: true
+
+  # Sonarr API health check
+  sonarr_api:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        X-Api-Key: "${SONARR_API_KEY}"
+      fail_if_body_not_matches_regexp:
+        - ".*\"version\".*"
+
+  # Radarr API health check
+  radarr_api:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        X-Api-Key: "${RADARR_API_KEY}"
+      fail_if_body_not_matches_regexp:
+        - ".*\"version\".*"
+
+  # Prowlarr API health check
+  prowlarr_api:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        X-Api-Key: "${PROWLARR_API_KEY}"
+      fail_if_body_not_matches_regexp:
+        - ".*\"version\".*"
+
+  # qBittorrent WebUI check
+  qbittorrent_webui:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 401, 403]  # Login page or auth required
+      method: GET
+      headers:
+        User-Agent: "Blackbox Exporter"
+      no_follow_redirects: true
+
+  # VPN connectivity check
+  vpn_check:
+    prober: http
+    timeout: 30s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        User-Agent: "VPN-Check"
+      fail_if_body_not_matches_regexp:
+        - ".*\"ip\".*"
+      no_follow_redirects: true
+
+  # Database connection checks
+  postgres_tcp:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      tls_config:
+        insecure_skip_verify: true
+
+  redis_tcp:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+
+  # Container health endpoint
+  container_health:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "application/json"
+      fail_if_body_not_matches_regexp:
+        - ".*\"status\".*\"healthy\".*"
+
+  # SSL certificate expiration check
+  ssl_cert_check:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      tls: true
+      tls_config:
+        insecure_skip_verify: false
+        ca_file: "/etc/ssl/certs/ca-certificates.crt"
+
+  # Monitoring service health
+  prometheus_health:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "application/json"
+      fail_if_body_not_matches_regexp:
+        - ".*Prometheus.*"
+
+  grafana_health:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "application/json"
+      fail_if_body_not_matches_regexp:
+        - ".*\"database\".*\"ok\".*"
+
+  # Traefik dashboard check
+  traefik_dashboard:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 401]  # Dashboard may require auth
+      method: GET
+      headers:
+        Accept: "text/html"
+      no_follow_redirects: true
+
+  # Authelia health check
+  authelia_health:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "application/json"
+      fail_if_body_not_matches_regexp:
+        - ".*\"status\".*\"UP\".*"
+
+  # Uptime Kuma self-check
+  uptime_kuma_check:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      headers:
+        Accept: "text/html"
+      fail_if_body_not_matches_regexp:
+        - ".*Uptime Kuma.*"
+
+  # Media streaming performance test
+  media_stream_test:
+    prober: http
+    timeout: 30s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 206]  # Accept partial content
+      method: HEAD  # Don't download actual content
+      headers:
+        Range: "bytes=0-1023"  # Request first 1KB
+        User-Agent: "Media-Stream-Test"
+      no_follow_redirects: true

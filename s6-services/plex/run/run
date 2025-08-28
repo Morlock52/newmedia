@@ -1,0 +1,22 @@
+#!/command/with-contenv bash
+# Plex Media Server runner
+
+set -e
+
+echo "Starting Plex Media Server..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/plex
+
+# Set proper ownership  
+chown -R media:media /config/plex
+
+# Set environment
+export PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR="/config/plex"
+export PLEX_MEDIA_SERVER_HOME="/usr/lib/plexmediaserver"
+export PLEX_MEDIA_SERVER_MAX_PLUGIN_PROCS="6"
+export PLEX_MEDIA_SERVER_TMPDIR="/tmp"
+export PLEX_MEDIA_SERVER_USE_SYSLOG="true"
+
+# Run Plex
+exec s6-setuidgid media /usr/lib/plexmediaserver/Plex\ Media\ Server

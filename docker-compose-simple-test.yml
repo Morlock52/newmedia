@@ -1,0 +1,93 @@
+services:
+  # Core Media Services for Testing - Simplified
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin-simple
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - ./test-config/jellyfin:/config
+      - ./test-media:/media:ro
+    ports:
+      - "8096:8096"
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr-simple
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - ./test-config/sonarr:/config
+      - ./test-media:/media
+      - ./test-downloads:/downloads
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr-simple
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - ./test-config/radarr:/config
+      - ./test-media:/media
+      - ./test-downloads:/downloads
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr-simple
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - ./test-config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent-simple
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - WEBUI_PORT=8080
+    volumes:
+      - ./test-config/qbittorrent:/config
+      - ./test-downloads:/downloads
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer-simple
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./test-config/portainer:/data
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma-simple
+    volumes:
+      - ./test-config/uptime-kuma:/app/data
+    ports:
+      - "3001:3001"
+    restart: unless-stopped

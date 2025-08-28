@@ -250,3 +250,24 @@ Your Ultimate Media Server 2025 now has enterprise-grade testing capabilities th
 - `/Users/morlock/fun/newmedia/test-config/k6-performance-test.js` *(Performance tests)*
 - `/Users/morlock/fun/newmedia/test-config/docker-security-scan.sh` *(Security scanner)*
 - `/Users/morlock/fun/newmedia/test-config/README.md` *(Documentation)*
+Artifacts on failure:
+- Traces, screenshots, and videos are collected on failure and an HTML report is generated in `tests/playwright-report`.
+
+### Jest Tests in Docker (local Docker stack)
+Run Jest integration tests (service accessibility, container status, APIs) inside a Docker container that has the docker CLI and access to your host Docker daemon.
+
+Quick start:
+```bash
+# Optionally set BASE_URL (default: http://host.docker.internal)
+BASE_URL=http://localhost ./run-jest-in-docker.sh
+```
+
+Details:
+- Dockerfile: tests/jest-docker/Dockerfile
+- Compose: docker-compose.jest.yml (mounts repo and /var/run/docker.sock)
+- Script: run-jest-in-docker.sh
+
+What it does:
+- Installs dependencies (npm ci) in the container
+- Runs `npm test` (Jest) serially (runInBand) to reduce port-probe flakiness
+- Tests probe Docker containers via `docker ps` in tests and service APIs via BASE_URL

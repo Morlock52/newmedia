@@ -1,0 +1,8 @@
+- targets:
+  - https://example.com
+  - https://jellyfin.example.com
+  - https://sonarr.example.com
+  - https://radarr.example.com
+  - https://prowlarr.example.com
+  - https://qbittorrent.example.com
+  - https://traefik.example.com

@@ -1,0 +1,45 @@
+#!/command/with-contenv bash
+# Prometheus monitoring runner
+
+set -e
+
+echo "Starting Prometheus..."
+
+# Create config directory
+s6-setuidgid media mkdir -p /config/prometheus
+
+# Set proper ownership
+chown -R media:media /config/prometheus
+
+# Create default config if not exists
+if [ ! -f /config/prometheus/prometheus.yml ]; then
+    cat > /config/prometheus/prometheus.yml << 'EOF'
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'media-server'
+    static_configs:
+      - targets: ['localhost:8090']
+  - job_name: 'jellyfin'
+    static_configs:
+      - targets: ['localhost:8096']
+  - job_name: 'sonarr'
+    static_configs:
+      - targets: ['localhost:8989']
+  - job_name: 'radarr'
+    static_configs:
+      - targets: ['localhost:7878']
+  - job_name: 'prowlarr'
+    static_configs:
+      - targets: ['localhost:9696']
+EOF
+fi
+
+# Run Prometheus
+exec s6-setuidgid media prometheus \
+    --config.file=/config/prometheus/prometheus.yml \
+    --storage.tsdb.path=/config/prometheus/data \
+    --web.console.libraries=/usr/share/prometheus/console_libraries \
+    --web.console.templates=/usr/share/prometheus/consoles \
+    --web.enable-lifecycle

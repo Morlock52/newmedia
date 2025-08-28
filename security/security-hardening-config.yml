@@ -1,0 +1,212 @@
+# Security Hardening Configuration for Media Server Infrastructure
+# This file contains security configurations for fail2ban, nginx, and other security services
+
+version: '3.9'
+
+networks:
+  security-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "true" 
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+
+services:
+  # Fail2ban for brute force protection
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TZ=${TZ:-UTC}
+      - F2B_LOG_LEVEL=INFO
+      - F2B_LOG_TARGET=STDOUT
+      - SSMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SSMTP_PORT=${SMTP_PORT:-587}
+      - SSMTP_USER=${SMTP_USER}
+      - SSMTP_PASSWORD=${SMTP_PASSWORD}
+      - SSMTP_TLS=YES
+    volumes:
+      - ./security/fail2ban:/data
+      - ./logs:/var/log:ro
+      - /var/log/auth.log:/var/log/auth.log:ro
+      - /var/log/syslog:/var/log/syslog:ro
+    network_mode: "host"
+    restart: unless-stopped
+    depends_on:
+      - nginx-security-proxy
+    labels:
+      - "homepage.group=Security"
+      - "homepage.name=Fail2ban"
+      - "homepage.icon=fail2ban.png"
+      - "homepage.description=Intrusion Prevention System"
+
+  # Enhanced Nginx Reverse Proxy with Security Headers
+  nginx-security-proxy:
+    image: nginx:alpine
+    container_name: nginx-security-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./security/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./security/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./security/nginx/ssl:/etc/nginx/ssl:ro
+      - ./security/nginx/logs:/var/log/nginx
+      - ./logs:/var/log/apps:ro
+    networks:
+      - security-net
+      - media-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "homepage.group=Security"
+      - "homepage.name=Security Proxy"
+      - "homepage.icon=nginx.png"
+      - "homepage.description=Secure Reverse Proxy"
+
+  # Security Monitoring and Alerting System
+  security-monitor:
+    build:
+      context: ./security
+      dockerfile: Dockerfile.security
+    container_name: security-monitor
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - ALERT_EMAIL=${SECURITY_ALERT_EMAIL}
+      - SLACK_WEBHOOK=${SECURITY_SLACK_WEBHOOK}
+      - MONITORING_INTERVAL=60
+    volumes:
+      - ./security/monitor:/app/config
+      - ./logs:/var/log/monitor:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:3011:3011"
+    networks:
+      - security-net
+      - monitoring-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "homepage.group=Security"
+      - "homepage.name=Security Monitor"
+      - "homepage.icon=security.png"
+      - "homepage.description=Real-time Security Monitoring"
+
+  # ModSecurity WAF
+  modsecurity:
+    image: owasp/modsecurity-crs:nginx-alpine
+    container_name: modsecurity-waf
+    environment:
+      - SERVERNAME=${DOMAIN:-localhost}
+      - BACKEND=http://nginx-security-proxy
+      - PORT=80
+      - SSL_PORT=443
+      - MODSEC_RULE_ENGINE=on
+      - MODSEC_REQ_BODY_ACCESS=on
+      - MODSEC_REQ_BODY_LIMIT=134217728
+      - MODSEC_RESP_BODY_ACCESS=on
+      - MODSEC_AUDIT_ENGINE=RelevantOnly
+      - MODSEC_AUDIT_LOG_PARTS=ABIJDEFHZ
+      - ANOMALY_INBOUND=5
+      - ANOMALY_OUTBOUND=4
+      - BLOCKING_PARANOIA=2
+    volumes:
+      - ./security/modsec/custom-rules:/etc/modsecurity.d/custom-rules:ro
+      - ./security/modsec/logs:/var/log/modsec_audit
+    ports:
+      - "127.0.0.1:8443:443"
+      - "127.0.0.1:8080:80"
+    networks:
+      - security-net
+    depends_on:
+      - nginx-security-proxy
+    restart: unless-stopped
+    labels:
+      - "homepage.group=Security"
+      - "homepage.name=ModSecurity WAF"
+      - "homepage.icon=modsecurity.png"
+      - "homepage.description=Web Application Firewall"
+
+  # Rate Limiting Service
+  rate-limiter:
+    image: redis:7-alpine
+    container_name: rate-limiter-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ./security/redis-data:/data
+    networks:
+      - security-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ClamAV Antivirus Scanner
+  clamav:
+    image: clamav/clamav:latest
+    container_name: clamav-scanner
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=false
+      - CLAMAV_NO_CLAMD=false
+    volumes:
+      - ./security/clamav-data:/var/lib/clamav
+      - media-data:/scan/media:ro
+      - downloads:/scan/downloads:ro
+    networks:
+      - security-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+    labels:
+      - "homepage.group=Security"
+      - "homepage.name=ClamAV"
+      - "homepage.icon=antivirus.png"
+      - "homepage.description=Antivirus Scanner"
+
+  # Security Log Aggregator
+  security-logger:
+    image: fluent/fluent-bit:latest
+    container_name: security-logger
+    volumes:
+      - ./security/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./security/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - ./logs:/var/log/monitor:ro
+      - /var/log:/var/log/host:ro
+    networks:
+      - security-net
+      - monitoring-net
+    restart: unless-stopped
+
+volumes:
+  media-data:
+    external: true
+  downloads:
+    external: true
+
+networks:
+  media-net:
+    external: true
+  monitoring-net:
+    external: true

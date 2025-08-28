@@ -1,0 +1,69 @@
+FROM ubuntu:22.04
+
+# Environment
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=America/New_York \
+    PUID=1000 \
+    PGID=1000
+
+# Install system dependencies and Caddy
+RUN apt-get update && apt-get install -y \
+    curl wget gnupg lsb-release ca-certificates \
+    software-properties-common apt-transport-https \
+    supervisor git unzip python3 python3-pip nodejs npm \
+    ffmpeg mediainfo sqlite3 \
+    debian-keyring debian-archive-keyring \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Caddy
+RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg && \
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list && \
+    apt-get update && apt-get install -y caddy && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install .NET Runtime for Arr apps
+RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --runtime aspnetcore --version 8.0.0 --install-dir /usr/share/dotnet && \
+    ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet && \
+    rm dotnet-install.sh
+
+# Create directories
+RUN mkdir -p /config /data/media /data/downloads /opt/services /var/log/supervisor
+
+# Install media services (simplified for demo)
+WORKDIR /opt/services
+
+# Download Jellyfin
+RUN wget -O jellyfin.tar.gz "https://repo.jellyfin.org/files/server/linux/stable/10.9.11/amd64/jellyfin_10.9.11_linux-amd64.tar.gz" 2>/dev/null || \
+    echo "Jellyfin will be installed on first run"
+
+# Install Node.js dashboard
+RUN mkdir -p /opt/dashboard && \
+    echo '{"name":"dashboard","version":"1.0.0","scripts":{"start":"node server.js"}}' > /opt/dashboard/package.json
+
+# Create supervisord configuration
+RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'logfile=/var/log/supervisor/supervisord.log' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:caddy]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=caddy run --config /etc/caddy/Caddyfile' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stderr_logfile=/var/log/caddy.err.log' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/var/log/caddy.out.log' >> /etc/supervisor/conf.d/supervisord.conf
+
+# Copy configuration files
+COPY Caddyfile-simple /etc/caddy/Caddyfile
+COPY dashboard.html /usr/share/caddy/index.html
+
+# Expose all service ports
+EXPOSE 80 443 8096 8989 7878 8686 9696 6767 8080 9091 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
+    CMD curl -f http://localhost/health || exit 1
+
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
