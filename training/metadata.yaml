@@ -1,0 +1,23 @@
+course:
+  title: "Training Course Title"
+  subtitle: "Concise value proposition or track name"
+  audience: "Intended learners (e.g., new engineers, analysts)"
+  duration: "1 day (6 hours)"
+  version: "1.0"
+  owner: "Team or org name"
+  contact: "training@example.com"
+  date: "2025-08-28"
+
+brand:
+  primary_h: 212
+  primary_s: 78
+  primary_l: 46
+  font: "Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+
+delivery:
+  format: ["in-person", "virtual"]
+  requirements:
+    - "Wifi and projector (1920x1080)"
+    - "Access to code repo / sandbox"
+    - "Printed handouts optional"
+

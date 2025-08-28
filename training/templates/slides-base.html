@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Training Slides</title>
+    <link rel="stylesheet" href="../../templates/slides.css" />
+    <style>
+      /* print-friendly */
+      @media print { .remark-slide-scaler { box-shadow: none !important; } }
+    </style>
+  </head>
+  <body>
+    <textarea id="source" style="display:none"></textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+    <script>
+      // Load slides.md from the current directory
+      (async function () {
+        try {
+          const res = await fetch('slides.md');
+          const md = await res.text();
+          document.getElementById('source').value = md;
+          const slideshow = remark.create({
+            highlightStyle: 'monokai',
+            ratio: '16:9',
+            navigation: { scroll: false },
+          });
+          window.slideshow = slideshow;
+        } catch (e) {
+          document.body.innerHTML = '<pre style="padding:24px">Could not load slides.md.\nMake sure you are serving over HTTP (see training/bin/serve-training.sh).</pre>';
+        }
+      })();
+    </script>
+  </body>
+  </html>
+
