@@ -17,6 +17,10 @@ import { MediaLibraryService } from './services/MediaLibraryService.js';
 import { SpeechService } from './services/SpeechService.js';
 import { TranslationService } from './services/TranslationService.js';
 import logger from './logger.js';
+import { RTCAudioSink } from 'wrtc';
+import { OpenAIRealtimeClient } from './services/OpenAIRealtimeClient.js';
+import clientLogger from './logger.js';
+import promClient from 'prom-client';
 
 dotenv.config();
 
@@ -65,6 +69,11 @@ export class VoiceServer {
     this.setupRoutes();
     this.setupWebSocketHandlers();
     this.setupSocketIOHandlers();
+    this.realtimeSessions = new Map();
+    this.metrics = {
+      realtime_connections: new promClient.Counter({ name: 'voice_realtime_connections_total', help: 'Total realtime websocket/webRTC sessions' }),
+      realtime_errors: new promClient.Counter({ name: 'voice_realtime_errors_total', help: 'Total realtime errors' })
+    };
   }
 
   /**
@@ -127,6 +136,15 @@ export class VoiceServer {
           mediaLibrary: this.mediaLibrary.isReady()
         }
       });
+    });
+
+    // Realtime signaling (WebRTC) endpoint
+    this.app.post('/api/realtime/signal', express.json(), (req, res) => this.handleRealtimeSignal(req, res));
+
+    // Metrics endpoint for Prometheus
+    this.app.get('/metrics', (req, res) => {
+      res.set('Content-Type', promClient.register.contentType);
+      promClient.register.metrics().then(m => res.send(m)).catch(err => res.status(500).send(err.message));
     });
 
     // Get supported languages
@@ -355,6 +373,76 @@ export class VoiceServer {
         timestamp: new Date().toISOString()
       }));
     });
+  }
+
+  // WebRTC signaling endpoint
+  async handleRealtimeSignal(req, res) {
+    try {
+      const { sdp, type, sessionId } = req.body;
+      if (!sdp) return res.status(400).json({ error: 'SDP offer required' });
+
+      const pc = new (require('wrtc').RTCPeerConnection)();
+
+      const audioSinkMap = new Map();
+      const dataChannels = new Map();
+
+      pc.ontrack = (event) => {
+        try {
+          const track = event.track;
+          const sink = new RTCAudioSink(track);
+          sink.ondata = (data) => {
+            try {
+              // data.samples is Int16Array or Float32Array; convert to 16-bit PCM buffer
+              let samples = data.samples;
+              let buf;
+              if (samples instanceof Int16Array) {
+                buf = Buffer.from(samples.buffer);
+              } else if (samples instanceof Float32Array) {
+                // convert float32 to int16
+                const int16 = new Int16Array(samples.length);
+                for (let i=0;i<samples.length;i++) int16[i] = Math.max(-1, Math.min(1, samples[i])) * 32767;
+                buf = Buffer.from(int16.buffer);
+              } else {
+                return;
+              }
+
+              const b64 = buf.toString('base64');
+              // forward to OpenAI realtime client if available
+              if (this.openaiRealtime) {
+                this.openaiRealtime.sendAudioChunk(b64);
+              }
+            } catch (err) {
+              clientLogger.error('Audio sink data handling error', err);
+              this.metrics.realtime_errors.inc();
+            }
+          };
+          audioSinkMap.set(track.id, sink);
+        } catch (err) {
+          clientLogger.error('ontrack handling failed', err);
+        }
+      };
+
+      pc.ondatachannel = (ev) => {
+        const ch = ev.channel;
+        ch.onmessage = (m) => {
+          // handle client messages if needed
+        };
+        dataChannels.set(ch.label, ch);
+      };
+
+      await pc.setRemoteDescription({ type: 'offer', sdp });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      // store session
+      this.realtimeSessions.set(sessionId || answer.sdp.slice(0,8), { pc, audioSinkMap, dataChannels });
+      this.metrics.realtime_connections.inc();
+
+      res.json({ sdp: pc.localDescription.sdp, type: pc.localDescription.type });
+    } catch (error) {
+      clientLogger.error('Realtime signaling failed', error);
+      res.status(500).json({ error: error.message });
+    }
   }
 
   /**
