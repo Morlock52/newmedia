@@ -5,6 +5,7 @@
 
 import { VoiceServer } from './server/VoiceServer.js';
 import dotenv from 'dotenv';
+import logger from './server/logger.js';
 
 // Load environment variables
 dotenv.config();
@@ -13,8 +14,8 @@ dotenv.config();
  * Main application entry point
  */
 async function main() {
-  console.log('🎙️  Starting Advanced Voice AI System...');
-  console.log('=====================================');
+  logger.info('🎙️  Starting Advanced Voice AI System...');
+  logger.info('=====================================');
   
   try {
     // Configuration for the voice server
@@ -72,7 +73,7 @@ async function main() {
     setupGracefulShutdown(voiceServer);
     
   } catch (error) {
-    console.error('❌ Failed to start Voice AI System:', error);
+    logger.error('❌ Failed to start Voice AI System:', error);
     process.exit(1);
   }
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 require('./scripts/console-shim');
+const logger = require('./middleware/logger');
 
 /**
  * Archon Mock MCP Server
@@ -67,7 +68,7 @@ app.get('/health', (req, res) => {
 app.post('/mcp', (req, res) => {
     const { jsonrpc, method, params, id } = req.body;
     
-    console.log(`📥 MCP Request: ${method}`, params);
+    logger.info(`📥 MCP Request: ${method}`, params);
     
     // Handle different Archon methods
     switch(method) {
@@ -293,18 +294,18 @@ app.get('/', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log('================================================');
-    console.log('🚀 ARCHON MCP SERVER STARTED');
-    console.log('================================================');
-    console.log(`✅ Server: http://localhost:${PORT}`);
-    console.log(`✅ Health: http://localhost:${PORT}/health`);
-    console.log(`✅ MCP Endpoint: http://localhost:${PORT}/mcp`);
-    console.log('================================================');
-    console.log('📊 PROJECT STATUS:');
-    console.log(`   ID: ${PROJECT_ID}`);
-    console.log(`   Title: Ultimate Media Server 2025`);
-    console.log(`   Tasks: 14/14 COMPLETED (100%)`);
-    console.log('================================================');
-    console.log('🎉 ALL TASKS VERIFIED AS COMPLETED!');
-    console.log('================================================');
+    logger.info('================================================');
+    logger.info('🚀 ARCHON MCP SERVER STARTED');
+    logger.info('================================================');
+    logger.info(`✅ Server: http://localhost:${PORT}`);
+    logger.info(`✅ Health: http://localhost:${PORT}/health`);
+    logger.info(`✅ MCP Endpoint: http://localhost:${PORT}/mcp`);
+    logger.info('================================================');
+    logger.info('📊 PROJECT STATUS:');
+    logger.info(`   ID: ${PROJECT_ID}`);
+    logger.info(`   Title: Ultimate Media Server 2025`);
+    logger.info(`   Tasks: 14/14 COMPLETED (100%)`);
+    logger.info('================================================');
+    logger.info('🎉 ALL TASKS VERIFIED AS COMPLETED!');
+    logger.info('================================================');
 });

@@ -167,6 +167,26 @@ volumes:
     driver: local
   redis-data:
     driver: local
+  # Central logs volume (optional - mount per-service as needed)
+  service-logs:
+    driver: local
+
+# Reusable logging anchor - add to any service that should write logs to the host
+# Example usage in a service:
+#   myservice:
+#     image: myimage
+#     <<: *common-variables
+#     <<: *default-logging
+#
+x-logging: &default-logging
+  environment:
+    LOG_FORMAT: ${LOG_FORMAT:-json}
+    LOG_FILE: /var/log/service/app.log
+  volumes:
+    - ./logs/service:/var/log/service
+  logging:
+    driver: local
+    options: {}
 
 services:
   # ==================== MEDIA SERVERS ====================
