@@ -292,18 +292,32 @@ export class LLMProcessor extends EventEmitter {
           const reqId = await this.openaiRealtime.requestResponse(prompt, { modalities: ['text'] });
           // listen for response events
           result = await new Promise((resolve, reject) => {
-            const onMessage = (msg) => {
-              if (msg && msg.type === 'response.delta' && msg.response) {
-                // accumulate or resolve on final
-                if (msg.response.final) {
-                  this.openaiRealtime.removeListener('message', onMessage);
-                  resolve({ text: msg.response.text, model: this.model, confidence: msg.response.confidence || 0.9 });
-                }
-              }
-            };
-            this.openaiRealtime.on('message', onMessage);
+          let acc = '';
+          const onDelta = (resp) => {
+            if (resp?.chunks) {
+              resp.chunks.forEach(c => { acc += c.text || ''; this.emit('response.delta', { text: c.text, model: this.model }); });
+            } else if (resp?.text) {
+              acc += resp.text;
+              this.emit('response.delta', { text: resp.text, model: this.model });
+            }
+            if (resp.final) {
+              this.openaiRealtime.removeListener('response.delta', onDelta);
+              this.openaiRealtime.removeListener('response.final', onFinal);
+              resolve({ text: acc, model: this.model, confidence: resp.confidence || 0.9 });
+            }
+          };
+          const onFinal = (resp) => {
+            // final may be triggered separately
+            this.openaiRealtime.removeListener('response.delta', onDelta);
+            this.openaiRealtime.removeListener('response.final', onFinal);
+            acc += resp.text || '';
+            resolve({ text: acc, model: this.model, confidence: resp.confidence || 0.9 });
+          };
+          this.openaiRealtime.on('response.delta', onDelta);
+          this.openaiRealtime.on('response.final', onFinal);
             setTimeout(() => {
-              this.openaiRealtime.removeListener('message', onMessage);
+              this.openaiRealtime.removeListener('response.delta', onDelta);
+              this.openaiRealtime.removeListener('response.final', onFinal);
               reject(new Error('OpenAI realtime response timeout'));
             }, 15000);
           });

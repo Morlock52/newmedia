@@ -36,7 +36,21 @@ export class OpenAIRealtimeClient extends EventEmitter {
         this.ws.on('message', (msg) => {
           let d = msg.toString();
           try { d = JSON.parse(d); } catch (e) {}
+          // Normalize common realtime event shapes
+          // Emit raw message
           this.emit('message', d);
+
+          // Heuristic: handle transcripts and response deltas
+          if (d?.type === 'transcript' && d.text) {
+            if (d.partial) this.emit('transcript.partial', d);
+            else this.emit('transcript.final', d);
+          }
+
+          if (d?.type === 'response.delta' && d.response) {
+            // delta may come in pieces
+            this.emit('response.delta', d.response);
+            if (d.response.final) this.emit('response.final', d.response);
+          }
         });
 
         this.ws.on('close', (code, reason) => {

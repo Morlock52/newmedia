@@ -392,15 +392,20 @@ export class SpeechService extends EventEmitter {
           await this.openaiRealtime.flushAudio();
           // Wait for message event with transcription (consumer listens on events)
           return new Promise((resolve, reject) => {
-            const onMsg = (msg) => {
-              if (msg && msg.type === 'transcript' && msg.text) {
-                this.openaiRealtime.removeListener('message', onMsg);
-                resolve({ text: msg.text, confidence: msg.confidence || 0.9, language: msg.language || language });
-              }
+            const onPartial = (d) => {
+              // emit partial via service events so callers can hook in
+              this.emit('transcription_partial', { sessionId, text: d.text, confidence: d.confidence });
             };
-            this.openaiRealtime.on('message', onMsg);
+            const onFinal = (d) => {
+              this.openaiRealtime.removeListener('transcript.partial', onPartial);
+              this.openaiRealtime.removeListener('transcript.final', onFinal);
+              resolve({ text: d.text, confidence: d.confidence || 0.9, language: d.language || language });
+            };
+            this.openaiRealtime.on('transcript.partial', onPartial);
+            this.openaiRealtime.on('transcript.final', onFinal);
             setTimeout(() => {
-              this.openaiRealtime.removeListener('message', onMsg);
+              this.openaiRealtime.removeListener('transcript.partial', onPartial);
+              this.openaiRealtime.removeListener('transcript.final', onFinal);
               reject(new Error('OpenAI realtime transcription timeout'));
             }, 10000);
           });
