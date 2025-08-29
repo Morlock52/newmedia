@@ -262,11 +262,11 @@ class MediaServerAPI {
                         res.json(mockServices);
                     }
                 } catch (dockerError) {
-                    console.log('Using mock services due to Docker error:', dockerError.message);
+                    logger.info('Using mock services due to Docker error:', dockerError.message);
                     res.json(mockServices);
                 }
             } catch (error) {
-                console.error('Service status error:', error);
+                logger.error('Service status error:', error);
                 res.json([]);
             }
         });
@@ -977,9 +977,9 @@ class MediaServerAPI {
                     pid: process.pid
                 });
                 
-                console.log(`🚀 Media Server API running on http://localhost:${this.port}`);
-                console.log(`📚 API Documentation: http://localhost:${this.port}/api/docs`);
-                console.log(`🔌 WebSocket: ws://localhost:${this.port}`);
+                logger.info(`🚀 Media Server API running on http://localhost:${this.port}`);
+                logger.info(`📚 API Documentation: http://localhost:${this.port}/api/docs`);
+                logger.info(`🔌 WebSocket: ws://localhost:${this.port}`);
             });
 
             // Start monitoring

@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Prowlarr Integration Wrapper
  * Simplified interface for Prowlarr indexer management
@@ -40,14 +41,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await prowlarr.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Prowlarr integration setup successfully');
+            logger.info('✅ Prowlarr integration setup successfully');
         } else {
-            console.warn('⚠️ Prowlarr connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Prowlarr connection test failed:', connectionResult.error);
         }
         
         return prowlarr;
     } catch (error) {
-        console.error('❌ Prowlarr quick setup failed:', error.message);
+        logger.error('❌ Prowlarr quick setup failed:', error.message);
         throw error;
     }
 }

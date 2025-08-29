@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * SmartHomeService - HomeKit, Google Home, Alexa integration, Philips Hue sync
  * Provides smart home integration for media synchronization and ambient lighting
@@ -51,7 +52,7 @@ class SmartHomeService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🏠 Initializing SmartHomeService...');
+            logger.info('🏠 Initializing SmartHomeService...');
             
             // Initialize Philips Hue
             await this.initializePhilipsHue();
@@ -67,11 +68,11 @@ class SmartHomeService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ SmartHomeService initialized successfully');
+            logger.info('✅ SmartHomeService initialized successfully');
             
             return { success: true, message: 'SmartHomeService initialized' };
         } catch (error) {
-            console.error('❌ SmartHomeService initialization failed:', error);
+            logger.error('❌ SmartHomeService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -83,7 +84,7 @@ class SmartHomeService extends EventEmitter {
     async initializePhilipsHue() {
         try {
             if (!this.config.philipsHueBridge) {
-                console.warn('⚠️ Philips Hue bridge IP not configured');
+                logger.warn('⚠️ Philips Hue bridge IP not configured');
                 return;
             }
 
@@ -127,9 +128,9 @@ class SmartHomeService extends EventEmitter {
                 });
             });
 
-            console.log(`✅ Philips Hue connected: ${Object.keys(lightsResponse.data).length} lights, ${Object.keys(groupsResponse.data).length} groups`);
+            logger.info(`✅ Philips Hue connected: ${Object.keys(lightsResponse.data).length} lights, ${Object.keys(groupsResponse.data).length} groups`);
         } catch (error) {
-            console.error('❌ Philips Hue initialization failed:', error.message);
+            logger.error('❌ Philips Hue initialization failed:', error.message);
             // Continue without Hue if it fails
         }
     }
@@ -176,9 +177,9 @@ class SmartHomeService extends EventEmitter {
                 capabilities: ['television', 'lighting']
             });
 
-            console.log('✅ HomeKit accessory initialized');
+            logger.info('✅ HomeKit accessory initialized');
         } catch (error) {
-            console.error('❌ HomeKit initialization failed:', error.message);
+            logger.error('❌ HomeKit initialization failed:', error.message);
         }
     }
 
@@ -187,7 +188,7 @@ class SmartHomeService extends EventEmitter {
      */
     async discoverDevices() {
         try {
-            console.log('🔍 Discovering smart devices...');
+            logger.info('🔍 Discovering smart devices...');
             
             // Discover Chromecast devices
             await this.discoverChromecast();
@@ -198,9 +199,9 @@ class SmartHomeService extends EventEmitter {
             // Discover smart speakers
             await this.discoverSmartSpeakers();
             
-            console.log(`✅ Device discovery completed: ${this.connectedDevices.size} devices found`);
+            logger.info(`✅ Device discovery completed: ${this.connectedDevices.size} devices found`);
         } catch (error) {
-            console.warn('⚠️ Device discovery failed:', error.message);
+            logger.warn('⚠️ Device discovery failed:', error.message);
         }
     }
 
@@ -226,9 +227,9 @@ class SmartHomeService extends EventEmitter {
                 this.connectedDevices.set(device.id, device);
             });
 
-            console.log(`✅ Chromecast discovery: ${mockDevices.length} devices`);
+            logger.info(`✅ Chromecast discovery: ${mockDevices.length} devices`);
         } catch (error) {
-            console.warn('⚠️ Chromecast discovery failed:', error.message);
+            logger.warn('⚠️ Chromecast discovery failed:', error.message);
         }
     }
 
@@ -253,9 +254,9 @@ class SmartHomeService extends EventEmitter {
                 this.connectedDevices.set(device.id, device);
             });
 
-            console.log(`✅ Roku discovery: ${mockDevices.length} devices`);
+            logger.info(`✅ Roku discovery: ${mockDevices.length} devices`);
         } catch (error) {
-            console.warn('⚠️ Roku discovery failed:', error.message);
+            logger.warn('⚠️ Roku discovery failed:', error.message);
         }
     }
 
@@ -286,9 +287,9 @@ class SmartHomeService extends EventEmitter {
                 this.connectedDevices.set(device.id, device);
             });
 
-            console.log(`✅ Smart speaker discovery: ${mockDevices.length} devices`);
+            logger.info(`✅ Smart speaker discovery: ${mockDevices.length} devices`);
         } catch (error) {
-            console.warn('⚠️ Smart speaker discovery failed:', error.message);
+            logger.warn('⚠️ Smart speaker discovery failed:', error.message);
         }
     }
 
@@ -323,11 +324,11 @@ class SmartHomeService extends EventEmitter {
             }, 5000); // Update every 5 seconds
 
             this.emit('mediaSyncStarted', this.currentMediaState);
-            console.log(`✅ Media sync started: ${mediaInfo.title}`);
+            logger.info(`✅ Media sync started: ${mediaInfo.title}`);
 
             return { success: true, message: 'Media sync started', state: this.currentMediaState };
         } catch (error) {
-            console.error('❌ Media sync start failed:', error);
+            logger.error('❌ Media sync start failed:', error);
             throw error;
         }
     }
@@ -347,11 +348,11 @@ class SmartHomeService extends EventEmitter {
 
             this.currentMediaState = null;
             this.emit('mediaSyncStopped');
-            console.log('✅ Media sync stopped');
+            logger.info('✅ Media sync stopped');
 
             return { success: true, message: 'Media sync stopped' };
         } catch (error) {
-            console.error('❌ Media sync stop failed:', error);
+            logger.error('❌ Media sync stop failed:', error);
             throw error;
         }
     }
@@ -370,7 +371,7 @@ class SmartHomeService extends EventEmitter {
 
             return defaultColors[mediaInfo.type] || defaultColors.movie;
         } catch (error) {
-            console.warn('⚠️ Color extraction failed:', error.message);
+            logger.warn('⚠️ Color extraction failed:', error.message);
             return [{ hue: 200, saturation: 60 }];
         }
     }
@@ -406,15 +407,15 @@ class SmartHomeService extends EventEmitter {
 
                     promises.push(
                         axios.put(`${bridgeUrl}/groups/${groupId}/action`, state)
-                            .catch(err => console.warn(`Failed to update group ${groupId}:`, err.message))
+                            .catch(err => logger.warn(`Failed to update group ${groupId}:`, err.message))
                     );
                 }
             });
 
             await Promise.allSettled(promises);
-            console.log('✅ Ambient lighting applied');
+            logger.info('✅ Ambient lighting applied');
         } catch (error) {
-            console.error('❌ Ambient lighting failed:', error);
+            logger.error('❌ Ambient lighting failed:', error);
         }
     }
 
@@ -432,7 +433,7 @@ class SmartHomeService extends EventEmitter {
 
             await this.applyAmbientLighting();
         } catch (error) {
-            console.warn('⚠️ Ambient lighting update failed:', error.message);
+            logger.warn('⚠️ Ambient lighting update failed:', error.message);
         }
     }
 
@@ -457,14 +458,14 @@ class SmartHomeService extends EventEmitter {
 
                 promises.push(
                     axios.put(`${bridgeUrl}/groups/${groupId}/action`, state)
-                        .catch(err => console.warn(`Failed to restore group ${groupId}:`, err.message))
+                        .catch(err => logger.warn(`Failed to restore group ${groupId}:`, err.message))
                 );
             });
 
             await Promise.allSettled(promises);
-            console.log('✅ Normal lighting restored');
+            logger.info('✅ Normal lighting restored');
         } catch (error) {
-            console.error('❌ Lighting restoration failed:', error);
+            logger.error('❌ Lighting restoration failed:', error);
         }
     }
 
@@ -489,7 +490,7 @@ class SmartHomeService extends EventEmitter {
                     throw new Error(`Unsupported device platform: ${device.platform}`);
             }
         } catch (error) {
-            console.error('❌ Device control failed:', error);
+            logger.error('❌ Device control failed:', error);
             throw error;
         }
     }
@@ -525,7 +526,7 @@ class SmartHomeService extends EventEmitter {
             this.emit('deviceControlled', { device: device.id, action, params, response: response.data });
             return { success: true, message: `Device ${action} completed`, response: response.data };
         } catch (error) {
-            console.error('❌ Hue device control failed:', error);
+            logger.error('❌ Hue device control failed:', error);
             throw error;
         }
     }
@@ -547,7 +548,7 @@ class SmartHomeService extends EventEmitter {
             this.emit('deviceControlled', { device: device.id, action, params, result });
             return result;
         } catch (error) {
-            console.error('❌ Chromecast control failed:', error);
+            logger.error('❌ Chromecast control failed:', error);
             throw error;
         }
     }
@@ -568,7 +569,7 @@ class SmartHomeService extends EventEmitter {
             this.emit('deviceControlled', { device: device.id, action, params, result });
             return result;
         } catch (error) {
-            console.error('❌ Roku control failed:', error);
+            logger.error('❌ Roku control failed:', error);
             throw error;
         }
     }
@@ -607,9 +608,9 @@ class SmartHomeService extends EventEmitter {
                 this.scenes.set(id, scene);
             });
 
-            console.log(`✅ Scenes loaded: ${this.scenes.size} scenes`);
+            logger.info(`✅ Scenes loaded: ${this.scenes.size} scenes`);
         } catch (error) {
-            console.warn('⚠️ Scene loading failed:', error.message);
+            logger.warn('⚠️ Scene loading failed:', error.message);
         }
     }
 
@@ -635,7 +636,7 @@ class SmartHomeService extends EventEmitter {
                                     return this.controlDevice(deviceId, 'set_color', scene.colors[0]);
                                 }
                             })
-                            .catch(err => console.warn(`Failed to apply scene to ${deviceId}:`, err.message))
+                            .catch(err => logger.warn(`Failed to apply scene to ${deviceId}:`, err.message))
                     );
                 }
             });
@@ -643,11 +644,11 @@ class SmartHomeService extends EventEmitter {
             await Promise.allSettled(promises);
             
             this.emit('sceneApplied', { sceneId, scene });
-            console.log(`✅ Scene applied: ${scene.name}`);
+            logger.info(`✅ Scene applied: ${scene.name}`);
 
             return { success: true, message: `Scene "${scene.name}" applied`, scene };
         } catch (error) {
-            console.error('❌ Scene application failed:', error);
+            logger.error('❌ Scene application failed:', error);
             throw error;
         }
     }
@@ -678,7 +679,7 @@ class SmartHomeService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up SmartHomeService...');
+            logger.info('🧹 Cleaning up SmartHomeService...');
             
             if (this.syncInterval) {
                 clearInterval(this.syncInterval);
@@ -692,9 +693,9 @@ class SmartHomeService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ SmartHomeService cleanup completed');
+            logger.info('✅ SmartHomeService cleanup completed');
         } catch (error) {
-            console.error('❌ SmartHomeService cleanup failed:', error);
+            logger.error('❌ SmartHomeService cleanup failed:', error);
         }
     }
 }

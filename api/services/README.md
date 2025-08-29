@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 # Media Server Backend Services
 
 This directory contains 8 comprehensive backend API services for the media server project, each designed to handle specific aspects of the media server infrastructure.
@@ -186,9 +187,9 @@ async function initializeServices() {
       smartHomeService.initialize(),
       securityService.initialize()
     ]);
-    console.log('✅ All services initialized successfully');
+    logger.info('✅ All services initialized successfully');
   } catch (error) {
-    console.error('❌ Service initialization failed:', error);
+    logger.error('❌ Service initialization failed:', error);
   }
 }
 ```
@@ -228,7 +229,7 @@ async function uploadMediaToWeb3(mediaBuffer, metadata) {
       metadataUrl: nftMetadata.metadataUri
     };
   } catch (error) {
-    console.error('Web3 upload failed:', error);
+    logger.error('Web3 upload failed:', error);
     throw error;
   }
 }
@@ -249,10 +250,10 @@ async function startMediaWithLighting(mediaInfo) {
     // Apply movie scene
     await smartHomeService.applyScene('movie_night');
 
-    console.log('🎬 Media playback started with ambient lighting');
+    logger.info('🎬 Media playback started with ambient lighting');
     return syncResult;
   } catch (error) {
-    console.error('Smart home sync failed:', error);
+    logger.error('Smart home sync failed:', error);
   }
 }
 ```
@@ -286,7 +287,7 @@ async function authenticateUser(username, password, totpCode) {
 
     return firstAuth;
   } catch (error) {
-    console.error('Authentication failed:', error);
+    logger.error('Authentication failed:', error);
     throw error;
   }
 }
@@ -300,7 +301,7 @@ async function ensureVPNConnection() {
     const status = await vpnService.updateVPNStatus();
     
     if (!status.connected) {
-      console.log('🔒 Connecting to VPN...');
+      logger.info('🔒 Connecting to VPN...');
       await vpnService.connect({
         provider: 'nordvpn',
         region: 'Switzerland'
@@ -309,11 +310,11 @@ async function ensureVPNConnection() {
 
     // Test connection speed
     const speedTest = await vpnService.testSpeed();
-    console.log(`📶 VPN Speed: ${speedTest.speedTest.downloadSpeed} Mbps`);
+    logger.info(`📶 VPN Speed: ${speedTest.speedTest.downloadSpeed} Mbps`);
 
     return status;
   } catch (error) {
-    console.error('VPN management failed:', error);
+    logger.error('VPN management failed:', error);
     throw error;
   }
 }
@@ -336,11 +337,11 @@ async function setupMonitoring() {
 
     // Get system metrics
     const metrics = monitoringService.getMetricsSummary();
-    console.log('📊 System Status:', metrics);
+    logger.info('📊 System Status:', metrics);
 
     return metrics;
   } catch (error) {
-    console.error('Monitoring setup failed:', error);
+    logger.error('Monitoring setup failed:', error);
   }
 }
 ```
@@ -357,12 +358,12 @@ async function transcodeVideo(inputFile, profile = 'web_optimized') {
 
     // Monitor progress
     transcodingService.on('jobProgress', ({ job, progress }) => {
-      console.log(`🎞️ Transcoding progress: ${progress}%`);
+      logger.info(`🎞️ Transcoding progress: ${progress}%`);
     });
 
     return job;
   } catch (error) {
-    console.error('Transcoding failed:', error);
+    logger.error('Transcoding failed:', error);
     throw error;
   }
 }
@@ -380,10 +381,10 @@ async function searchMedia(query, type = 'movie') {
       minSeeders: 5
     });
 
-    console.log(`🔍 Found ${searchResult.totalResults} results`);
+    logger.info(`🔍 Found ${searchResult.totalResults} results`);
     return searchResult.results;
   } catch (error) {
-    console.error('Search failed:', error);
+    logger.error('Search failed:', error);
     throw error;
   }
 }

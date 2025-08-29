@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import path from 'path';
+import logger from '../logger.js';
 
 export class BiometricAuth extends EventEmitter {
   constructor(config = {}) {
@@ -63,7 +64,7 @@ export class BiometricAuth extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Voice Biometric Authentication Service...');
+      logger.info('Initializing Voice Biometric Authentication Service...');
       
       // Create storage directory if it doesn't exist
       await this.ensureStorageDirectory();
@@ -80,11 +81,11 @@ export class BiometricAuth extends EventEmitter {
       this.setupCleanupIntervals();
       
       this.isInitialized = true;
-      console.log('Voice Biometric Authentication Service initialized successfully');
+      logger.info('Voice Biometric Authentication Service initialized successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Voice Biometric Authentication Service:', error);
+      logger.error('Failed to initialize Voice Biometric Authentication Service:', error);
       throw error;
     }
   }
@@ -121,9 +122,9 @@ export class BiometricAuth extends EventEmitter {
         this.voicePrints.set(voicePrint.speakerId, voicePrint);
       }
       
-      console.log(`Loaded ${this.voicePrints.size} voice prints`);
+      logger.info(`Loaded ${this.voicePrints.size} voice prints`);
     } catch (error) {
-      console.warn('Failed to load voice prints:', error.message);
+      logger.warn('Failed to load voice prints:', error.message);
     }
   }
 
@@ -253,7 +254,7 @@ export class BiometricAuth extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Enrollment sample processing failed:', error);
+      logger.error('Enrollment sample processing failed:', error);
       throw error;
     }
   }
@@ -326,7 +327,7 @@ export class BiometricAuth extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Enrollment completion failed:', error);
+      logger.error('Enrollment completion failed:', error);
       throw error;
     }
   }
@@ -433,7 +434,7 @@ export class BiometricAuth extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Voice verification failed:', error);
+      logger.error('Voice verification failed:', error);
       return {
         verified: false,
         speakerId,
@@ -497,9 +498,9 @@ export class BiometricAuth extends EventEmitter {
             similarity: matchResult.similarity,
             confidence: matchResult.similarity
           });
-        } catch (error) {
-          console.warn(`Failed to match against speaker ${speakerId}:`, error.message);
-        }
+          } catch (error) {
+          logger.warn(`Failed to match against speaker ${speakerId}: ${error.message}`);
+          }
       }
 
       // Sort by confidence and get best match
@@ -539,7 +540,7 @@ export class BiometricAuth extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Voice identification failed:', error);
+      logger.error('Voice identification failed:', error);
       return {
         identified: false,
         confidence: 0,
@@ -597,7 +598,7 @@ export class BiometricAuth extends EventEmitter {
       
       return { success: true, speakerId };
     } catch (error) {
-      console.error('Failed to revoke voice print:', error);
+      logger.error('Failed to revoke voice print:', error);
       throw error;
     }
   }
@@ -810,7 +811,7 @@ export class BiometricAuth extends EventEmitter {
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Voice Biometric Authentication Service...');
+    logger.info('Cleaning up Voice Biometric Authentication Service...');
     this.activeSessions.clear();
     this.enrollmentSessions.clear();
     this.voicePrints.clear();

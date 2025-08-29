@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Radarr Integration Wrapper
  * Simplified interface for Radarr movie management
@@ -40,14 +41,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await radarr.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Radarr integration setup successfully');
+            logger.info('✅ Radarr integration setup successfully');
         } else {
-            console.warn('⚠️ Radarr connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Radarr connection test failed:', connectionResult.error);
         }
         
         return radarr;
     } catch (error) {
-        console.error('❌ Radarr quick setup failed:', error.message);
+        logger.error('❌ Radarr quick setup failed:', error.message);
         throw error;
     }
 }

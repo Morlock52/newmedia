@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Health Monitor Service
  * Comprehensive system and service health monitoring
@@ -70,7 +71,7 @@ class HealthMonitor {
 
     async initialize() {
         try {
-            console.log('Initializing HealthMonitor...');
+            logger.info('Initializing HealthMonitor...');
             
             // Initialize service health states
             for (const [serviceName, definition] of Object.entries(this.serviceDefinitions)) {
@@ -88,9 +89,9 @@ class HealthMonitor {
             await this.performAllHealthChecks();
             
             this.initialized = true;
-            console.log('HealthMonitor initialized successfully');
+            logger.info('HealthMonitor initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize HealthMonitor:', error);
+            logger.error('Failed to initialize HealthMonitor:', error);
             throw error;
         }
     }
@@ -100,7 +101,7 @@ class HealthMonitor {
             return;
         }
         
-        console.log(`Starting health monitoring (interval: ${this.checkInterval}ms)`);
+        logger.info(`Starting health monitoring (interval: ${this.checkInterval}ms)`);
         
         this.monitoringInterval = setInterval(async () => {
             try {
@@ -108,7 +109,7 @@ class HealthMonitor {
                 await this.updateSystemMetrics();
                 this.notifySubscribers();
             } catch (error) {
-                console.error('Health monitoring error:', error);
+                logger.error('Health monitoring error:', error);
             }
         }, this.checkInterval);
     }
@@ -117,7 +118,7 @@ class HealthMonitor {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
             this.monitoringInterval = null;
-            console.log('Health monitoring stopped');
+            logger.info('Health monitoring stopped');
         }
     }
 
@@ -280,7 +281,7 @@ class HealthMonitor {
             };
             
         } catch (error) {
-            console.error('Failed to update system metrics:', error);
+            logger.error('Failed to update system metrics:', error);
         }
     }
 
@@ -368,7 +369,7 @@ class HealthMonitor {
                 timestamp: new Date().toISOString()
             }));
         } catch (error) {
-            console.error('Failed to send health update:', error);
+            logger.error('Failed to send health update:', error);
         }
     }
 

@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Media Server Integrations Index
  * Exports all service integration modules
@@ -133,11 +134,11 @@ class IntegrationsManager {
     setupEventHandlers(serviceName, integration) {
         const handlers = {
             error: (error) => {
-                console.error(`${serviceName} error:`, error);
+                logger.error(`${serviceName} error:`, error);
                 this.emit('integrationError', { service: serviceName, error });
             },
             webhook: (data) => {
-                console.log(`${serviceName} webhook:`, data);
+                logger.info(`${serviceName} webhook:`, data);
                 this.emit('webhookReceived', { service: serviceName, data });
             }
         };
@@ -188,7 +189,7 @@ class IntegrationsManager {
         for (const [name, integration] of this.integrations) {
             if (typeof integration.setupWebhook === 'function') {
                 integration.setupWebhook(app);
-                console.log(`Webhook setup for ${name}`);
+                logger.info(`Webhook setup for ${name}`);
             }
         }
     }
@@ -259,7 +260,7 @@ class IntegrationsManager {
                     integration.cleanup();
                 }
             } catch (error) {
-                console.error(`Error cleaning up ${name}:`, error);
+                logger.error(`Error cleaning up ${name}:`, error);
             }
         }
 
@@ -272,7 +273,7 @@ class IntegrationsManager {
      */
     emit(event, data) {
         // Simple event emission - could be extended with proper EventEmitter
-        console.log(`IntegrationsManager event: ${event}`, data);
+        logger.info(`IntegrationsManager event: ${event}`, data);
     }
 }
 

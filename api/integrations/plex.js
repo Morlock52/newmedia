@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Plex Integration Wrapper
  * Simplified interface for Plex media server integration
@@ -42,14 +43,14 @@ async function quickSetup(options = {}) {
         // Test connection and authenticate if needed
         const connectionResult = await plex.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Plex integration setup successfully');
+            logger.info('✅ Plex integration setup successfully');
         } else {
-            console.warn('⚠️ Plex connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Plex connection test failed:', connectionResult.error);
         }
         
         return plex;
     } catch (error) {
-        console.error('❌ Plex quick setup failed:', error.message);
+        logger.error('❌ Plex quick setup failed:', error.message);
         throw error;
     }
 }

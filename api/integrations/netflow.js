@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * NetFlow Integration Wrapper
  * Simplified interface for NetFlow network monitoring
@@ -42,14 +43,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await netflow.testConnection();
         if (connectionResult.success) {
-            console.log('✅ NetFlow integration setup successfully');
+            logger.info('✅ NetFlow integration setup successfully');
         } else {
-            console.warn('⚠️ NetFlow connection test failed:', connectionResult.error);
+            logger.warn('⚠️ NetFlow connection test failed:', connectionResult.error);
         }
         
         return netflow;
     } catch (error) {
-        console.error('❌ NetFlow quick setup failed:', error.message);
+        logger.error('❌ NetFlow quick setup failed:', error.message);
         throw error;
     }
 }

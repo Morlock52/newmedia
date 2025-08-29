@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('./scripts/console-shim');
 
 /**
  * Startup Script for Real Media Server Backend

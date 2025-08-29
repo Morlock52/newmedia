@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * IndexerService - Prowlarr master indexer with 500+ trackers
  * Provides comprehensive indexer management and search capabilities
@@ -70,7 +71,7 @@ class IndexerService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🔍 Initializing IndexerService...');
+            logger.info('🔍 Initializing IndexerService...');
             
             // Test Prowlarr connection
             await this.testProwlarrConnection();
@@ -86,11 +87,11 @@ class IndexerService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ IndexerService initialized successfully');
+            logger.info('✅ IndexerService initialized successfully');
             
             return { success: true, message: 'IndexerService initialized' };
         } catch (error) {
-            console.error('❌ IndexerService initialization failed:', error);
+            logger.error('❌ IndexerService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -110,9 +111,9 @@ class IndexerService extends EventEmitter {
                 throw new Error('Invalid Prowlarr response');
             }
             
-            console.log(`✅ Prowlarr connection verified (v${response.data.version})`);
+            logger.info(`✅ Prowlarr connection verified (v${response.data.version})`);
         } catch (error) {
-            console.error('❌ Prowlarr connection failed:', error.message);
+            logger.error('❌ Prowlarr connection failed:', error.message);
             throw error;
         }
     }
@@ -157,10 +158,10 @@ class IndexerService extends EventEmitter {
             // Update statistics
             this.updateStatistics();
             
-            console.log(`✅ Loaded ${this.indexers.size} indexers from Prowlarr`);
+            logger.info(`✅ Loaded ${this.indexers.size} indexers from Prowlarr`);
             this.emit('indexersLoaded', { count: this.indexers.size });
         } catch (error) {
-            console.error('❌ Failed to load indexers:', error);
+            logger.error('❌ Failed to load indexers:', error);
             throw error;
         }
     }
@@ -210,7 +211,7 @@ class IndexerService extends EventEmitter {
     async configureSyncApps() {
         try {
             if (!this.config.enableAutoConfig) {
-                console.log('⚠️ Auto-configuration disabled, skipping sync apps setup');
+                logger.info('⚠️ Auto-configuration disabled, skipping sync apps setup');
                 return;
             }
             
@@ -236,9 +237,9 @@ class IndexerService extends EventEmitter {
                 });
             });
             
-            console.log(`✅ Configured ${this.syncApps.size} sync applications`);
+            logger.info(`✅ Configured ${this.syncApps.size} sync applications`);
         } catch (error) {
-            console.error('❌ Sync apps configuration failed:', error.message);
+            logger.error('❌ Sync apps configuration failed:', error.message);
         }
     }
 
@@ -259,7 +260,7 @@ class IndexerService extends EventEmitter {
                 ...options
             };
             
-            console.log(`🔍 Starting search: "${query}" (${searchId})`);
+            logger.info(`🔍 Starting search: "${query}" (${searchId})`);
             
             // Build search URL
             const searchUrl = this.buildSearchUrl(query, searchOptions);
@@ -293,7 +294,7 @@ class IndexerService extends EventEmitter {
             
             this.emit('searchCompleted', searchLog);
             
-            console.log(`✅ Search completed: ${processedResults.length} results in ${duration}ms`);
+            logger.info(`✅ Search completed: ${processedResults.length} results in ${duration}ms`);
             
             return {
                 success: true,
@@ -305,7 +306,7 @@ class IndexerService extends EventEmitter {
                 indexersSearched: this.getActiveIndexerCount(searchOptions.indexerIds)
             };
         } catch (error) {
-            console.error('❌ Search failed:', error);
+            logger.error('❌ Search failed:', error);
             
             this.updateSearchStatistics(false);
             
@@ -521,7 +522,7 @@ class IndexerService extends EventEmitter {
                 error: success ? null : response.data?.error
             };
         } catch (error) {
-            console.error(`❌ Indexer test failed for ${indexerId}:`, error.message);
+            logger.error(`❌ Indexer test failed for ${indexerId}:`, error.message);
             
             const indexer = this.indexers.get(indexerId);
             if (indexer) {
@@ -538,7 +539,7 @@ class IndexerService extends EventEmitter {
      */
     async testAllIndexers() {
         try {
-            console.log('🧪 Testing all active indexers...');
+            logger.info('🧪 Testing all active indexers...');
             
             const activeIndexers = Array.from(this.indexers.values())
                 .filter(indexer => indexer.enable && indexer.status === 'active');
@@ -575,7 +576,7 @@ class IndexerService extends EventEmitter {
             const successful = results.filter(r => r.success).length;
             const failed = results.filter(r => !r.success).length;
             
-            console.log(`✅ Indexer testing completed: ${successful} successful, ${failed} failed`);
+            logger.info(`✅ Indexer testing completed: ${successful} successful, ${failed} failed`);
             
             return {
                 success: true,
@@ -588,7 +589,7 @@ class IndexerService extends EventEmitter {
                 }
             };
         } catch (error) {
-            console.error('❌ Indexer testing failed:', error);
+            logger.error('❌ Indexer testing failed:', error);
             throw error;
         }
     }
@@ -653,13 +654,13 @@ class IndexerService extends EventEmitter {
         this.syncTimer = setInterval(async () => {
             try {
                 await this.loadIndexers();
-                console.log('🔄 Indexers synchronized with Prowlarr');
+                logger.info('🔄 Indexers synchronized with Prowlarr');
             } catch (error) {
-                console.warn('⚠️ Indexer sync failed:', error.message);
+                logger.warn('⚠️ Indexer sync failed:', error.message);
             }
         }, this.config.syncInterval);
         
-        console.log('✅ Indexer sync timer started');
+        logger.info('✅ Indexer sync timer started');
     }
 
     /**
@@ -783,7 +784,7 @@ class IndexerService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up IndexerService...');
+            logger.info('🧹 Cleaning up IndexerService...');
             
             if (this.syncTimer) {
                 clearInterval(this.syncTimer);
@@ -796,9 +797,9 @@ class IndexerService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ IndexerService cleanup completed');
+            logger.info('✅ IndexerService cleanup completed');
         } catch (error) {
-            console.error('❌ IndexerService cleanup failed:', error);
+            logger.error('❌ IndexerService cleanup failed:', error);
         }
     }
 }

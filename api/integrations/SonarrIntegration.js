@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Sonarr Integration Module
  * Complete Sonarr API v3 integration with calendar, queue, history
@@ -540,7 +541,7 @@ class SonarrIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Sonarr webhook error:', error);
+                logger.error('Sonarr webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

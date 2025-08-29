@@ -96,7 +96,7 @@
       "id": "emby",
       "name": "Emby",
       "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/emby.svg",
-      "url": "http://localhost:8922",
+      "url": "http://localhost:8097",
       "category": "media-servers",
       "description": "Alternative Media Server"
     },
@@ -168,7 +168,7 @@
       "id": "qbittorrent",
       "name": "qBittorrent",
       "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/qbittorrent.svg",
-      "url": "http://localhost:8090",
+      "url": "http://localhost:8080",
       "category": "downloads",
       "description": "Torrent Client",
       "integration": {
@@ -200,7 +200,7 @@
       "id": "sabnzbd",
       "name": "SABnzbd",
       "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/sabnzbd.svg",
-      "url": "http://localhost:8085",
+      "url": "http://localhost:8081",
       "category": "downloads",
       "description": "Usenet Downloader",
       "integration": {
@@ -303,7 +303,7 @@
       "id": "grafana",
       "name": "Grafana",
       "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/grafana.svg",
-      "url": "http://localhost:3003",
+      "url": "http://localhost:3000",
       "category": "monitoring",
       "description": "Metrics Visualization"
     },

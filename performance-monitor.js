@@ -1,6 +1,8 @@
 // Advanced Performance Monitoring System
 // Tracks Core Web Vitals, custom metrics, and provides optimization insights
 
+require('./scripts/console-shim');
+
 class AdvancedPerformanceMonitor {
     constructor(options = {}) {
         this.options = {

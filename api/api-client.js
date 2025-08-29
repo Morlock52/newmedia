@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 /**
  * Modern API Client with Retry Logic, Circuit Breaker, and Fallbacks
  * Implements modern API integration patterns for robust backend communication
@@ -144,7 +145,7 @@ class APIClient {
             try {
                 modifiedConfig = await interceptor(modifiedConfig);
             } catch (error) {
-                console.error('Request interceptor error:', error);
+                logger.error('Request interceptor error:', error);
             }
         }
         
@@ -161,7 +162,7 @@ class APIClient {
             try {
                 modifiedResponse = await interceptor(modifiedResponse);
             } catch (error) {
-                console.error('Response interceptor error:', error);
+                logger.error('Response interceptor error:', error);
             }
         }
         
@@ -366,7 +367,7 @@ class ChatbotAPIClient extends APIClient {
                 settings
             });
         } catch (error) {
-            console.warn('Chatbot API unavailable, using fallback:', error.message);
+            logger.warn('Chatbot API unavailable, using fallback:', error.message);
             
             // Return fallback response
             return {
@@ -400,7 +401,7 @@ class ConfigServerAPIClient extends APIClient {
         try {
             return await this.get('/api/docker/services');
         } catch (error) {
-            console.warn('Config server unavailable, using fallback:', error.message);
+            logger.warn('Config server unavailable, using fallback:', error.message);
             
             return {
                 data: this.fallbackData,
@@ -414,7 +415,7 @@ class ConfigServerAPIClient extends APIClient {
         try {
             return await this.get(`/api/docker/services/${serviceName}`);
         } catch (error) {
-            console.warn(`Service ${serviceName} status unavailable:`, error.message);
+            logger.warn(`Service ${serviceName} status unavailable:`, error.message);
             
             return {
                 data: {
@@ -508,23 +509,23 @@ const configServerAPI = new ConfigServerAPIClient();
 if (typeof window !== 'undefined' && window.CONFIG?.debug?.enabled) {
     [chatbotAPI, configServerAPI].forEach(client => {
         client.on('request-start', (data) => {
-            console.log(`API Request Start:`, data);
+            logger.info(`API Request Start:`, data);
         });
         
         client.on('request-success', (data) => {
-            console.log(`API Request Success:`, data);
+            logger.info(`API Request Success:`, data);
         });
         
         client.on('request-error', (data) => {
-            console.warn(`API Request Error:`, data);
+            logger.warn(`API Request Error:`, data);
         });
         
         client.on('request-retry', (data) => {
-            console.log(`API Request Retry:`, data);
+            logger.info(`API Request Retry:`, data);
         });
         
         client.on('circuit-breaker', (data) => {
-            console.warn(`Circuit Breaker:`, data);
+            logger.warn(`Circuit Breaker:`, data);
         });
     });
 }

@@ -12,10 +12,21 @@ const { promisify } = require('util');
 const fs = require('fs');
 const path = require('path');
 
+const winston = require('winston');
+
 // Performance optimization modules
 const LRU = require('lru-cache');
 const NodeCache = require('node-cache');
 const redis = require('redis');
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.simple()
+  ),
+  transports: [new winston.transports.Console()]
+});
 
 class PerformanceOptimizedAPI {
     constructor(options = {}) {
@@ -55,7 +66,7 @@ class PerformanceOptimizedAPI {
     }
 
     async init() {
-        console.log('🚀 Initializing Performance-Optimized API Server...');
+        logger.info('🚀 Initializing Performance-Optimized API Server...');
 
         // Initialize Redis if available
         await this.initRedis();
@@ -72,7 +83,7 @@ class PerformanceOptimizedAPI {
         // Setup error handling
         this.setupErrorHandling();
 
-        console.log('✅ API Server initialized successfully');
+        logger.info('✅ API Server initialized successfully');
     }
 
     async initRedis() {
@@ -83,14 +94,15 @@ class PerformanceOptimizedAPI {
                 });
 
                 await this.redisClient.connect();
-                console.log('✅ Redis connected for caching');
+                logger.info('✅ Redis connected for caching');
             } catch (error) {
-                console.warn('⚠️  Redis connection failed, using memory cache:', error.message);
+                logger.warn('⚠️  Redis connection failed, using memory cache:', error.message);
             }
         }
     }
 
     setupMiddleware() {
+        const self = this;
         // Security headers
         this.app.use(helmet({
             contentSecurityPolicy: {
@@ -173,22 +185,23 @@ class PerformanceOptimizedAPI {
             }
         }));
 
-        // Request timing middleware
         this.app.use((req, res, next) => {
             req.startTime = process.hrtime.bigint();
-            
-            // Override res.json to measure response time
+
             const originalJson = res.json;
             res.json = function(data) {
                 const duration = Number(process.hrtime.bigint() - req.startTime) / 1000000;
                 res.set('X-Response-Time', `${duration.toFixed(2)}ms`);
-                
-                // Update stats
-                req.app.parent.updateRequestStats(duration);
-                
+
+                try {
+                    self.updateRequestStats(duration);
+                } catch (e) {
+                    logger.debug('Failed to update request stats', e && e.message);
+                }
+
                 return originalJson.call(this, data);
             };
-            
+
             next();
         });
 
@@ -268,7 +281,7 @@ class PerformanceOptimizedAPI {
                             this.memoryCache.set(cacheKey, cacheData, 300);
                         }
                     } catch (error) {
-                        console.warn('Cache storage failed:', error.message);
+                    logger.warn('Cache storage failed:', error.message);
                     }
 
                     res.set('X-Cache', 'MISS');
@@ -276,10 +289,10 @@ class PerformanceOptimizedAPI {
                 };
 
                 next();
-            } catch (error) {
-                console.warn('Cache middleware error:', error.message);
-                next();
-            }
+                } catch (error) {
+                    logger.warn('Cache middleware error:', error.message);
+                    next();
+                }
         };
     }
 
@@ -468,16 +481,19 @@ class PerformanceOptimizedAPI {
 
     async checkServiceStatus(service) {
         const axios = require('axios');
-        
+
         try {
+            const start = Date.now();
             const response = await axios.get(`http://localhost:${service.port}`, {
                 timeout: service.timeout,
                 headers: { 'User-Agent': 'MediaServer-HealthCheck/1.0' }
             });
 
+            const responseTime = Date.now() - start;
+
             return {
                 available: true,
-                responseTime: response.duration || 0,
+                responseTime,
                 statusCode: response.status,
                 timestamp: Date.now()
             };
@@ -535,7 +551,8 @@ class PerformanceOptimizedAPI {
         }
 
         // Cache optimization
-        if (cacheStats.hits / (cacheStats.hits + cacheStats.misses) < 0.7) {
+        const totalCacheOps = (cacheStats.hits || 0) + (cacheStats.misses || 0);
+        if (totalCacheOps > 0 && (cacheStats.hits / totalCacheOps) < 0.7) {
             recommendations.push({
                 type: 'cache',
                 priority: 'medium',
@@ -571,32 +588,33 @@ class PerformanceOptimizedAPI {
     setupPerformanceMonitoring() {
         // GC monitoring
         if (global.gc) {
-            const v8 = require('v8');
             const originalGC = global.gc;
-            
+
             global.gc = function() {
                 const before = process.memoryUsage();
                 const result = originalGC();
                 const after = process.memoryUsage();
-                
-                console.log(`GC: Freed ${Math.round((before.heapUsed - after.heapUsed) / 1024 / 1024)}MB`);
+
+                logger.info(`GC: Freed ${Math.round((before.heapUsed - after.heapUsed) / 1024 / 1024)}MB`);
                 return result;
             };
         }
 
         // Memory leak detection
         let memoryBaseline = process.memoryUsage().heapUsed;
+        let lastBaselineReset = Date.now();
         setInterval(() => {
             const current = process.memoryUsage().heapUsed;
             const growth = current - memoryBaseline;
-            
-            if (growth > 50 * 1024 * 1024) { // 50MB growth
-                console.warn(`⚠️  Memory leak detected: ${Math.round(growth / 1024 / 1024)}MB growth`);
+
+            if (growth > 50 * 1024 * 1024) {
+                logger.warn(`⚠️  Memory leak detected: ${Math.round(growth / 1024 / 1024)}MB growth`);
             }
-            
-            // Reset baseline periodically
-            if (Date.now() % (10 * 60 * 1000) === 0) {
+
+            const now = Date.now();
+            if (now - lastBaselineReset >= 10 * 60 * 1000) {
                 memoryBaseline = current;
+                lastBaselineReset = now;
             }
         }, 30000);
 
@@ -604,17 +622,16 @@ class PerformanceOptimizedAPI {
         setInterval(() => {
             const now = Date.now();
             const duration = now - this.requestStats.lastReset;
-            
-            console.log(`📊 Request Stats (${Math.round(duration / 1000)}s): ${this.requestStats.total} total, ${this.requestStats.errors} errors, ${this.requestStats.averageResponseTime.toFixed(2)}ms avg`);
-            
-            // Reset stats
+
+            logger.info(`📊 Request Stats (${Math.round(duration / 1000)}s): ${this.requestStats.total} total, ${this.requestStats.errors} errors, ${this.requestStats.averageResponseTime.toFixed(2)}ms avg`);
+
             this.requestStats = {
                 total: 0,
                 errors: 0,
                 averageResponseTime: 0,
                 lastReset: now
             };
-        }, 5 * 60 * 1000); // Every 5 minutes
+        }, 5 * 60 * 1000);
     }
 
     updateRequestStats(duration) {
@@ -627,7 +644,7 @@ class PerformanceOptimizedAPI {
     setupErrorHandling() {
         // Global error handler
         this.app.use((error, req, res, next) => {
-            console.error('API Error:', error);
+            logger.error('API Error:', error);
             
             this.requestStats.errors++;
             
@@ -657,12 +674,12 @@ class PerformanceOptimizedAPI {
         process.on('SIGINT', () => this.gracefulShutdown());
         
         process.on('uncaughtException', (error) => {
-            console.error('Uncaught Exception:', error);
+            logger.error('Uncaught Exception:', error);
             this.gracefulShutdown();
         });
 
         process.on('unhandledRejection', (reason, promise) => {
-            console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+            logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
         });
     }
 
@@ -723,7 +740,7 @@ class PerformanceOptimizedAPI {
     }
 
     async gracefulShutdown() {
-        console.log('🛑 Graceful shutdown initiated...');
+        logger.info('🛑 Graceful shutdown initiated...');
         
         // Close Redis connection
         if (this.redisClient) {
@@ -734,28 +751,28 @@ class PerformanceOptimizedAPI {
         this.memoryCache.close();
         this.cache.clear();
         
-        console.log('✅ Shutdown complete');
+        logger.info('✅ Shutdown complete');
         process.exit(0);
     }
 
     start() {
         if (this.options.enableClustering && cluster.isMaster) {
             const numCPUs = os.cpus().length;
-            console.log(`🚀 Starting ${numCPUs} workers...`);
+            logger.info(`🚀 Starting ${numCPUs} workers...`);
             
             for (let i = 0; i < numCPUs; i++) {
                 cluster.fork();
             }
             
             cluster.on('exit', (worker, code, signal) => {
-                console.log(`Worker ${worker.process.pid} died. Restarting...`);
+                logger.warn(`Worker ${worker.process.pid} died. Restarting...`);
                 cluster.fork();
             });
         } else {
             this.server = this.app.listen(this.options.port, () => {
-                console.log(`🚀 Performance-Optimized API Server running on port ${this.options.port}`);
-                console.log(`📊 Process ID: ${process.pid}`);
-                console.log(`💾 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+                logger.info(`🚀 Performance-Optimized API Server running on port ${this.options.port}`);
+                logger.info(`📊 Process ID: ${process.pid}`);
+                logger.info(`💾 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
             });
 
             // Set up server optimizations

@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Example Usage of Media Server Integrations
  * Demonstrates how to integrate all services into an Express application
@@ -28,15 +29,15 @@ class MediaServerAPI {
     }
 
     async initialize() {
-        console.log('🚀 Initializing Media Server API...');
+        logger.info('🚀 Initializing Media Server API...');
         
         // Initialize all configured integrations
         const results = await this.integrationsManager.initializeAll();
-        console.log('📡 Integration Status:', results);
+        logger.info('📡 Integration Status:', results);
         
         // Setup webhooks for all integrations
         this.integrationsManager.setupWebhooks(this.app);
-        console.log('🎣 Webhooks configured');
+        logger.info('🎣 Webhooks configured');
         
         return results;
     }
@@ -447,15 +448,15 @@ class MediaServerAPI {
 
     start(port = 3002) {
         this.app.listen(port, () => {
-            console.log(`🌟 Media Server API running on port ${port}`);
-            console.log(`📖 Health check: http://localhost:${port}/health`);
-            console.log(`📊 Statistics: http://localhost:${port}/api/stats`);
-            console.log(`🔍 Search: http://localhost:${port}/api/search?q=query`);
+            logger.info(`🌟 Media Server API running on port ${port}`);
+            logger.info(`📖 Health check: http://localhost:${port}/health`);
+            logger.info(`📊 Statistics: http://localhost:${port}/api/stats`);
+            logger.info(`🔍 Search: http://localhost:${port}/api/search?q=query`);
         });
     }
 
     async cleanup() {
-        console.log('🧹 Cleaning up integrations...');
+        logger.info('🧹 Cleaning up integrations...');
         this.integrationsManager.cleanup();
     }
 }
@@ -470,13 +471,13 @@ async function main() {
         
         // Graceful shutdown
         process.on('SIGINT', async () => {
-            console.log('\n🛑 Shutting down gracefully...');
+            logger.info('\n🛑 Shutting down gracefully...');
             await api.cleanup();
             process.exit(0);
         });
         
     } catch (error) {
-        console.error('❌ Failed to start API:', error);
+        logger.error('❌ Failed to start API:', error);
         process.exit(1);
     }
 }

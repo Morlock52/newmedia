@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Integration Test Suite
  * Tests all service integrations to ensure they work correctly
@@ -49,21 +50,21 @@ class IntegrationTester {
             test.status = 'skipped';
             test.skipped = true;
             this.results.summary.skipped++;
-            console.log(`⏸️  SKIP: ${name} - ${skipReason}`);
+            logger.info(`⏸️  SKIP: ${name} - ${skipReason}`);
             return;
         }
 
         try {
-            console.log(`🧪 TEST: ${name}`);
+            logger.info(`🧪 TEST: ${name}`);
             await testFn();
             test.status = 'passed';
             this.results.summary.passed++;
-            console.log(`✅ PASS: ${name}`);
+            logger.info(`✅ PASS: ${name}`);
         } catch (error) {
             test.status = 'failed';
             test.error = error.message;
             this.results.summary.failed++;
-            console.error(`❌ FAIL: ${name} - ${error.message}`);
+            logger.error(`❌ FAIL: ${name} - ${error.message}`);
         } finally {
             test.endTime = new Date();
             test.duration = test.endTime - test.startTime;
@@ -490,7 +491,7 @@ class IntegrationTester {
      * Run all tests
      */
     async runAllTests() {
-        console.log('🚀 Starting Integration Tests...\n');
+        logger.info('🚀 Starting Integration Tests...\n');
 
         await this.testJellyfinIntegration();
         await this.testPlexIntegration();
@@ -511,35 +512,35 @@ class IntegrationTester {
      * Generate test report
      */
     generateReport() {
-        console.log('\n📊 TEST RESULTS SUMMARY');
-        console.log('========================');
-        console.log(`Total Tests: ${this.results.summary.total}`);
-        console.log(`✅ Passed: ${this.results.summary.passed}`);
-        console.log(`❌ Failed: ${this.results.summary.failed}`);
-        console.log(`⏸️  Skipped: ${this.results.summary.skipped}`);
+        logger.info('\n📊 TEST RESULTS SUMMARY');
+        logger.info('========================');
+        logger.info(`Total Tests: ${this.results.summary.total}`);
+        logger.info(`✅ Passed: ${this.results.summary.passed}`);
+        logger.info(`❌ Failed: ${this.results.summary.failed}`);
+        logger.info(`⏸️  Skipped: ${this.results.summary.skipped}`);
         
         const successRate = ((this.results.summary.passed / (this.results.summary.total - this.results.summary.skipped)) * 100).toFixed(1);
-        console.log(`📈 Success Rate: ${successRate}%`);
+        logger.info(`📈 Success Rate: ${successRate}%`);
 
         if (this.results.summary.failed > 0) {
-            console.log('\n❌ FAILED TESTS:');
+            logger.info('\n❌ FAILED TESTS:');
             this.results.tests
                 .filter(t => t.status === 'failed')
                 .forEach(test => {
-                    console.log(`   - ${test.name}: ${test.error}`);
+                    logger.info(`   - ${test.name}: ${test.error}`);
                 });
         }
 
         if (this.results.summary.skipped > 0) {
-            console.log('\n⏸️  SKIPPED TESTS:');
+            logger.info('\n⏸️  SKIPPED TESTS:');
             this.results.tests
                 .filter(t => t.skipped)
                 .forEach(test => {
-                    console.log(`   - ${test.name}: ${test.skipReason}`);
+                    logger.info(`   - ${test.name}: ${test.skipReason}`);
                 });
         }
 
-        console.log('\n✨ Test run completed!');
+        logger.info('\n✨ Test run completed!');
     }
 }
 

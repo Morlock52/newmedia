@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 const express = require('express');
 const cors = require('cors');
 const WebSocket = require('ws');
@@ -83,7 +84,7 @@ app.get('/api/services', async (req, res) => {
                             memory: Math.round(memPercent)
                         };
                     } catch (err) {
-                        console.error(`Error getting stats for ${name}:`, err);
+                        logger.error(`Error getting stats for ${name}:`, err);
                     }
                 }
             }
@@ -99,7 +100,7 @@ app.get('/api/services', async (req, res) => {
 
         res.json(services);
     } catch (error) {
-        console.error('Error fetching services:', error);
+        logger.error('Error fetching services:', error);
         res.status(500).json({ error: 'Failed to fetch services' });
     }
 });
@@ -128,7 +129,7 @@ app.post('/api/services/:name/restart', async (req, res) => {
 
         res.json({ message: `${name} restarted successfully` });
     } catch (error) {
-        console.error('Error restarting service:', error);
+        logger.error('Error restarting service:', error);
         res.status(500).json({ error: 'Failed to restart service' });
     }
 });
@@ -159,7 +160,7 @@ app.get('/api/stats', async (req, res) => {
                 const memUsage = stats.memory_stats.usage;
                 totalMemory += memUsage;
             } catch (err) {
-                console.error('Error getting container stats:', err);
+                logger.error('Error getting container stats:', err);
             }
         }
 
@@ -186,7 +187,7 @@ app.get('/api/stats', async (req, res) => {
             bandwidth: Math.random() * 100 // Would need actual network monitoring
         });
     } catch (error) {
-        console.error('Error fetching stats:', error);
+        logger.error('Error fetching stats:', error);
         res.status(500).json({ error: 'Failed to fetch stats' });
     }
 });
@@ -217,7 +218,7 @@ app.post('/api/ai/chat', async (req, res) => {
 const wss = new WebSocket.Server({ port: 8001 });
 
 wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    logger.info('WebSocket client connected');
     
     // Send updates every 2 seconds
     const interval = setInterval(async () => {
@@ -232,21 +233,21 @@ wss.on('connection', (ws) => {
             };
             ws.send(JSON.stringify(stats));
         } catch (error) {
-            console.error('WebSocket error:', error);
+            logger.error('WebSocket error:', error);
         }
     }, 2000);
     
     ws.on('close', () => {
         clearInterval(interval);
-        console.log('WebSocket client disconnected');
+        logger.info('WebSocket client disconnected');
     });
 });
 
 // Start server
 const PORT = process.env.PORT || 3738;
 app.listen(PORT, () => {
-    console.log(`Cyberpunk API Server running on port ${PORT}`);
-    console.log(`WebSocket server running on port 8001`);
+    logger.info(`Cyberpunk API Server running on port ${PORT}`);
+    logger.info(`WebSocket server running on port 8001`);
 });
 
 module.exports = app;

@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Jellyfin Integration Module
  * Complete Jellyfin API integration with MediaBrowser token authentication
@@ -501,7 +502,7 @@ class JellyfinIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Jellyfin webhook error:', error);
+                logger.error('Jellyfin webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

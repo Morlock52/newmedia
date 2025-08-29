@@ -7,6 +7,7 @@
 import { franc } from 'franc';
 import axios from 'axios';
 import { EventEmitter } from 'events';
+import logger from '../logger.js';
 
 export class LanguageProcessor extends EventEmitter {
   constructor(config = {}) {
@@ -246,7 +247,7 @@ export class LanguageProcessor extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Language Processing Service...');
+      logger.info('Initializing Language Processing Service...');
       
       // Test provider connectivity
       await this.testProviderConnectivity();
@@ -258,11 +259,11 @@ export class LanguageProcessor extends EventEmitter {
       this.setupCacheCleanup();
       
       this.isInitialized = true;
-      console.log(`Language Processing Service initialized with ${Object.keys(this.supportedLanguages).length} languages`);
+      logger.info(`Language Processing Service initialized with ${Object.keys(this.supportedLanguages).length} languages`);
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Language Processing Service:', error);
+      logger.error('Failed to initialize Language Processing Service:', error);
       throw error;
     }
   }
@@ -294,9 +295,9 @@ export class LanguageProcessor extends EventEmitter {
       const providers = ['google', 'azure', 'deepl'];
       if (result.status === 'fulfilled') {
         this.providerStatus[providers[index]] = true;
-        console.log(`✅ ${providers[index]} translation provider connected`);
+        logger.info(`✅ ${providers[index]} translation provider connected`);
       } else {
-        console.warn(`⚠️  ${providers[index]} translation provider not available:`, result.reason.message);
+        logger.warn(`⚠️  ${providers[index]} translation provider not available: ${result.reason?.message || result.reason}`);
       }
     });
   }
@@ -353,7 +354,7 @@ export class LanguageProcessor extends EventEmitter {
   async initializeDetectionModels() {
     // franc library is already available for language detection
     // Additional models could be loaded here
-    console.log('Language detection models ready');
+    logger.info('Language detection models ready');
   }
 
   /**
@@ -442,7 +443,7 @@ export class LanguageProcessor extends EventEmitter {
       return result;
 
     } catch (error) {
-      console.error('Language detection failed:', error);
+      logger.error('Language detection failed:', error);
       return {
         language: 'unknown',
         confidence: 0,
@@ -700,7 +701,7 @@ export class LanguageProcessor extends EventEmitter {
       return result;
 
     } catch (error) {
-      console.error('Translation failed:', error);
+      logger.error('Translation failed:', error);
       this.emit('translationError', { error, options });
       throw error;
     }
@@ -910,7 +911,7 @@ export class LanguageProcessor extends EventEmitter {
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Language Processing Service...');
+    logger.info('Cleaning up Language Processing Service...');
     this.clearCaches();
     this.isInitialized = false;
     this.removeAllListeners();

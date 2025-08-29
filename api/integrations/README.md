@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 # Media Server Service Integrations
 
 A comprehensive collection of service integration modules for media server APIs with complete functionality, authentication, error handling, and webhook support.
@@ -77,13 +78,13 @@ const { IntegrationsManager } = require('./integrations');
 const manager = new IntegrationsManager();
 const results = await manager.initializeAll();
 
-console.log('Integration status:', results);
+logger.info('Integration status:', results);
 
 // Get a specific integration
 const jellyfin = manager.getIntegration('jellyfin');
 if (jellyfin) {
     const libraries = await jellyfin.getLibraries();
-    console.log('Jellyfin libraries:', libraries);
+    logger.info('Jellyfin libraries:', libraries);
 }
 
 // Setup webhooks on Express app
@@ -124,7 +125,7 @@ await jellyfin.markPlayed('item-id');
 
 // Listen for events
 jellyfin.on('webhook', (event) => {
-    console.log('Jellyfin webhook received:', event);
+    logger.info('Jellyfin webhook received:', event);
 });
 ```
 
@@ -308,7 +309,7 @@ const flows = netflow.searchFlows({
 
 // Listen for media streaming detection
 netflow.on('mediaFlowDetected', (data) => {
-    console.log('Media streaming detected:', data);
+    logger.info('Media streaming detected:', data);
 });
 
 // Export flow data
@@ -330,15 +331,15 @@ integration.on('error', (error) => {
 
 // Service-specific events
 jellyfin.on('itemPlayed', (itemId) => {
-    console.log('Item played:', itemId);
+    logger.info('Item played:', itemId);
 });
 
 sonarr.on('episodeGrabbed', (event) => {
-    console.log('Episode grabbed:', event);
+    logger.info('Episode grabbed:', event);
 });
 
 plex.on('playbackStarted', (event) => {
-    console.log('Playback started:', event);
+    logger.info('Playback started:', event);
 });
 ```
 
@@ -755,7 +756,7 @@ try {
     const result = await integration.someMethod();
 } catch (error) {
     // Structured error information
-    console.error('Integration error:', {
+    logger.error('Integration error:', {
         service: 'jellyfin',
         method: 'someMethod',
         message: error.message,
@@ -766,7 +767,7 @@ try {
 
 // Event-based error handling
 integration.on('error', (error) => {
-    console.error('Integration error event:', error);
+    logger.error('Integration error event:', error);
 });
 ```
 

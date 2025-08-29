@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * TranscodingService - FileFlows GPU transcoding with hardware acceleration
  * Provides video/audio transcoding and optimization for media files
@@ -75,7 +76,7 @@ class TranscodingService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🎥 Initializing TranscodingService...');
+            logger.info('🎥 Initializing TranscodingService...');
             
             // Check dependencies
             await this.checkDependencies();
@@ -94,11 +95,11 @@ class TranscodingService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ TranscodingService initialized successfully');
+            logger.info('✅ TranscodingService initialized successfully');
             
             return { success: true, message: 'TranscodingService initialized' };
         } catch (error) {
-            console.error('❌ TranscodingService initialization failed:', error);
+            logger.error('❌ TranscodingService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -126,9 +127,9 @@ class TranscodingService extends EventEmitter {
                 await this.checkGPUSupport();
             }
             
-            console.log('✅ All dependencies verified');
+            logger.info('✅ All dependencies verified');
         } catch (error) {
-            console.error('❌ Dependency check failed:', error);
+            logger.error('❌ Dependency check failed:', error);
             throw error;
         }
     }
@@ -141,22 +142,22 @@ class TranscodingService extends EventEmitter {
             switch (this.config.gpuType) {
                 case 'nvidia':
                     await execAsync('nvidia-smi');
-                    console.log('✅ NVIDIA GPU detected');
+                    logger.info('✅ NVIDIA GPU detected');
                     break;
                 case 'amd':
                     // Check for AMD GPU
-                    console.log('✅ AMD GPU support enabled');
+                    logger.info('✅ AMD GPU support enabled');
                     break;
                 case 'intel':
                     // Check for Intel Quick Sync
-                    console.log('✅ Intel Quick Sync support enabled');
+                    logger.info('✅ Intel Quick Sync support enabled');
                     break;
                 default:
-                    console.warn('⚠️ Unknown GPU type, disabling hardware acceleration');
+                    logger.warn('⚠️ Unknown GPU type, disabling hardware acceleration');
                     this.config.enableGPU = false;
             }
         } catch (error) {
-            console.warn('⚠️ GPU not available, falling back to CPU transcoding');
+            logger.warn('⚠️ GPU not available, falling back to CPU transcoding');
             this.config.enableGPU = false;
         }
     }
@@ -168,9 +169,9 @@ class TranscodingService extends EventEmitter {
         try {
             await fs.mkdir(this.config.tempDir, { recursive: true });
             await fs.mkdir(this.config.outputDir, { recursive: true });
-            console.log('✅ Directories created');
+            logger.info('✅ Directories created');
         } catch (error) {
-            console.error('❌ Directory creation failed:', error);
+            logger.error('❌ Directory creation failed:', error);
             throw error;
         }
     }
@@ -181,7 +182,7 @@ class TranscodingService extends EventEmitter {
     async initializeFileFlows() {
         try {
             if (!this.config.fileflowsUrl) {
-                console.warn('⚠️ FileFlows URL not configured, using direct FFmpeg');
+                logger.warn('⚠️ FileFlows URL not configured, using direct FFmpeg');
                 return;
             }
             
@@ -194,11 +195,11 @@ class TranscodingService extends EventEmitter {
             });
             
             if (response.data) {
-                console.log('✅ FileFlows connection established');
+                logger.info('✅ FileFlows connection established');
                 this.fileflowsAvailable = true;
             }
         } catch (error) {
-            console.warn('⚠️ FileFlows not available, using direct FFmpeg:', error.message);
+            logger.warn('⚠️ FileFlows not available, using direct FFmpeg:', error.message);
             this.fileflowsAvailable = false;
         }
     }
@@ -256,9 +257,9 @@ class TranscodingService extends EventEmitter {
                 this.profiles.set(id, profile);
             });
             
-            console.log(`✅ Transcoding profiles loaded: ${this.profiles.size} profiles`);
+            logger.info(`✅ Transcoding profiles loaded: ${this.profiles.size} profiles`);
         } catch (error) {
-            console.error('❌ Profile loading failed:', error);
+            logger.error('❌ Profile loading failed:', error);
         }
     }
 
@@ -291,7 +292,7 @@ class TranscodingService extends EventEmitter {
             this.queue.push(jobId);
             
             this.emit('jobCreated', job);
-            console.log(`✅ Transcoding job created: ${jobId}`);
+            logger.info(`✅ Transcoding job created: ${jobId}`);
             
             // Process queue
             this.processQueue();
@@ -302,7 +303,7 @@ class TranscodingService extends EventEmitter {
                 job
             };
         } catch (error) {
-            console.error('❌ Transcoding job creation failed:', error);
+            logger.error('❌ Transcoding job creation failed:', error);
             throw error;
         }
     }
@@ -343,7 +344,7 @@ class TranscodingService extends EventEmitter {
                 }))
             };
         } catch (error) {
-            console.error('❌ Media info extraction failed:', error);
+            logger.error('❌ Media info extraction failed:', error);
             throw error;
         }
     }
@@ -393,7 +394,7 @@ class TranscodingService extends EventEmitter {
             this.activeJobs.set(jobId, job);
             
             this.emit('jobStarted', job);
-            console.log(`🎥 Starting transcoding: ${job.inputFile}`);
+            logger.info(`🎥 Starting transcoding: ${job.inputFile}`);
             
             if (this.fileflowsAvailable) {
                 await this.executeFileFlowsJob(job);
@@ -406,14 +407,14 @@ class TranscodingService extends EventEmitter {
             job.progress = 100;
             
             this.emit('jobCompleted', job);
-            console.log(`✅ Transcoding completed: ${job.outputFile}`);
+            logger.info(`✅ Transcoding completed: ${job.outputFile}`);
         } catch (error) {
             job.status = this.jobStatus.FAILED;
             job.error = error.message;
             job.completedAt = new Date();
             
             this.emit('jobFailed', { job, error });
-            console.error(`❌ Transcoding failed: ${error.message}`);
+            logger.error(`❌ Transcoding failed: ${error.message}`);
         } finally {
             this.activeJobs.delete(jobId);
             
@@ -498,7 +499,7 @@ class TranscodingService extends EventEmitter {
             
             const ffmpegCommand = this.buildFFmpegCommand(job, profile);
             
-            console.log(`📝 FFmpeg command: ${ffmpegCommand}`);
+            logger.info(`📝 FFmpeg command: ${ffmpegCommand}`);
             
             await this.executeFFmpegCommand(job, ffmpegCommand);
         } catch (error) {
@@ -626,7 +627,7 @@ class TranscodingService extends EventEmitter {
             this.processQueue();
         }, 5000);
         
-        console.log('✅ Job processor started');
+        logger.info('✅ Job processor started');
     }
 
     /**
@@ -650,11 +651,11 @@ class TranscodingService extends EventEmitter {
             this.activeJobs.delete(jobId);
             
             this.emit('jobCancelled', job);
-            console.log(`✅ Job cancelled: ${jobId}`);
+            logger.info(`✅ Job cancelled: ${jobId}`);
             
             return { success: true, job };
         } catch (error) {
-            console.error('❌ Job cancellation failed:', error);
+            logger.error('❌ Job cancellation failed:', error);
             throw error;
         }
     }
@@ -744,12 +745,12 @@ class TranscodingService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up TranscodingService...');
+            logger.info('🧹 Cleaning up TranscodingService...');
             
             // Cancel all active jobs
             const activeJobIds = Array.from(this.activeJobs.keys());
             await Promise.all(activeJobIds.map(jobId => 
-                this.cancelJob(jobId).catch(err => console.warn('Job cancellation failed:', err))
+                this.cancelJob(jobId).catch(err => logger.warn('Job cancellation failed:', err))
             ));
             
             this.jobs.clear();
@@ -759,9 +760,9 @@ class TranscodingService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ TranscodingService cleanup completed');
+            logger.info('✅ TranscodingService cleanup completed');
         } catch (error) {
-            console.error('❌ TranscodingService cleanup failed:', error);
+            logger.error('❌ TranscodingService cleanup failed:', error);
         }
     }
 }

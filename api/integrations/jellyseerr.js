@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Jellyseerr Integration Wrapper
  * Simplified interface for Jellyseerr request management
@@ -40,14 +41,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await jellyseerr.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Jellyseerr integration setup successfully');
+            logger.info('✅ Jellyseerr integration setup successfully');
         } else {
-            console.warn('⚠️ Jellyseerr connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Jellyseerr connection test failed:', connectionResult.error);
         }
         
         return jellyseerr;
     } catch (error) {
-        console.error('❌ Jellyseerr quick setup failed:', error.message);
+        logger.error('❌ Jellyseerr quick setup failed:', error.message);
         throw error;
     }
 }

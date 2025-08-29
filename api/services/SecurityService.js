@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * SecurityService - Zero-trust architecture, OAuth2/OIDC with 2FA, intrusion detection
  * Provides comprehensive security monitoring and access control for the media server
@@ -58,7 +59,7 @@ class SecurityService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🔒 Initializing SecurityService...');
+            logger.info('🔒 Initializing SecurityService...');
             
             // Initialize security monitoring
             this.startSecurityMonitoring();
@@ -74,11 +75,11 @@ class SecurityService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ SecurityService initialized successfully');
+            logger.info('✅ SecurityService initialized successfully');
             
             return { success: true, message: 'SecurityService initialized' };
         } catch (error) {
-            console.error('❌ SecurityService initialization failed:', error);
+            logger.error('❌ SecurityService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -127,7 +128,7 @@ class SecurityService extends EventEmitter {
                 sessionId: session.id
             });
 
-            console.log(`✅ User authenticated: ${username}`);
+            logger.info(`✅ User authenticated: ${username}`);
             return {
                 success: true,
                 user: {
@@ -144,7 +145,7 @@ class SecurityService extends EventEmitter {
                 }
             };
         } catch (error) {
-            console.error('❌ Authentication failed:', error);
+            logger.error('❌ Authentication failed:', error);
             throw error;
         }
     }
@@ -188,7 +189,7 @@ class SecurityService extends EventEmitter {
 
             return user;
         } catch (error) {
-            console.error('❌ User validation failed:', error);
+            logger.error('❌ User validation failed:', error);
             return null;
         }
     }
@@ -211,7 +212,7 @@ class SecurityService extends EventEmitter {
                 backupCodes: this.generateBackupCodes()
             };
         } catch (error) {
-            console.error('❌ TOTP generation failed:', error);
+            logger.error('❌ TOTP generation failed:', error);
             throw error;
         }
     }
@@ -230,7 +231,7 @@ class SecurityService extends EventEmitter {
 
             return { success: verified, verified };
         } catch (error) {
-            console.error('❌ TOTP verification failed:', error);
+            logger.error('❌ TOTP verification failed:', error);
             return { success: false, verified: false };
         }
     }
@@ -279,7 +280,7 @@ class SecurityService extends EventEmitter {
 
             return { accessToken, refreshToken };
         } catch (error) {
-            console.error('❌ Token generation failed:', error);
+            logger.error('❌ Token generation failed:', error);
             throw error;
         }
     }
@@ -311,7 +312,7 @@ class SecurityService extends EventEmitter {
 
             return { success: true, tokens };
         } catch (error) {
-            console.error('❌ Token refresh failed:', error);
+            logger.error('❌ Token refresh failed:', error);
             throw error;
         }
     }
@@ -382,7 +383,7 @@ class SecurityService extends EventEmitter {
             this.activeSessions.set(sessionId, session);
             return session;
         } catch (error) {
-            console.error('❌ Session creation failed:', error);
+            logger.error('❌ Session creation failed:', error);
             throw error;
         }
     }
@@ -421,7 +422,7 @@ class SecurityService extends EventEmitter {
                 attempts: current + 1
             });
         } catch (error) {
-            console.error('❌ Failed login handling error:', error);
+            logger.error('❌ Failed login handling error:', error);
         }
     }
 
@@ -491,7 +492,7 @@ class SecurityService extends EventEmitter {
                 });
             }
         } catch (error) {
-            console.error('❌ Intrusion tracking failed:', error);
+            logger.error('❌ Intrusion tracking failed:', error);
         }
     }
 
@@ -520,7 +521,7 @@ class SecurityService extends EventEmitter {
                 reason: hasPermission ? null : 'Insufficient permissions'
             };
         } catch (error) {
-            console.error('❌ Authorization failed:', error);
+            logger.error('❌ Authorization failed:', error);
             return { authorized: false, reason: 'Authorization error' };
         }
     }
@@ -540,9 +541,9 @@ class SecurityService extends EventEmitter {
             // Emit event for external logging
             this.emit('securityEvent', event);
             
-            console.log(`🔍 Security Event [${event.severity}]: ${eventType}`, data);
+            logger.info(`🔍 Security Event [${event.severity}]: ${eventType}`, data);
         } catch (error) {
-            console.error('❌ Security logging failed:', error);
+            logger.error('❌ Security logging failed:', error);
         }
     }
 
@@ -625,7 +626,7 @@ class SecurityService extends EventEmitter {
         });
         
         if (expired.length > 0) {
-            console.log(`🧹 Cleaned up ${expired.length} expired sessions`);
+            logger.info(`🧹 Cleaned up ${expired.length} expired sessions`);
         }
     }
 
@@ -648,7 +649,7 @@ class SecurityService extends EventEmitter {
         });
         
         if (unlocked.length > 0) {
-            console.log(`🔓 Unlocked ${unlocked.length} accounts`);
+            logger.info(`🔓 Unlocked ${unlocked.length} accounts`);
         }
     }
 
@@ -658,12 +659,12 @@ class SecurityService extends EventEmitter {
     async loadSecurityPolicies() {
         try {
             // Load security policies from configuration
-            console.log('📜 Loading security policies...');
+            logger.info('📜 Loading security policies...');
             
             // Default policies loaded
-            console.log('✅ Security policies loaded');
+            logger.info('✅ Security policies loaded');
         } catch (error) {
-            console.warn('⚠️ Security policy loading failed:', error.message);
+            logger.warn('⚠️ Security policy loading failed:', error.message);
         }
     }
 
@@ -725,7 +726,7 @@ class SecurityService extends EventEmitter {
             
             return { success: false, message: 'Session not found' };
         } catch (error) {
-            console.error('❌ Logout failed:', error);
+            logger.error('❌ Logout failed:', error);
             throw error;
         }
     }
@@ -735,7 +736,7 @@ class SecurityService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up SecurityService...');
+            logger.info('🧹 Cleaning up SecurityService...');
             
             this.activeSessions.clear();
             this.failedLogins.clear();
@@ -746,9 +747,9 @@ class SecurityService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ SecurityService cleanup completed');
+            logger.info('✅ SecurityService cleanup completed');
         } catch (error) {
-            console.error('❌ SecurityService cleanup failed:', error);
+            logger.error('❌ SecurityService cleanup failed:', error);
         }
     }
 }

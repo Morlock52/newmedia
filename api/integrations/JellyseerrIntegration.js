@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Jellyseerr Integration Module
  * Complete Jellyseerr API integration with request management and approval workflow
@@ -610,7 +611,7 @@ class JellyseerrIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Jellyseerr webhook error:', error);
+                logger.error('Jellyseerr webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

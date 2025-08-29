@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import { EventEmitter } from 'events';
+import logger from '../logger.js';
 
 export class LLMProcessor extends EventEmitter {
   constructor(config = {}) {
@@ -97,7 +98,7 @@ export class LLMProcessor extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing LLM Processing Service...');
+      logger.info('Initializing LLM Processing Service...');
       
       // Test provider connectivity
       await this.testProviderConnectivity();
@@ -106,11 +107,11 @@ export class LLMProcessor extends EventEmitter {
       this.setupMemoryCleanup();
       
       this.isInitialized = true;
-      console.log('LLM Processing Service initialized successfully');
+      logger.info('LLM Processing Service initialized successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize LLM Processing Service:', error);
+      logger.error('Failed to initialize LLM Processing Service:', error);
       throw error;
     }
   }
@@ -142,9 +143,9 @@ export class LLMProcessor extends EventEmitter {
       const providers = ['openai', 'anthropic', 'gemini'];
       if (result.status === 'fulfilled') {
         this.providerStatus[providers[index]] = true;
-        console.log(`✅ ${providers[index]} LLM provider connected`);
+        logger.info(`✅ ${providers[index]} LLM provider connected`);
       } else {
-        console.warn(`⚠️  ${providers[index]} LLM provider not available:`, result.reason.message);
+        logger.warn(`⚠️  ${providers[index]} LLM provider not available: ${result.reason?.message || result.reason}`);
       }
     });
   }
@@ -294,7 +295,7 @@ export class LLMProcessor extends EventEmitter {
       return result;
 
     } catch (error) {
-      console.error('LLM processing failed:', error);
+      logger.error('LLM processing failed:', error);
       this.emit('processingError', { error, options });
       throw error;
     }
@@ -408,7 +409,7 @@ export class LLMProcessor extends EventEmitter {
       try {
         return await this.callProvider(this.config.primaryProvider, prompt, context);
       } catch (error) {
-        console.warn(`Primary provider ${this.config.primaryProvider} failed:`, error.message);
+        logger.warn(`Primary provider ${this.config.primaryProvider} failed: ${error.message}`);
       }
     }
 
@@ -420,7 +421,7 @@ export class LLMProcessor extends EventEmitter {
       try {
         return await this.callProvider(provider, prompt, context);
       } catch (error) {
-        console.warn(`Provider ${provider} failed:`, error.message);
+        logger.warn(`Provider ${provider} failed: ${error.message}`);
       }
     }
 
@@ -667,7 +668,7 @@ export class LLMProcessor extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Content summarization failed:', error);
+      logger.error('Content summarization failed:', error);
       throw error;
     }
   }
@@ -781,7 +782,7 @@ Respond in JSON format with the following structure:
       }
 
     } catch (error) {
-      console.warn('Insight extraction failed, using basic extraction:', error);
+      logger.warn('Insight extraction failed, using basic extraction:', error);
       return this.extractBasicInsights(summary);
     }
   }
@@ -1180,7 +1181,7 @@ Respond in JSON format with the following structure:
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up LLM Processing Service...');
+    logger.info('Cleaning up LLM Processing Service...');
     this.conversations.clear();
     this.contextCache.clear();
     this.userProfiles.clear();

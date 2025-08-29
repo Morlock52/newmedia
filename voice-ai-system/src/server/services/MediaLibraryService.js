@@ -7,6 +7,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
+import logger from '../logger.js';
 
 export class MediaLibraryService extends EventEmitter {
   constructor(config = {}) {
@@ -65,7 +66,7 @@ export class MediaLibraryService extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Media Library Service...');
+      logger.info('Initializing Media Library Service...');
       
       // Create required directories
       await this.ensureDirectories();
@@ -83,11 +84,11 @@ export class MediaLibraryService extends EventEmitter {
       await this.buildSearchIndices();
       
       this.isInitialized = true;
-      console.log(`Media Library Service initialized with ${this.mediaIndex.size} media files`);
+      logger.info(`Media Library Service initialized with ${this.mediaIndex.size} media files`);
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Media Library Service:', error);
+      logger.error('Failed to initialize Media Library Service:', error);
       throw error;
     }
   }
@@ -124,9 +125,9 @@ export class MediaLibraryService extends EventEmitter {
         this.metadataCache.set(key, value);
       });
       
-      console.log(`Loaded ${this.metadataCache.size} metadata entries from cache`);
+      logger.info(`Loaded ${this.metadataCache.size} metadata entries from cache`);
     } catch (error) {
-      console.log('No existing metadata cache found, starting fresh');
+      logger.info('No existing metadata cache found, starting fresh');
     }
   }
 
@@ -140,7 +141,7 @@ export class MediaLibraryService extends EventEmitter {
       try {
         await this.indexMediaFile(filePath);
       } catch (error) {
-        console.warn(`Failed to index ${filePath}:`, error.message);
+        logger.warn(`Failed to index ${filePath}: ${error.message}`);
       }
     }
     
@@ -179,7 +180,7 @@ export class MediaLibraryService extends EventEmitter {
         }
       }
     } catch (error) {
-      console.error(`Error scanning directory ${directory}:`, error.message);
+      logger.error(`Error scanning directory ${directory}: ${error.message}`);
     }
     
     return mediaFiles;
@@ -294,7 +295,7 @@ export class MediaLibraryService extends EventEmitter {
       }
 
     } catch (error) {
-      console.warn(`Metadata extraction failed for ${filePath}:`, error.message);
+      logger.warn(`Metadata extraction failed for ${filePath}: ${error.message}`);
       metadata.extractionError = error.message;
     }
 
@@ -373,7 +374,7 @@ export class MediaLibraryService extends EventEmitter {
         };
       }
     } catch (error) {
-      console.warn(`Document metadata extraction failed for ${filePath}:`, error.message);
+      logger.warn(`Document metadata extraction failed for ${filePath}: ${error.message}`);
     }
 
     return {
@@ -498,7 +499,7 @@ export class MediaLibraryService extends EventEmitter {
       this.updateSearchIndices(mediaEntry);
     }
     
-    console.log(`Built search indices: ${this.searchIndex.size} terms, ${this.tagIndex.size} tags`);
+    logger.info(`Built search indices: ${this.searchIndex.size} terms, ${this.tagIndex.size} tags`);
   }
 
   /**
@@ -554,7 +555,7 @@ export class MediaLibraryService extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Search failed:', error);
+      logger.error('Search failed:', error);
       this.emit('searchError', { query, error, userId });
       throw error;
     }
@@ -923,7 +924,7 @@ export class MediaLibraryService extends EventEmitter {
       return response;
       
     } catch (error) {
-      console.error('Conversational search failed:', error);
+      logger.error('Conversational search failed:', error);
       return {
         type: 'error',
         message: 'I encountered an error while processing your request. Please try again.',
@@ -1306,7 +1307,7 @@ I understand natural language, so feel free to ask in your own words!`;
       };
 
     } catch (error) {
-      console.error('Media content summarization failed:', error);
+      logger.error('Media content summarization failed:', error);
       throw error;
     }
   }
@@ -1403,7 +1404,7 @@ I understand natural language, so feel free to ask in your own words!`;
       return `Document: ${media.fileName}. This is a ${ext} file that contains textual content.`;
       
     } catch (error) {
-      console.warn('Failed to extract document content:', error);
+      logger.warn('Failed to extract document content:', error);
       return `Document file: ${media.fileName}`;
     }
   }
@@ -1459,7 +1460,7 @@ I understand natural language, so feel free to ask in your own words!`;
       
       await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2));
     } catch (error) {
-      console.warn('Failed to cache summary:', error);
+      logger.warn('Failed to cache summary:', error);
     }
   }
 
@@ -1622,7 +1623,7 @@ I understand natural language, so feel free to ask in your own words!`;
    */
   async executeEditOperation(media, command) {
     // In production, integrate with ffmpeg or similar tools
-    console.log(`Executing ${command.type} on ${media.fileName} with parameters:`, command.parameters);
+    logger.info(`Executing ${command.type} on ${media.fileName} with parameters: ${JSON.stringify(command.parameters)}`);
     
     return {
       command: command.type,
@@ -1684,7 +1685,7 @@ I understand natural language, so feel free to ask in your own words!`;
    */
   async setupFileWatchers() {
     // In production, use fs.watch or chokidar for file system monitoring
-    console.log('File system watchers would be set up here');
+    logger.info('File system watchers would be set up here');
   }
 
   /**
@@ -1696,7 +1697,7 @@ I understand natural language, so feel free to ask in your own words!`;
       const cacheData = Object.fromEntries(this.metadataCache);
       await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2));
     } catch (error) {
-      console.warn('Failed to save metadata cache:', error.message);
+      logger.warn('Failed to save metadata cache:', error.message);
     }
   }
 
@@ -1745,7 +1746,7 @@ I understand natural language, so feel free to ask in your own words!`;
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Media Library Service...');
+    logger.info('Cleaning up Media Library Service...');
     
     // Save metadata cache before cleanup
     await this.saveMetadataCache();

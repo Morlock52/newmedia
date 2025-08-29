@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 /**
  * Socket.IO Server for Real-time Media Server Communication
  * Provides WebSocket connectivity for real-time updates and control
@@ -121,7 +122,7 @@ class MediaSocketServer {
 
     setupSocketHandlers() {
         this.io.on('connection', (socket) => {
-            console.log(`📡 Client connected: ${socket.id}`);
+            logger.info(`📡 Client connected: ${socket.id}`);
             
             // Store client information
             this.clients.set(socket.id, {
@@ -236,7 +237,7 @@ class MediaSocketServer {
             });
 
             socket.on('disconnect', () => {
-                console.log(`📱 Client disconnected: ${socket.id}`);
+                logger.info(`📱 Client disconnected: ${socket.id}`);
                 this.clients.delete(socket.id);
             });
         });
@@ -467,18 +468,18 @@ class MediaSocketServer {
                     }
                 }
             } catch (error) {
-                console.error('Monitoring error:', error.message);
+                logger.error('Monitoring error:', error.message);
             }
         }, 30000);
 
-        console.log('🔄 Service monitoring started');
+        logger.info('🔄 Service monitoring started');
     }
 
     stopMonitoring() {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
             this.monitoringInterval = null;
-            console.log('⏹️ Service monitoring stopped');
+            logger.info('⏹️ Service monitoring stopped');
         }
     }
 
@@ -511,9 +512,9 @@ class MediaSocketServer {
 
     start() {
         this.server.listen(this.port, () => {
-            console.log(`🚀 Socket.IO Media Server running on port ${this.port}`);
-            console.log(`🔌 Socket.IO endpoint: ws://localhost:${this.port}`);
-            console.log(`📡 REST API: http://localhost:${this.port}/api`);
+            logger.info(`🚀 Socket.IO Media Server running on port ${this.port}`);
+            logger.info(`🔌 Socket.IO endpoint: ws://localhost:${this.port}`);
+            logger.info(`📡 REST API: http://localhost:${this.port}/api`);
         });
 
         // Graceful shutdown
@@ -522,13 +523,13 @@ class MediaSocketServer {
     }
 
     shutdown() {
-        console.log('🛑 Shutting down Socket.IO server...');
+        logger.info('🛑 Shutting down Socket.IO server...');
         
         this.stopMonitoring();
         
         // Close all client connections
         this.io.close(() => {
-            console.log('✅ Socket.IO server shut down complete');
+            logger.info('✅ Socket.IO server shut down complete');
             process.exit(0);
         });
     }

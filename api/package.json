@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 {
   "name": "media-assistant-api",
   "version": "1.0.0",
@@ -13,8 +14,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:health": "node test-health.js",
-    "docs": "node -e \"console.log('API Documentation: http://localhost:3002/api/docs')\"",
-    "validate": "node -e \"const MediaServerAPI = require('./server'); console.log('✓ Server validation passed');\""
+    "docs": "node -e \"logger.info('API Documentation: http://localhost:3002/api/docs')\"",
+    "validate": "node -e \"const MediaServerAPI = require('./server'); logger.info('✓ Server validation passed');\""
   },
   "dependencies": {
     "axios": "^1.11.0",

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('./scripts/console-shim');
 
 /**
  * Start API Server with Dependencies Check

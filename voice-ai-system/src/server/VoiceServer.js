@@ -16,6 +16,7 @@ import { LLMProcessor } from './services/LLMProcessor.js';
 import { MediaLibraryService } from './services/MediaLibraryService.js';
 import { SpeechService } from './services/SpeechService.js';
 import { TranslationService } from './services/TranslationService.js';
+import logger from './logger.js';
 
 dotenv.config();
 
@@ -102,7 +103,7 @@ export class VoiceServer {
 
     // Logging middleware
     this.app.use((req, res, next) => {
-      console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+      logger.info(`${new Date().toISOString()} - ${req.method} ${req.path}`);
       next();
     });
   }
@@ -159,7 +160,7 @@ export class VoiceServer {
 
         res.send(audioBuffer);
       } catch (error) {
-        console.error('TTS error:', error);
+        logger.error('TTS error:', error);
         res.status(500).json({ error: 'Text-to-speech failed' });
       }
     });
@@ -181,7 +182,7 @@ export class VoiceServer {
 
         res.json(result);
       } catch (error) {
-        console.error('Translation error:', error);
+        logger.error('Translation error:', error);
         res.status(500).json({ error: 'Translation failed' });
       }
     });
@@ -199,7 +200,7 @@ export class VoiceServer {
 
         res.json(results);
       } catch (error) {
-        console.error('Media search error:', error);
+        logger.error('Media search error:', error);
         res.status(500).json({ error: 'Media search failed' });
       }
     });
@@ -216,7 +217,7 @@ export class VoiceServer {
 
         res.json(result);
       } catch (error) {
-        console.error('Biometric enrollment error:', error);
+        logger.error('Biometric enrollment error:', error);
         res.status(500).json({ error: 'Biometric enrollment failed' });
       }
     });
@@ -238,7 +239,7 @@ export class VoiceServer {
 
         res.json(summary);
       } catch (error) {
-        console.error('Content summarization error:', error);
+        logger.error('Content summarization error:', error);
         res.status(500).json({ error: 'Content summarization failed' });
       }
     });
@@ -255,7 +256,7 @@ export class VoiceServer {
         const results = await this.mediaLibrary.batchSummarizeMedia(mediaIds, options);
         res.json(results);
       } catch (error) {
-        console.error('Batch summarization error:', error);
+        logger.error('Batch summarization error:', error);
         res.status(500).json({ error: 'Batch summarization failed' });
       }
     });
@@ -272,7 +273,7 @@ export class VoiceServer {
         const highlights = await this.mediaLibrary.generateMediaHighlights(mediaId, maxHighlights);
         res.json(highlights);
       } catch (error) {
-        console.error('Highlight generation error:', error);
+        logger.error('Highlight generation error:', error);
         res.status(500).json({ error: 'Highlight generation failed' });
       }
     });
@@ -296,7 +297,7 @@ export class VoiceServer {
 
         res.json(summary);
       } catch (error) {
-        console.error('LLM summarization error:', error);
+        logger.error('LLM summarization error:', error);
         res.status(500).json({ error: 'LLM summarization failed' });
       }
     });
@@ -311,7 +312,7 @@ export class VoiceServer {
   setupWebSocketHandlers() {
     this.wss.on('connection', (ws, request) => {
       this.connectionCount++;
-      console.log(`WebSocket connection established. Total connections: ${this.connectionCount}`);
+      logger.info(`WebSocket connection established. Total connections: ${this.connectionCount}`);
 
       let sessionData = {
         id: null,
@@ -328,7 +329,7 @@ export class VoiceServer {
           const message = JSON.parse(data.toString());
           await this.handleWebSocketMessage(ws, message, sessionData);
         } catch (error) {
-          console.error('WebSocket message error:', error);
+          logger.error('WebSocket message error:', error);
           ws.send(JSON.stringify({
             type: 'error',
             error: error.message
@@ -341,11 +342,11 @@ export class VoiceServer {
         if (sessionData.id) {
           this.activeSessions.delete(sessionData.id);
         }
-        console.log(`WebSocket connection closed. Total connections: ${this.connectionCount}`);
+        logger.info(`WebSocket connection closed. Total connections: ${this.connectionCount}`);
       });
 
       ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
       });
 
       // Send welcome message
@@ -586,7 +587,7 @@ export class VoiceServer {
    */
   setupSocketIOHandlers() {
     this.io.on('connection', (socket) => {
-      console.log('Socket.IO client connected:', socket.id);
+      logger.info('Socket.IO client connected:', socket.id);
 
       // Media library conversation
       socket.on('media_conversation', async (data) => {
@@ -734,7 +735,7 @@ export class VoiceServer {
       });
 
       socket.on('disconnect', () => {
-        console.log('Socket.IO client disconnected:', socket.id);
+        logger.info('Socket.IO client disconnected:', socket.id);
       });
     });
   }
@@ -774,14 +775,14 @@ export class VoiceServer {
       // Wire up service dependencies for advanced features
       this.mediaLibrary.setLLMProcessor(this.llmProcessor);
       
-      console.log('✅ All services initialized and wired successfully');
+      logger.info('✅ All services initialized and wired successfully');
 
       // Start server
       this.server.listen(this.config.port, () => {
-        console.log(`🎙️  Voice AI Server running on port ${this.config.port}`);
-        console.log(`🌐 WebSocket endpoint: ws://localhost:${this.config.port}/voice`);
-        console.log(`🔌 Socket.IO endpoint: http://localhost:${this.config.port}/socket.io/`);
-        console.log(`📚 API docs: http://localhost:${this.config.port}/health`);
+        logger.info(`🎙️  Voice AI Server running on port ${this.config.port}`);
+        logger.info(`🌐 WebSocket endpoint: ws://localhost:${this.config.port}/voice`);
+        logger.info(`🔌 Socket.IO endpoint: http://localhost:${this.config.port}/socket.io/`);
+        logger.info(`📚 API docs: http://localhost:${this.config.port}/health`);
       });
 
       // Setup cleanup on exit
@@ -789,7 +790,7 @@ export class VoiceServer {
       process.on('SIGTERM', () => this.shutdown());
 
     } catch (error) {
-      console.error('Failed to start server:', error);
+      logger.error('Failed to start server:', error);
       process.exit(1);
     }
   }
@@ -798,7 +799,7 @@ export class VoiceServer {
    * Graceful shutdown
    */
   async shutdown() {
-    console.log('Shutting down voice AI server...');
+    logger.info('Shutting down voice AI server...');
     
     // Close WebSocket connections
     this.wss.clients.forEach(ws => {
@@ -822,7 +823,7 @@ export class VoiceServer {
       this.translationService.cleanup()
     ]);
 
-    console.log('Server shutdown complete');
+    logger.info('Server shutdown complete');
     process.exit(0);
   }
 }

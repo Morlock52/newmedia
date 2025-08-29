@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Sonarr Integration Wrapper
  * Simplified interface for Sonarr TV series management
@@ -40,14 +41,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await sonarr.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Sonarr integration setup successfully');
+            logger.info('✅ Sonarr integration setup successfully');
         } else {
-            console.warn('⚠️ Sonarr connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Sonarr connection test failed:', connectionResult.error);
         }
         
         return sonarr;
     } catch (error) {
-        console.error('❌ Sonarr quick setup failed:', error.message);
+        logger.error('❌ Sonarr quick setup failed:', error.message);
         throw error;
     }
 }

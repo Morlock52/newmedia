@@ -18,6 +18,8 @@ RUN npm ci --only=production
 
 # Copy application files
 COPY api/ ./
+# Add console shim for structured logging inside container
+COPY scripts/console-shim.js ./scripts/console-shim.js
 
 # Create logs directory
 RUN mkdir -p /var/log/api
@@ -30,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3002/health || exit 1
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["node", "-r", "./scripts/console-shim.js", "server.js"]

@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 /**
  * Home Assistant Integration for NEXUS Media Hub
  * Connects to Home Assistant at http://homeassistant.local:8123
@@ -22,7 +23,7 @@ class HomeAssistantIntegration extends EventEmitter {
     }
 
     async init() {
-        console.log('🏠 Connecting to Home Assistant...');
+        logger.info('🏠 Connecting to Home Assistant...');
         await this.connect();
         await this.subscribeToEvents();
         await this.fetchEntities();
@@ -33,7 +34,7 @@ class HomeAssistantIntegration extends EventEmitter {
             this.ws = new WebSocket(this.wsURL);
 
             this.ws.on('open', () => {
-                console.log('✅ Connected to Home Assistant WebSocket');
+                logger.info('✅ Connected to Home Assistant WebSocket');
             });
 
             this.ws.on('message', async (data) => {
@@ -42,7 +43,7 @@ class HomeAssistantIntegration extends EventEmitter {
                 if (message.type === 'auth_required') {
                     this.authenticate();
                 } else if (message.type === 'auth_ok') {
-                    console.log('✅ Authenticated with Home Assistant');
+                    logger.info('✅ Authenticated with Home Assistant');
                     this.connected = true;
                     resolve();
                 } else if (message.type === 'result') {
@@ -53,12 +54,12 @@ class HomeAssistantIntegration extends EventEmitter {
             });
 
             this.ws.on('error', (error) => {
-                console.error('❌ Home Assistant WebSocket error:', error);
+                logger.error('❌ Home Assistant WebSocket error:', error);
                 reject(error);
             });
 
             this.ws.on('close', () => {
-                console.log('🔌 Disconnected from Home Assistant');
+                logger.info('🔌 Disconnected from Home Assistant');
                 this.connected = false;
                 // Attempt reconnection
                 setTimeout(() => this.connect(), 5000);
@@ -100,7 +101,7 @@ class HomeAssistantIntegration extends EventEmitter {
                     result.result.forEach(entity => {
                         this.entities.set(entity.entity_id, entity);
                     });
-                    console.log(`📊 Loaded ${this.entities.size} entities from Home Assistant`);
+                    logger.info(`📊 Loaded ${this.entities.size} entities from Home Assistant`);
                 }
                 resolve();
             });
@@ -150,7 +151,7 @@ class HomeAssistantIntegration extends EventEmitter {
     }
 
     async syncLightsWithMedia(mediaType) {
-        console.log(`🎬 Syncing lights for ${mediaType} content`);
+        logger.info(`🎬 Syncing lights for ${mediaType} content`);
         
         const lightSettings = {
             'horror': { color: [255, 0, 0], brightness: 50 },      // Red, dim
@@ -276,7 +277,7 @@ class HomeAssistantIntegration extends EventEmitter {
         };
 
         // This would normally be sent to HA's automation API
-        console.log('Creating automation:', automation);
+        logger.info('Creating automation:', automation);
         return automation;
     }
 
@@ -366,7 +367,7 @@ class HomeAssistantIntegration extends EventEmitter {
      * NEXUS-specific integrations
      */
     async startMovieMode(movieTitle, genre) {
-        console.log(`🎬 Starting movie mode for "${movieTitle}" (${genre})`);
+        logger.info(`🎬 Starting movie mode for "${movieTitle}" (${genre})`);
         
         // 1. Activate movie scene
         await this.activateScene('movie_night');
@@ -399,7 +400,7 @@ class HomeAssistantIntegration extends EventEmitter {
     }
 
     async endMovieMode() {
-        console.log('🛑 Ending movie mode');
+        logger.info('🛑 Ending movie mode');
         
         // Reset to normal scene
         await this.activateScene('normal');
@@ -420,7 +421,7 @@ class HomeAssistantIntegration extends EventEmitter {
      * Party Mode with music sync
      */
     async startPartyMode() {
-        console.log('🎉 Starting party mode!');
+        logger.info('🎉 Starting party mode!');
         
         // Activate party scene
         await this.activateScene('party');

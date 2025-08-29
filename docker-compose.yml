@@ -219,7 +219,7 @@ services:
       - "0.0.0.0:32400:32400"
       - "0.0.0.0:1901:1900/udp" # Changed to avoid conflict
       - "0.0.0.0:3005:3005"
-      - "0.0.0.0:5353:5353/udp"
+      - "0.0.0.0:5354:5353/udp" # Remapped mDNS to avoid host conflict
       - "0.0.0.0:8324:8324"
       - "0.0.0.0:32410:32410/udp"
       - "0.0.0.0:32412:32412/udp"
@@ -1422,19 +1422,18 @@ services:
     env_file:
       - ./homarr-env.env
     environment:
-      - BASE_URL=${HOMARR_URL:-http://localhost:7575}
       - EDIT_MODE_PASSWORD=${HOMARR_PASSWORD:-}
       - NODE_ENV=production
       - DATABASE_URL=file:/data/db.sqlite
       - AUTH_TRUST_HOST=true
       - NEXTAUTH_URL=http://localhost:7575
       - NEXTAUTH_SECRET=your-secret-key-here-change-in-production
+      - NEXT_PUBLIC_BASE_URL=http://localhost:7575
       - NEXT_PUBLIC_DEFAULT_COLOR_SCHEME=dark
       - NEXT_PUBLIC_DISABLE_ANALYTICS=true
       - NEXT_PUBLIC_DEFAULT_BOARD_NAME=default
       - DATA_DIR=/data
       - CONFIG_DIR=/app/data/configs
-      - DEFAULT_BOARD=default
     networks:
       - media-net
     restart: unless-stopped

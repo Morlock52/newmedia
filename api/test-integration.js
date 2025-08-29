@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const logger = require('../middleware/logger.js');
 
 /**
  * Comprehensive API Integration Test Suite
@@ -44,7 +45,7 @@ class IntegrationTester {
             reset: '\x1b[0m'     // Reset
         };
         
-        console.log(`${colors[type]}[${timestamp}] ${message}${colors.reset}`);
+        logger.info(`${colors[type]}[${timestamp}] ${message}${colors.reset}`);
     }
 
     async test(name, testFunction) {
@@ -433,7 +434,7 @@ if (typeof fetch === 'undefined') {
 if (require.main === module) {
     const tester = new IntegrationTester();
     tester.runAllTests().catch(error => {
-        console.error('Test runner error:', error);
+        logger.error('Test runner error:', error);
         process.exit(1);
     });
 }

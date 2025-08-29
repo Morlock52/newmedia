@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Web3Service - Web3 wallet connection, NFT media collections, IPFS streaming, smart contracts
  * Provides blockchain integration for media ownership, NFT collections, and decentralized storage
@@ -39,7 +40,7 @@ class Web3Service extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🔗 Initializing Web3Service...');
+            logger.info('🔗 Initializing Web3Service...');
             
             // Validate configuration
             await this.validateConfig();
@@ -52,11 +53,11 @@ class Web3Service extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ Web3Service initialized successfully');
+            logger.info('✅ Web3Service initialized successfully');
             
             return { success: true, message: 'Web3Service initialized' };
         } catch (error) {
-            console.error('❌ Web3Service initialization failed:', error);
+            logger.error('❌ Web3Service initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -134,9 +135,9 @@ class Web3Service extends EventEmitter {
                 throw new Error('IPFS gateway test failed');
             }
             
-            console.log('✅ IPFS gateway connection verified');
+            logger.info('✅ IPFS gateway connection verified');
         } catch (error) {
-            console.warn('⚠️ IPFS gateway test failed, using fallback:', error.message);
+            logger.warn('⚠️ IPFS gateway test failed, using fallback:', error.message);
             this.config.ipfsGateway = 'https://ipfs.io/ipfs/';
         }
     }
@@ -171,14 +172,14 @@ class Web3Service extends EventEmitter {
             this.connectedWallets.set(address, wallet);
             this.emit('walletConnected', wallet);
 
-            console.log(`✅ Wallet connected: ${address} (${walletType})`);
+            logger.info(`✅ Wallet connected: ${address} (${walletType})`);
             return {
                 success: true,
                 wallet,
                 message: 'Wallet connected successfully'
             };
         } catch (error) {
-            console.error('❌ Wallet connection failed:', error);
+            logger.error('❌ Wallet connection failed:', error);
             throw error;
         }
     }
@@ -199,7 +200,7 @@ class Web3Service extends EventEmitter {
 
             return wallet;
         } catch (error) {
-            console.warn('⚠️ Failed to update wallet data:', error.message);
+            logger.warn('⚠️ Failed to update wallet data:', error.message);
             return wallet;
         }
     }
@@ -226,7 +227,7 @@ class Web3Service extends EventEmitter {
                 currency: 'ETH'
             };
         } catch (error) {
-            console.error('❌ Failed to get wallet balance:', error);
+            logger.error('❌ Failed to get wallet balance:', error);
             return { balance: '0', balanceWei: '0', currency: 'ETH' };
         }
     }
@@ -280,7 +281,7 @@ class Web3Service extends EventEmitter {
                 timestamp: new Date()
             };
         } catch (error) {
-            console.warn('⚠️ Failed to fetch NFTs:', error.message);
+            logger.warn('⚠️ Failed to fetch NFTs:', error.message);
             return { collections: [], total: 0, timestamp: new Date() };
         }
     }
@@ -330,7 +331,7 @@ class Web3Service extends EventEmitter {
 
             this.emit('ipfsUpload', { hash: ipfsHash, url: ipfsUrl, metadata });
 
-            console.log(`✅ Media uploaded to IPFS: ${ipfsHash}`);
+            logger.info(`✅ Media uploaded to IPFS: ${ipfsHash}`);
             return {
                 success: true,
                 hash: ipfsHash,
@@ -339,7 +340,7 @@ class Web3Service extends EventEmitter {
                 metadata: response.data
             };
         } catch (error) {
-            console.error('❌ IPFS upload failed:', error);
+            logger.error('❌ IPFS upload failed:', error);
             throw error;
         }
     }
@@ -372,7 +373,7 @@ class Web3Service extends EventEmitter {
                 url
             };
         } catch (error) {
-            console.error('❌ IPFS streaming failed:', error);
+            logger.error('❌ IPFS streaming failed:', error);
             throw error;
         }
     }
@@ -417,7 +418,7 @@ class Web3Service extends EventEmitter {
                 ipfsHash: ipfsResult.hash
             };
         } catch (error) {
-            console.error('❌ NFT metadata creation failed:', error);
+            logger.error('❌ NFT metadata creation failed:', error);
             throw error;
         }
     }
@@ -428,15 +429,15 @@ class Web3Service extends EventEmitter {
     async loadNFTCollections() {
         try {
             // Load from persistent storage if available
-            console.log('📚 Loading NFT collections...');
+            logger.info('📚 Loading NFT collections...');
             
             // For now, initialize with empty collections
             // In production, load from database or cache
             this.nftCollections.clear();
             
-            console.log('✅ NFT collections loaded');
+            logger.info('✅ NFT collections loaded');
         } catch (error) {
-            console.warn('⚠️ Failed to load NFT collections:', error.message);
+            logger.warn('⚠️ Failed to load NFT collections:', error.message);
         }
     }
 
@@ -467,13 +468,13 @@ class Web3Service extends EventEmitter {
             if (this.connectedWallets.has(address)) {
                 this.connectedWallets.delete(address);
                 this.emit('walletDisconnected', { address });
-                console.log(`✅ Wallet disconnected: ${address}`);
+                logger.info(`✅ Wallet disconnected: ${address}`);
                 return { success: true, message: 'Wallet disconnected' };
             }
             
             return { success: false, message: 'Wallet not found' };
         } catch (error) {
-            console.error('❌ Wallet disconnection failed:', error);
+            logger.error('❌ Wallet disconnection failed:', error);
             throw error;
         }
     }
@@ -483,7 +484,7 @@ class Web3Service extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up Web3Service...');
+            logger.info('🧹 Cleaning up Web3Service...');
             
             this.connectedWallets.clear();
             this.nftCollections.clear();
@@ -491,9 +492,9 @@ class Web3Service extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ Web3Service cleanup completed');
+            logger.info('✅ Web3Service cleanup completed');
         } catch (error) {
-            console.error('❌ Web3Service cleanup failed:', error);
+            logger.error('❌ Web3Service cleanup failed:', error);
         }
     }
 }

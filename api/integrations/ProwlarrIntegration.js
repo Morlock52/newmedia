@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Prowlarr Integration Module
  * Complete Prowlarr API integration with indexer management and 500+ trackers
@@ -601,7 +602,7 @@ class ProwlarrIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Prowlarr webhook error:', error);
+                logger.error('Prowlarr webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

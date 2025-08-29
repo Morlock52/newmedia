@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 // Unified Media API - Integration layer for 30+ media services
 import axios from 'axios';
 import WebSocket from 'ws';
@@ -455,7 +456,7 @@ class UnifiedMediaAPI extends EventEmitter {
         version: response.data.version || 'unknown'
       };
     } catch (error) {
-      console.error(`Failed to connect to ${service.name}:`, error.message);
+      logger.error(`Failed to connect to ${service.name}:`, error.message);
       return {
         status: 'offline',
         error: error.message
@@ -550,7 +551,7 @@ class UnifiedMediaAPI extends EventEmitter {
             items: this.normalizeMediaItems(serverKey, response.data)
           });
         } catch (error) {
-          console.error(`Search failed on ${serverKey}:`, error.message);
+          logger.error(`Search failed on ${serverKey}:`, error.message);
         }
       })
     );
@@ -644,7 +645,7 @@ class UnifiedMediaAPI extends EventEmitter {
             items: this.normalizeQueueItems(clientKey, queueData)
           });
         } catch (error) {
-          console.error(`Failed to get queue from ${clientKey}:`, error.message);
+          logger.error(`Failed to get queue from ${clientKey}:`, error.message);
         }
       })
     );
@@ -807,7 +808,7 @@ class UnifiedMediaAPI extends EventEmitter {
           
           stats.overall.totalMedia += stats.mediaServers[serverKey].totalItems;
         } catch (error) {
-          console.error(`Failed to get stats from ${serverKey}:`, error.message);
+          logger.error(`Failed to get stats from ${serverKey}:`, error.message);
         }
       })
     );
@@ -835,7 +836,7 @@ class UnifiedMediaAPI extends EventEmitter {
             monitoring: true
           };
         } catch (error) {
-          console.error(`Failed to get stats from ${managerKey}:`, error.message);
+          logger.error(`Failed to get stats from ${managerKey}:`, error.message);
         }
       })
     );
@@ -863,7 +864,7 @@ class UnifiedMediaAPI extends EventEmitter {
             stats.overall.bandwidth.in += stats.downloadClients[clientKey].totalSpeed;
           }
         } catch (error) {
-          console.error(`Failed to get stats from ${clientKey}:`, error.message);
+          logger.error(`Failed to get stats from ${clientKey}:`, error.message);
         }
       })
     );
@@ -893,7 +894,7 @@ class UnifiedMediaAPI extends EventEmitter {
             };
           }
         } catch (error) {
-          console.error(`Failed to get stats from ${monitorKey}:`, error.message);
+          logger.error(`Failed to get stats from ${monitorKey}:`, error.message);
         }
       })
     );

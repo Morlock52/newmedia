@@ -76,7 +76,7 @@ class DockerServiceClient {
                 try {
                     callback(data);
                 } catch (error) {
-                    console.error(`Error in event handler for ${event}:`, error);
+                    logger.error(`Error in event handler for ${event}: ${error}`);
                 }
             });
         }
@@ -90,7 +90,7 @@ class DockerServiceClient {
             const response = await this.configAPI.getServices();
             
             if (response.fallback) {
-                console.warn('Using fallback service data');
+                logger.warn('Using fallback service data');
                 return this.getFallbackServices();
             }
 
@@ -104,7 +104,7 @@ class DockerServiceClient {
             return enhancedServices;
 
         } catch (error) {
-            console.error('Failed to get services:', error);
+            logger.error('Failed to get services:', error);
             return this.getFallbackServices();
         }
     }
@@ -138,7 +138,7 @@ class DockerServiceClient {
             return enhancedStatus;
 
         } catch (error) {
-            console.error(`Failed to get status for ${serviceName}:`, error);
+            logger.error(`Failed to get status for ${serviceName}:`, error);
             return this.getFallbackServiceStatus(serviceName);
         }
     }
@@ -381,7 +381,7 @@ class DockerServiceClient {
                     timestamp: Date.now() 
                 });
             } catch (error) {
-                console.error('Monitoring error:', error);
+                logger.error('Monitoring error:', error);
                 this.emit('monitoring-error', { 
                     error: error.message, 
                     timestamp: Date.now() 

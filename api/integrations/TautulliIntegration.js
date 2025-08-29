@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Tautulli Integration Module
  * Complete Tautulli API integration for Plex statistics and monitoring
@@ -708,7 +709,7 @@ class TautulliIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Tautulli webhook error:', error);
+                logger.error('Tautulli webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

@@ -1,13 +1,14 @@
+const logger = require('../../middleware/logger.js');
 class ErrorHandler {
     static handle(err, req, res, next) {
-        console.error(err.stack);
+        logger.error(err.stack);
         res.status(err.status || 500).json({
             error: err.message || 'Internal Server Error'
         });
     }
     
     static handleError(err, req, res, next) {
-        console.error('Error:', err);
+        logger.error('Error:', err);
         
         const statusCode = err.statusCode || err.status || 500;
         const message = err.message || 'Internal Server Error';

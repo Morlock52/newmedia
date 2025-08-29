@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Jellyfin Authentication Service
  * Handles secure authentication and API management for Jellyfin
@@ -35,7 +36,7 @@ class JellyfinAuthService extends EventEmitter {
      * Initialize the service
      */
     async init() {
-        console.log('🔧 Initializing Jellyfin Authentication Service...');
+        logger.info('🔧 Initializing Jellyfin Authentication Service...');
         
         // Create HTTP client
         this.client = axios.create({
@@ -54,7 +55,7 @@ class JellyfinAuthService extends EventEmitter {
         // Start health monitoring
         this.startHealthMonitoring();
         
-        console.log('✅ Jellyfin Authentication Service initialized');
+        logger.info('✅ Jellyfin Authentication Service initialized');
     }
 
     /**
@@ -76,7 +77,7 @@ class JellyfinAuthService extends EventEmitter {
                 return config;
             },
             (error) => {
-                console.error('❌ Request interceptor error:', error);
+                logger.error('❌ Request interceptor error:', error);
                 return Promise.reject(error);
             }
         );
@@ -93,7 +94,7 @@ class JellyfinAuthService extends EventEmitter {
                 if (error.response?.status === 401 && !originalRequest._retry) {
                     originalRequest._retry = true;
                     
-                    console.log('🔄 Token expired, attempting refresh...');
+                    logger.info('🔄 Token expired, attempting refresh...');
                     this.emit('authError', { type: 'tokenExpired', error });
                     
                     // Could implement token refresh logic here if Jellyfin supported it
@@ -103,7 +104,7 @@ class JellyfinAuthService extends EventEmitter {
                 // Handle rate limiting
                 if (error.response?.status === 429) {
                     const retryAfter = error.response.headers['retry-after'] || 1;
-                    console.log(`⏳ Rate limited, retrying after ${retryAfter}s...`);
+                    logger.info(`⏳ Rate limited, retrying after ${retryAfter}s...`);
                     
                     await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
                     return this.client.request(originalRequest);
@@ -128,7 +129,7 @@ class JellyfinAuthService extends EventEmitter {
      * Authenticate user with username/password
      */
     async authenticateUser(username, password, rememberMe = false) {
-        console.log(`🔐 Authenticating user: ${username}`);
+        logger.info(`🔐 Authenticating user: ${username}`);
         
         try {
             const authData = {
@@ -151,7 +152,7 @@ class JellyfinAuthService extends EventEmitter {
                     created: Date.now()
                 });
                 
-                console.log(`✅ User authenticated successfully: ${userData.User.Name}`);
+                logger.info(`✅ User authenticated successfully: ${userData.User.Name}`);
                 this.emit('userAuthenticated', userData.User);
                 
                 return {
@@ -164,7 +165,7 @@ class JellyfinAuthService extends EventEmitter {
                 throw new Error('Invalid authentication response');
             }
         } catch (error) {
-            console.error(`❌ Authentication failed for ${username}:`, error.message);
+            logger.error(`❌ Authentication failed for ${username}:`, error.message);
             this.emit('authError', { type: 'authFailed', username, error });
             
             return {
@@ -179,7 +180,7 @@ class JellyfinAuthService extends EventEmitter {
      * Create API key for long-term access
      */
     async createAPIKey(userId, appName = 'MediaDashboard') {
-        console.log(`🔑 Creating API key for user ${userId}...`);
+        logger.info(`🔑 Creating API key for user ${userId}...`);
         
         const userAuth = this.accessTokens.get(userId);
         if (!userAuth) {
@@ -203,7 +204,7 @@ class JellyfinAuthService extends EventEmitter {
                     app: appName
                 });
                 
-                console.log(`✅ API key created for ${appName}`);
+                logger.info(`✅ API key created for ${appName}`);
                 this.emit('apiKeyCreated', { appName, userId });
                 
                 return {
@@ -215,7 +216,7 @@ class JellyfinAuthService extends EventEmitter {
                 throw new Error('Invalid API key response');
             }
         } catch (error) {
-            console.error(`❌ API key creation failed:`, error.message);
+            logger.error(`❌ API key creation failed:`, error.message);
             this.emit('authError', { type: 'apiKeyFailed', userId, error });
             
             return {
@@ -267,7 +268,7 @@ class JellyfinAuthService extends EventEmitter {
                 lastError = error;
                 
                 if (attempt < this.config.maxRetries && this.isRetryableError(error)) {
-                    console.log(`⚠️  Request failed (attempt ${attempt}), retrying...`);
+                    logger.info(`⚠️  Request failed (attempt ${attempt}), retrying...`);
                     await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * attempt));
                 } else {
                     break;
@@ -294,7 +295,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', '/System/Info', null, options);
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Failed to get system info:', error.message);
+            logger.error('❌ Failed to get system info:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -307,7 +308,7 @@ class JellyfinAuthService extends EventEmitter {
             const response = await this.client.get('/System/Info/Public');
             return { success: true, data: response.data };
         } catch (error) {
-            console.error('❌ Failed to get public system info:', error.message);
+            logger.error('❌ Failed to get public system info:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -320,7 +321,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', '/Items/Counts', null, options);
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Failed to get library stats:', error.message);
+            logger.error('❌ Failed to get library stats:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -333,7 +334,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', '/Sessions', null, options);
             return { success: true, data: data || [] };
         } catch (error) {
-            console.error('❌ Failed to get active sessions:', error.message);
+            logger.error('❌ Failed to get active sessions:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -346,7 +347,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', '/Users', null, options);
             return { success: true, data: data || [] };
         } catch (error) {
-            console.error('❌ Failed to get users:', error.message);
+            logger.error('❌ Failed to get users:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -365,7 +366,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', `/Items?${params}`, null, options);
             return { success: true, data: data?.Items || [] };
         } catch (error) {
-            console.error('❌ Failed to search content:', error.message);
+            logger.error('❌ Failed to search content:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -378,7 +379,7 @@ class JellyfinAuthService extends EventEmitter {
             const data = await this.makeAuthenticatedRequest('GET', '/System/Configuration', null, options);
             return { success: true, data };
         } catch (error) {
-            console.error('❌ Failed to get server configuration:', error.message);
+            logger.error('❌ Failed to get server configuration:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -427,7 +428,7 @@ class JellyfinAuthService extends EventEmitter {
             this.healthCheck();
         }, interval);
         
-        console.log(`🏥 Health monitoring started (${interval}ms interval)`);
+        logger.info(`🏥 Health monitoring started (${interval}ms interval)`);
     }
 
     /**
@@ -437,7 +438,7 @@ class JellyfinAuthService extends EventEmitter {
         if (this.healthInterval) {
             clearInterval(this.healthInterval);
             this.healthInterval = null;
-            console.log('🏥 Health monitoring stopped');
+            logger.info('🏥 Health monitoring stopped');
         }
     }
 
@@ -445,7 +446,7 @@ class JellyfinAuthService extends EventEmitter {
      * Get comprehensive dashboard data
      */
     async getDashboardData(options = {}) {
-        console.log('📊 Fetching comprehensive dashboard data...');
+        logger.info('📊 Fetching comprehensive dashboard data...');
         
         try {
             // Execute requests in parallel
@@ -466,10 +467,10 @@ class JellyfinAuthService extends EventEmitter {
                 timestamp: new Date().toISOString()
             };
             
-            console.log('✅ Dashboard data fetched successfully');
+            logger.info('✅ Dashboard data fetched successfully');
             return { success: true, data: dashboardData };
         } catch (error) {
-            console.error('❌ Failed to fetch dashboard data:', error.message);
+            logger.error('❌ Failed to fetch dashboard data:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -478,7 +479,7 @@ class JellyfinAuthService extends EventEmitter {
      * Logout user
      */
     async logoutUser(userId) {
-        console.log(`🔓 Logging out user: ${userId}`);
+        logger.info(`🔓 Logging out user: ${userId}`);
         
         const userAuth = this.accessTokens.get(userId);
         if (!userAuth) {
@@ -489,14 +490,14 @@ class JellyfinAuthService extends EventEmitter {
             // Try to invalidate session on server
             await this.makeAuthenticatedRequest('POST', '/Sessions/Logout', null, { userId });
         } catch (error) {
-            console.log('⚠️  Could not invalidate server session:', error.message);
+            logger.info('⚠️  Could not invalidate server session:', error.message);
         }
         
         // Remove from local storage
         this.accessTokens.delete(userId);
         this.emit('userLoggedOut', { userId });
         
-        console.log(`✅ User logged out: ${userId}`);
+        logger.info(`✅ User logged out: ${userId}`);
         return { success: true };
     }
 
@@ -504,7 +505,7 @@ class JellyfinAuthService extends EventEmitter {
      * Clean up resources
      */
     async cleanup() {
-        console.log('🧹 Cleaning up Jellyfin Authentication Service...');
+        logger.info('🧹 Cleaning up Jellyfin Authentication Service...');
         
         this.stopHealthMonitoring();
         this.accessTokens.clear();
@@ -512,7 +513,7 @@ class JellyfinAuthService extends EventEmitter {
         this.sessionCache.clear();
         this.removeAllListeners();
         
-        console.log('✅ Cleanup completed');
+        logger.info('✅ Cleanup completed');
     }
 
     /**

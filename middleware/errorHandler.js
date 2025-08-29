@@ -5,6 +5,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const logger = require('./logger');
 
 class APIErrorHandler {
     constructor(options = {}) {
@@ -27,7 +28,7 @@ class APIErrorHandler {
             const logDir = path.dirname(this.logFile);
             await fs.mkdir(logDir, { recursive: true });
         } catch (error) {
-            console.error('Failed to initialize error logging:', error);
+            logger.error('Failed to initialize error logging:', error);
         }
     }
 
@@ -304,11 +305,11 @@ class APIErrorHandler {
             const logLine = JSON.stringify(logEntry) + '\n';
             await fs.appendFile(this.logFile, logLine);
         } catch (logError) {
-            console.error('Failed to log error:', logError);
+            logger.error('Failed to log error:', logError);
         }
 
-        // Also log to console
-        console.error(`[${timestamp}] ${error.name}: ${error.message}`, {
+        // Also log to central logger
+        logger.error(`[${timestamp}] ${error.name}: ${error.message}`, {
             errorId,
             path: req.path,
             method: req.method
@@ -348,7 +349,7 @@ class APIErrorHandler {
             // Open circuit if failure threshold reached
             if (breaker.failureCount >= 5) {
                 breaker.state = 'OPEN';
-                console.warn(`Circuit breaker OPENED for ${path}`);
+                logger.warn(`Circuit breaker OPENED for ${path}`);
             }
         } else {
             // Success - reset circuit breaker

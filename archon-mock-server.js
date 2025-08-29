@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('./scripts/console-shim');
 
 /**
  * Archon Mock MCP Server

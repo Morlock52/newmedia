@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 /**
  * GPT-5 Advanced AI Engine for NEXUS Media Hub
  * Using latest 2025 GPT-5 models with multimodal capabilities
@@ -42,7 +43,7 @@ class GPT5Engine {
     }
 
     async initializeAI() {
-        console.log('🧠 Initializing GPT-5 AI Engine...');
+        logger.info('🧠 Initializing GPT-5 AI Engine...');
         
         // Initialize neural pathways
         this.neuralNetwork = {
@@ -65,7 +66,7 @@ class GPT5Engine {
      * Natural Language Content Discovery
      */
     async discoverContent(query, userProfile) {
-        console.log(`🔍 GPT-5 Processing: "${query}"`);
+        logger.info(`🔍 GPT-5 Processing: "${query}"`);
         
         // Simulate GPT-5 API call with advanced reasoning
         const analysis = {

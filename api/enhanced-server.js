@@ -13,11 +13,12 @@ try {
   const api = new MediaServerAPI();
 
   process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception in enhanced-server wrapper:', err);
+  const logger = require('../middleware/logger');
+  logger.error('Uncaught Exception in enhanced-server wrapper:', err);
     process.exit(1);
   });
   process.on('unhandledRejection', (reason) => {
-    console.error('Unhandled Rejection in enhanced-server wrapper:', reason);
+  logger.error('Unhandled Rejection in enhanced-server wrapper:', reason);
     process.exit(1);
   });
 
@@ -25,13 +26,13 @@ try {
   process.on('SIGINT', () => api.shutdown && api.shutdown());
 
   api.start().then(() => {
-    console.log(`✅ Enhanced server wrapper running on http://localhost:${port}`);
+  logger.info(`✅ Enhanced server wrapper running on http://localhost:${port}`);
   }).catch((err) => {
-    console.error('Failed to start enhanced server wrapper:', err);
+  logger.error('Failed to start enhanced server wrapper:', err);
     process.exit(1);
   });
 } catch (err) {
-  console.error('Failed to load server implementation from enhanced-server.js wrapper:', err);
+  logger.error('Failed to load server implementation from enhanced-server.js wrapper:', err);
   process.exit(1);
 }
 

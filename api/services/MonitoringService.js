@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * MonitoringService - Prometheus metrics, Grafana dashboards, Uptime Kuma
  * Provides comprehensive monitoring and alerting for the media server infrastructure
@@ -69,7 +70,7 @@ class MonitoringService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('📊 Initializing MonitoringService...');
+            logger.info('📊 Initializing MonitoringService...');
             
             // Test connections to monitoring services
             await this.testConnections();
@@ -94,11 +95,11 @@ class MonitoringService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ MonitoringService initialized successfully');
+            logger.info('✅ MonitoringService initialized successfully');
             
             return { success: true, message: 'MonitoringService initialized' };
         } catch (error) {
-            console.error('❌ MonitoringService initialization failed:', error);
+            logger.error('❌ MonitoringService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -114,8 +115,8 @@ class MonitoringService extends EventEmitter {
             // Test Prometheus
             tests.push(
                 axios.get(`${this.config.prometheusUrl}/api/v1/query?query=up`, { timeout: 5000 })
-                    .then(() => console.log('✅ Prometheus connection verified'))
-                    .catch(err => console.warn('⚠️ Prometheus connection failed:', err.message))
+                    .then(() => logger.info('✅ Prometheus connection verified'))
+                    .catch(err => logger.warn('⚠️ Prometheus connection failed:', err.message))
             );
             
             // Test Grafana
@@ -125,21 +126,21 @@ class MonitoringService extends EventEmitter {
                         headers: { 'Authorization': `Bearer ${this.config.grafanaApiKey}` },
                         timeout: 5000
                     })
-                        .then(() => console.log('✅ Grafana connection verified'))
-                        .catch(err => console.warn('⚠️ Grafana connection failed:', err.message))
+                        .then(() => logger.info('✅ Grafana connection verified'))
+                        .catch(err => logger.warn('⚠️ Grafana connection failed:', err.message))
                 );
             }
             
             // Test Uptime Kuma
             tests.push(
                 axios.get(`${this.config.uptimeKumaUrl}/api/status-page/heartbeat`, { timeout: 5000 })
-                    .then(() => console.log('✅ Uptime Kuma connection verified'))
-                    .catch(err => console.warn('⚠️ Uptime Kuma connection failed:', err.message))
+                    .then(() => logger.info('✅ Uptime Kuma connection verified'))
+                    .catch(err => logger.warn('⚠️ Uptime Kuma connection failed:', err.message))
             );
             
             await Promise.allSettled(tests);
         } catch (error) {
-            console.warn('⚠️ Monitoring service connection tests failed:', error.message);
+            logger.warn('⚠️ Monitoring service connection tests failed:', error.message);
         }
     }
 
@@ -186,9 +187,9 @@ class MonitoringService extends EventEmitter {
                 this.metrics.set(key, { ...metric, value: 0, labels: {} });
             });
             
-            console.log('✅ Prometheus metrics initialized');
+            logger.info('✅ Prometheus metrics initialized');
         } catch (error) {
-            console.error('❌ Prometheus initialization failed:', error);
+            logger.error('❌ Prometheus initialization failed:', error);
         }
     }
 
@@ -198,7 +199,7 @@ class MonitoringService extends EventEmitter {
     async initializeGrafana() {
         try {
             if (!this.config.grafanaApiKey) {
-                console.warn('⚠️ Grafana API key not configured, skipping dashboard setup');
+                logger.warn('⚠️ Grafana API key not configured, skipping dashboard setup');
                 return;
             }
             
@@ -208,9 +209,9 @@ class MonitoringService extends EventEmitter {
             // Import dashboard to Grafana
             await this.importGrafanaDashboard(dashboard);
             
-            console.log('✅ Grafana dashboards initialized');
+            logger.info('✅ Grafana dashboards initialized');
         } catch (error) {
-            console.error('❌ Grafana initialization failed:', error);
+            logger.error('❌ Grafana initialization failed:', error);
         }
     }
 
@@ -298,9 +299,9 @@ class MonitoringService extends EventEmitter {
                 version: response.data.version
             });
             
-            console.log('✅ Dashboard imported to Grafana');
+            logger.info('✅ Dashboard imported to Grafana');
         } catch (error) {
-            console.error('❌ Dashboard import failed:', error.message);
+            logger.error('❌ Dashboard import failed:', error.message);
         }
     }
 
@@ -359,9 +360,9 @@ class MonitoringService extends EventEmitter {
                 });
             });
             
-            console.log('✅ Uptime Kuma monitors initialized');
+            logger.info('✅ Uptime Kuma monitors initialized');
         } catch (error) {
-            console.error('❌ Uptime Kuma initialization failed:', error);
+            logger.error('❌ Uptime Kuma initialization failed:', error);
         }
     }
 
@@ -379,11 +380,11 @@ class MonitoringService extends EventEmitter {
                 await this.collectApplicationMetrics();
                 await this.pushMetricsToPrometheus();
             } catch (error) {
-                console.warn('⚠️ Metrics collection failed:', error.message);
+                logger.warn('⚠️ Metrics collection failed:', error.message);
             }
         }, this.config.metricsInterval);
         
-        console.log('✅ Metrics collection started');
+        logger.info('✅ Metrics collection started');
     }
 
     /**
@@ -425,7 +426,7 @@ class MonitoringService extends EventEmitter {
             // Check thresholds and create alerts
             await this.checkSystemThresholds();
         } catch (error) {
-            console.error('❌ System metrics collection failed:', error);
+            logger.error('❌ System metrics collection failed:', error);
         }
     }
 
@@ -540,7 +541,7 @@ class MonitoringService extends EventEmitter {
             this.updateMetric('download_queue_size', Math.floor(Math.random() * 50));
             this.updateMetric('active_users', Math.floor(Math.random() * 20));
         } catch (error) {
-            console.error('❌ Application metrics collection failed:', error);
+            logger.error('❌ Application metrics collection failed:', error);
         }
     }
 
@@ -586,7 +587,7 @@ class MonitoringService extends EventEmitter {
             
             this.emit('metricsPushed', { timestamp: new Date(), metricsCount: this.metrics.size });
         } catch (error) {
-            console.warn('⚠️ Metrics push failed:', error.message);
+            logger.warn('⚠️ Metrics push failed:', error.message);
         }
     }
 
@@ -602,11 +603,11 @@ class MonitoringService extends EventEmitter {
             try {
                 await this.performHealthChecks();
             } catch (error) {
-                console.warn('⚠️ Health monitoring failed:', error.message);
+                logger.warn('⚠️ Health monitoring failed:', error.message);
             }
         }, this.config.healthCheckInterval);
         
-        console.log('✅ Health monitoring started');
+        logger.info('✅ Health monitoring started');
     }
 
     /**
@@ -704,7 +705,7 @@ class MonitoringService extends EventEmitter {
                 });
             }
         } catch (error) {
-            console.error('❌ Threshold checking failed:', error);
+            logger.error('❌ Threshold checking failed:', error);
         }
     }
 
@@ -732,11 +733,11 @@ class MonitoringService extends EventEmitter {
             // Send to Alertmanager
             await this.sendToAlertmanager(alert);
             
-            console.log(`🚨 Alert created: ${alert.title} [${alert.severity}]`);
+            logger.info(`🚨 Alert created: ${alert.title} [${alert.severity}]`);
             
             return alert;
         } catch (error) {
-            console.error('❌ Alert creation failed:', error);
+            logger.error('❌ Alert creation failed:', error);
         }
     }
 
@@ -765,7 +766,7 @@ class MonitoringService extends EventEmitter {
                 { timeout: 5000 }
             );
         } catch (error) {
-            console.warn('⚠️ Failed to send alert to Alertmanager:', error.message);
+            logger.warn('⚠️ Failed to send alert to Alertmanager:', error.message);
         }
     }
 
@@ -775,12 +776,12 @@ class MonitoringService extends EventEmitter {
     async loadDashboards() {
         try {
             // Load dashboard configurations
-            console.log('📊 Loading monitoring dashboards...');
+            logger.info('📊 Loading monitoring dashboards...');
             
             // In production, load from persistent storage or Grafana API
-            console.log('✅ Dashboards loaded');
+            logger.info('✅ Dashboards loaded');
         } catch (error) {
-            console.warn('⚠️ Dashboard loading failed:', error.message);
+            logger.warn('⚠️ Dashboard loading failed:', error.message);
         }
     }
 
@@ -855,14 +856,14 @@ class MonitoringService extends EventEmitter {
                 alert.resolvedAt = new Date();
                 
                 this.emit('alertResolved', alert);
-                console.log(`✅ Alert resolved: ${alert.title}`);
+                logger.info(`✅ Alert resolved: ${alert.title}`);
                 
                 return { success: true, alert };
             }
             
             return { success: false, message: 'Alert not found' };
         } catch (error) {
-            console.error('❌ Alert resolution failed:', error);
+            logger.error('❌ Alert resolution failed:', error);
             throw error;
         }
     }
@@ -872,7 +873,7 @@ class MonitoringService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up MonitoringService...');
+            logger.info('🧹 Cleaning up MonitoringService...');
             
             if (this.metricsTimer) {
                 clearInterval(this.metricsTimer);
@@ -891,9 +892,9 @@ class MonitoringService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ MonitoringService cleanup completed');
+            logger.info('✅ MonitoringService cleanup completed');
         } catch (error) {
-            console.error('❌ MonitoringService cleanup failed:', error);
+            logger.error('❌ MonitoringService cleanup failed:', error);
         }
     }
 }

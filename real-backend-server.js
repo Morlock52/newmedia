@@ -22,6 +22,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const yaml = require('js-yaml');
 
+require('./scripts/console-shim');
 const execAsync = promisify(exec);
 
 class RealMediaServerAPI {

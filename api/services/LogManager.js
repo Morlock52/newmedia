@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Log Manager Service
  * Comprehensive logging system with multiple transports and filtering
@@ -36,7 +37,7 @@ class LogManager {
             this.initialized = true;
             this.info('LogManager initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize LogManager:', error);
+            logger.error('Failed to initialize LogManager:', error);
             throw error;
         }
     }
@@ -111,13 +112,13 @@ class LogManager {
         const timestamp = new Date(logEntry.timestamp).toLocaleString();
         const service = logEntry.service ? `[${logEntry.service}]` : '';
         
-        console.log(
+        logger.info(
             `${color}[${timestamp}] [${logEntry.level.toUpperCase()}]${service} ${logEntry.message}${reset}`
         );
         
         // Log metadata if present and debug level
         if (Object.keys(logEntry.metadata).length > 0 && this.currentLevel >= this.logLevels.debug) {
-            console.log(`${color}Metadata:${reset}`, JSON.stringify(logEntry.metadata, null, 2));
+            logger.info(`${color}Metadata:${reset}`, JSON.stringify(logEntry.metadata, null, 2));
         }
     }
 
@@ -269,7 +270,7 @@ class LogManager {
                     }));
                 }
             } catch (error) {
-                console.error('Failed to notify log subscriber:', error);
+                logger.error('Failed to notify log subscriber:', error);
                 this.subscribers.delete(subscription);
             }
         }

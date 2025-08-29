@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * VPNService - Gluetun VPN tunnel management for download protection
  * Provides VPN management and monitoring for secure downloading through Gluetun container
@@ -60,7 +61,7 @@ class VPNService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🔐 Initializing VPNService...');
+            logger.info('🔐 Initializing VPNService...');
             
             // Check if Gluetun container is running
             await this.checkGluetunContainer();
@@ -76,11 +77,11 @@ class VPNService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ VPNService initialized successfully');
+            logger.info('✅ VPNService initialized successfully');
             
             return { success: true, message: 'VPNService initialized' };
         } catch (error) {
-            console.error('❌ VPNService initialization failed:', error);
+            logger.error('❌ VPNService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -97,10 +98,10 @@ class VPNService extends EventEmitter {
                 throw new Error(`Gluetun container '${this.config.containerName}' is not running`);
             }
             
-            console.log(`✅ Gluetun container '${this.config.containerName}' is running`);
+            logger.info(`✅ Gluetun container '${this.config.containerName}' is running`);
             return true;
         } catch (error) {
-            console.error('❌ Gluetun container check failed:', error);
+            logger.error('❌ Gluetun container check failed:', error);
             throw error;
         }
     }
@@ -132,7 +133,7 @@ class VPNService extends EventEmitter {
             this.emit('statusUpdated', this.vpnStatus);
             return this.vpnStatus;
         } catch (error) {
-            console.warn('⚠️ VPN status update failed:', error.message);
+            logger.warn('⚠️ VPN status update failed:', error.message);
             
             // Fallback: assume disconnected if can't get status
             this.vpnStatus.connected = false;
@@ -169,7 +170,7 @@ class VPNService extends EventEmitter {
      */
     async connect(options = {}) {
         try {
-            console.log('🔌 Connecting to VPN...');
+            logger.info('🔌 Connecting to VPN...');
             
             const connectOptions = {
                 provider: options.provider || this.config.vpnProvider,
@@ -190,7 +191,7 @@ class VPNService extends EventEmitter {
             await this.logConnection('connected', connectOptions);
             
             this.emit('connected', this.vpnStatus);
-            console.log(`✅ VPN connected: ${this.vpnStatus.server} (${this.vpnStatus.location})`);
+            logger.info(`✅ VPN connected: ${this.vpnStatus.server} (${this.vpnStatus.location})`);
             
             return {
                 success: true,
@@ -198,7 +199,7 @@ class VPNService extends EventEmitter {
                 status: this.vpnStatus
             };
         } catch (error) {
-            console.error('❌ VPN connection failed:', error);
+            logger.error('❌ VPN connection failed:', error);
             await this.logConnection('failed', { error: error.message });
             throw error;
         }
@@ -209,7 +210,7 @@ class VPNService extends EventEmitter {
      */
     async disconnect() {
         try {
-            console.log('🔌 Disconnecting from VPN...');
+            logger.info('🔌 Disconnecting from VPN...');
             
             // Send disconnect request to Gluetun
             await this.makeGluetunRequest('/disconnect', 'POST');
@@ -224,14 +225,14 @@ class VPNService extends EventEmitter {
             await this.logConnection('disconnected');
             
             this.emit('disconnected');
-            console.log('✅ VPN disconnected');
+            logger.info('✅ VPN disconnected');
             
             return {
                 success: true,
                 message: 'VPN disconnected successfully'
             };
         } catch (error) {
-            console.error('❌ VPN disconnection failed:', error);
+            logger.error('❌ VPN disconnection failed:', error);
             throw error;
         }
     }
@@ -241,7 +242,7 @@ class VPNService extends EventEmitter {
      */
     async reconnect(options = {}) {
         try {
-            console.log('🔁 Reconnecting VPN...');
+            logger.info('🔁 Reconnecting VPN...');
             
             // Disconnect first if connected
             if (this.vpnStatus.connected) {
@@ -254,7 +255,7 @@ class VPNService extends EventEmitter {
             // Connect with new options
             return await this.connect(options);
         } catch (error) {
-            console.error('❌ VPN reconnection failed:', error);
+            logger.error('❌ VPN reconnection failed:', error);
             throw error;
         }
     }
@@ -321,7 +322,7 @@ class VPNService extends EventEmitter {
                 count: servers.servers?.length || 0
             };
         } catch (error) {
-            console.error('❌ Failed to get available servers:', error);
+            logger.error('❌ Failed to get available servers:', error);
             
             // Return mock servers if API fails
             return {
@@ -358,7 +359,7 @@ class VPNService extends EventEmitter {
      */
     async testSpeed() {
         try {
-            console.log('📊 Testing VPN speed...');
+            logger.info('📊 Testing VPN speed...');
             
             if (!this.vpnStatus.connected) {
                 throw new Error('VPN is not connected');
@@ -404,14 +405,14 @@ class VPNService extends EventEmitter {
             }
             
             this.emit('speedTest', speedTest);
-            console.log(`✅ Speed test completed: ${speedTest.downloadSpeed} Mbps`);
+            logger.info(`✅ Speed test completed: ${speedTest.downloadSpeed} Mbps`);
             
             return {
                 success: true,
                 speedTest
             };
         } catch (error) {
-            console.error('❌ Speed test failed:', error);
+            logger.error('❌ Speed test failed:', error);
             throw error;
         }
     }
@@ -421,7 +422,7 @@ class VPNService extends EventEmitter {
      */
     async checkDNSLeak() {
         try {
-            console.log('🔍 Checking for DNS leaks...');
+            logger.info('🔍 Checking for DNS leaks...');
             
             if (!this.vpnStatus.connected) {
                 throw new Error('VPN is not connected');
@@ -449,9 +450,9 @@ class VPNService extends EventEmitter {
             this.emit('dnsLeakCheck', leak);
             
             if (leak.isLeak) {
-                console.warn('⚠️ DNS leak detected!');
+                logger.warn('⚠️ DNS leak detected!');
             } else {
-                console.log('✅ No DNS leak detected');
+                logger.info('✅ No DNS leak detected');
             }
             
             return {
@@ -459,7 +460,7 @@ class VPNService extends EventEmitter {
                 leak
             };
         } catch (error) {
-            console.error('❌ DNS leak check failed:', error);
+            logger.error('❌ DNS leak check failed:', error);
             throw error;
         }
     }
@@ -479,7 +480,7 @@ class VPNService extends EventEmitter {
                 
                 // Check for connection changes
                 if (previousStatus && !this.vpnStatus.connected) {
-                    console.warn('⚠️ VPN connection lost!');
+                    logger.warn('⚠️ VPN connection lost!');
                     this.emit('connectionLost');
                     
                     // Auto-reconnect if enabled
@@ -487,15 +488,15 @@ class VPNService extends EventEmitter {
                         setTimeout(() => this.reconnect(), this.config.reconnectDelay);
                     }
                 } else if (!previousStatus && this.vpnStatus.connected) {
-                    console.log('✅ VPN connection restored');
+                    logger.info('✅ VPN connection restored');
                     this.emit('connectionRestored');
                 }
             } catch (error) {
-                console.warn('⚠️ Health check failed:', error.message);
+                logger.warn('⚠️ Health check failed:', error.message);
             }
         }, this.config.healthCheckInterval);
         
-        console.log('✅ VPN health monitoring started');
+        logger.info('✅ VPN health monitoring started');
     }
 
     /**
@@ -521,7 +522,7 @@ class VPNService extends EventEmitter {
             
             this.emit('connectionLog', entry);
         } catch (error) {
-            console.error('❌ Connection logging failed:', error);
+            logger.error('❌ Connection logging failed:', error);
         }
     }
 
@@ -531,14 +532,14 @@ class VPNService extends EventEmitter {
     async loadConnectionHistory() {
         try {
             // In production, load from persistent storage
-            console.log('📚 Loading connection history...');
+            logger.info('📚 Loading connection history...');
             
             // For now, start with empty history
             this.connectionHistory = [];
             
-            console.log('✅ Connection history loaded');
+            logger.info('✅ Connection history loaded');
         } catch (error) {
-            console.warn('⚠️ Connection history loading failed:', error.message);
+            logger.warn('⚠️ Connection history loading failed:', error.message);
         }
     }
 
@@ -557,7 +558,7 @@ class VPNService extends EventEmitter {
                 active: hasKillSwitch && this.vpnStatus.connected
             };
         } catch (error) {
-            console.warn('⚠️ Kill switch status check failed:', error.message);
+            logger.warn('⚠️ Kill switch status check failed:', error.message);
             return { enabled: false, active: false };
         }
     }
@@ -610,7 +611,7 @@ class VPNService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up VPNService...');
+            logger.info('🧹 Cleaning up VPNService...');
             
             if (this.healthCheckTimer) {
                 clearInterval(this.healthCheckTimer);
@@ -627,9 +628,9 @@ class VPNService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ VPNService cleanup completed');
+            logger.info('✅ VPNService cleanup completed');
         } catch (error) {
-            console.error('❌ VPNService cleanup failed:', error);
+            logger.error('❌ VPNService cleanup failed:', error);
         }
     }
 }

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const logger = require('../middleware/logger.js');
+require('../scripts/console-shim');
 
 /**
  * Start All API Services
@@ -15,7 +17,7 @@ class APIServiceManager {
     }
 
     startService(name, scriptPath, port) {
-        console.log(`🚀 Starting ${name} on port ${port}...`);
+        logger.info(`🚀 Starting ${name} on port ${port}...`);
         
         const process = spawn('node', [scriptPath], {
             cwd: path.dirname(scriptPath),
@@ -28,11 +30,11 @@ class APIServiceManager {
         });
 
         process.on('error', (error) => {
-            console.error(`❌ ${name} failed to start:`, error.message);
+            logger.error(`❌ ${name} failed to start:`, error.message);
         });
 
         process.on('exit', (code, signal) => {
-            console.log(`📱 ${name} exited with code ${code} and signal ${signal}`);
+            logger.info(`📱 ${name} exited with code ${code} and signal ${signal}`);
             this.processes.delete(name);
         });
 
@@ -46,7 +48,7 @@ class APIServiceManager {
     }
 
     async start() {
-        console.log('🎬 Starting Media Server API Services...\n');
+        logger.info('🎬 Starting Media Server API Services...\n');
 
         // Start Main API Server
         this.startService(
@@ -76,33 +78,33 @@ class APIServiceManager {
     }
 
     displayStatus() {
-        console.log('\n📊 API Services Status:');
-        console.log('─'.repeat(50));
+        logger.info('\n📊 API Services Status:');
+        logger.info('─'.repeat(50));
         
         for (const [name, service] of this.processes) {
             const uptime = Math.floor((Date.now() - service.startTime.getTime()) / 1000);
-            console.log(`✅ ${name.padEnd(25)} | Port: ${service.port} | Uptime: ${uptime}s`);
+            logger.info(`✅ ${name.padEnd(25)} | Port: ${service.port} | Uptime: ${uptime}s`);
         }
         
-        console.log('─'.repeat(50));
-        console.log('🌐 Available Endpoints:');
-        console.log('  📚 API Docs:     http://localhost:3004/api/docs');
-        console.log('  🏥 Health:       http://localhost:3004/health');
-        console.log('  🔌 Socket.IO:    ws://localhost:3003');
-        console.log('  📡 Socket API:   http://localhost:3003/api/services/status');
-        console.log('\n💡 Use Ctrl+C to stop all services');
+        logger.info('─'.repeat(50));
+        logger.info('🌐 Available Endpoints:');
+        logger.info('  📚 API Docs:     http://localhost:3004/api/docs');
+        logger.info('  🏥 Health:       http://localhost:3004/health');
+        logger.info('  🔌 Socket.IO:    ws://localhost:3003');
+        logger.info('  📡 Socket API:   http://localhost:3003/api/services/status');
+        logger.info('\n💡 Use Ctrl+C to stop all services');
     }
 
     shutdown() {
-        console.log('\n🛑 Shutting down all API services...');
+        logger.info('\n🛑 Shutting down all API services...');
         
         for (const [name, service] of this.processes) {
-            console.log(`📱 Stopping ${name}...`);
+            logger.info(`📱 Stopping ${name}...`);
             service.process.kill('SIGTERM');
         }
 
         setTimeout(() => {
-            console.log('✅ All API services stopped');
+            logger.info('✅ All API services stopped');
             process.exit(0);
         }, 3000);
     }
@@ -114,19 +116,19 @@ class APIServiceManager {
             { name: 'Socket.IO API', url: 'http://localhost:3003/health' }
         ];
 
-        console.log('\n🏥 Health Check Results:');
-        console.log('─'.repeat(40));
+        logger.info('\n🏥 Health Check Results:');
+        logger.info('─'.repeat(40));
 
         for (const check of healthChecks) {
             try {
                 const response = await axios.get(check.url, { timeout: 5000 });
                 const status = response.data.status === 'healthy' ? '✅' : '⚠️';
-                console.log(`${status} ${check.name.padEnd(20)} | ${response.data.status}`);
+                logger.info(`${status} ${check.name.padEnd(20)} | ${response.data.status}`);
             } catch (error) {
-                console.log(`❌ ${check.name.padEnd(20)} | Unreachable`);
+                logger.info(`❌ ${check.name.padEnd(20)} | Unreachable`);
             }
         }
-        console.log('─'.repeat(40));
+        logger.info('─'.repeat(40));
     }
 }
 
@@ -145,10 +147,10 @@ switch (command) {
         manager.displayStatus();
         break;
     default:
-        console.log('📖 Available commands:');
-        console.log('  node start-all.js start   - Start all API services');
-        console.log('  node start-all.js health  - Check service health');
-        console.log('  node start-all.js status  - Show service status');
+        logger.info('📖 Available commands:');
+        logger.info('  node start-all.js start   - Start all API services');
+        logger.info('  node start-all.js health  - Check service health');
+        logger.info('  node start-all.js status  - Show service status');
         break;
 }
 

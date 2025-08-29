@@ -7,6 +7,7 @@ import axios from 'axios';
 import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import path from 'path';
+import logger from '../logger.js';
 
 export class TranslationService extends EventEmitter {
   constructor(config = {}) {
@@ -83,7 +84,7 @@ export class TranslationService extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Translation Service...');
+      logger.info('Initializing Translation Service...');
       
       // Create cache directory
       await this.ensureCacheDirectory();
@@ -104,11 +105,11 @@ export class TranslationService extends EventEmitter {
       this.startRequestProcessor();
       
       this.isInitialized = true;
-      console.log('Translation Service initialized successfully');
+      logger.info('Translation Service initialized successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Translation Service:', error);
+      logger.error('Failed to initialize Translation Service:', error);
       throw error;
     }
   }
@@ -151,9 +152,9 @@ export class TranslationService extends EventEmitter {
       const providers = ['google', 'azure', 'deepl'];
       if (result.status === 'fulfilled') {
         this.providerStatus[providers[index]] = true;
-        console.log(`✅ ${providers[index]} translation provider connected`);
+        logger.info(`✅ ${providers[index]} translation provider connected`);
       } else {
-        console.warn(`⚠️  ${providers[index]} translation provider not available:`, result.reason.message);
+        logger.warn(`⚠️  ${providers[index]} translation provider not available: ${result.reason?.message || result.reason}`);
       }
     });
   }
@@ -240,9 +241,9 @@ export class TranslationService extends EventEmitter {
       }));
       
       this.supportedLanguages.set('google', languages);
-      console.log(`Loaded ${languages.length} Google Translate languages`);
+      logger.info(`Loaded ${languages.length} Google Translate languages`);
     } catch (error) {
-      console.warn('Failed to load Google languages:', error.message);
+      logger.warn('Failed to load Google languages:', error.message);
     }
   }
 
@@ -265,9 +266,9 @@ export class TranslationService extends EventEmitter {
       }));
       
       this.supportedLanguages.set('azure', languages);
-      console.log(`Loaded ${languages.length} Azure Translator languages`);
+      logger.info(`Loaded ${languages.length} Azure Translator languages`);
     } catch (error) {
-      console.warn('Failed to load Azure languages:', error.message);
+      logger.warn('Failed to load Azure languages:', error.message);
     }
   }
 
@@ -284,9 +285,9 @@ export class TranslationService extends EventEmitter {
       }));
       
       this.supportedLanguages.set('deepl', languages);
-      console.log(`Loaded ${languages.length} DeepL languages`);
+      logger.info(`Loaded ${languages.length} DeepL languages`);
     } catch (error) {
-      console.warn('Failed to load DeepL languages:', error.message);
+      logger.warn('Failed to load DeepL languages:', error.message);
     }
   }
 
@@ -334,9 +335,9 @@ export class TranslationService extends EventEmitter {
         this.translationCache.set(key, value);
       });
       
-      console.log(`Loaded ${this.translationCache.size} translation cache entries`);
+      logger.info(`Loaded ${this.translationCache.size} translation cache entries`);
     } catch (error) {
-      console.log('No existing translation cache found');
+      logger.info('No existing translation cache found');
     }
   }
 
@@ -453,7 +454,7 @@ export class TranslationService extends EventEmitter {
       };
 
     } catch (error) {
-      console.error('Translation failed:', error);
+      logger.error('Translation failed:', error);
       this.emit('translationError', { text, targetLanguage, error });
       throw error;
     }
@@ -561,13 +562,13 @@ export class TranslationService extends EventEmitter {
       for (const fallbackProvider of this.config.fallbackProviders) {
         if (fallbackProvider !== provider && this.providerStatus[fallbackProvider]) {
           try {
-            console.warn(`Falling back to ${fallbackProvider} after ${provider} failed`);
+            logger.warn(`Falling back to ${fallbackProvider} after ${provider} failed`);
             return await this.executeTranslationRequest({
               ...request,
               provider: fallbackProvider
             });
           } catch (fallbackError) {
-            console.warn(`Fallback provider ${fallbackProvider} also failed:`, fallbackError.message);
+            logger.warn(`Fallback provider ${fallbackProvider} also failed: ${fallbackError.message}`);
           }
         }
       }
@@ -726,7 +727,7 @@ export class TranslationService extends EventEmitter {
 
       return detectedLanguage;
     } catch (error) {
-      console.warn('Language detection failed:', error.message);
+      logger.warn('Language detection failed:', error.message);
       return 'auto';
     }
   }
@@ -896,7 +897,7 @@ export class TranslationService extends EventEmitter {
       // Clear buffer
       session.buffer = '';
     } catch (error) {
-      console.error('Real-time translation failed:', error);
+      logger.error('Real-time translation failed:', error);
       this.emit('realTimeTranslationError', {
         sessionId: session.id,
         error
@@ -993,7 +994,7 @@ export class TranslationService extends EventEmitter {
 
       return qualityScore;
     } catch (error) {
-      console.warn('Quality assessment failed:', error.message);
+      logger.warn('Quality assessment failed:', error.message);
       return 0.5; // Default score
     }
   }
@@ -1037,7 +1038,7 @@ export class TranslationService extends EventEmitter {
       const cacheData = Object.fromEntries(this.translationCache);
       await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2));
     } catch (error) {
-      console.warn('Failed to save translation cache:', error.message);
+      logger.warn('Failed to save translation cache:', error.message);
     }
   }
 
@@ -1146,7 +1147,7 @@ export class TranslationService extends EventEmitter {
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Translation Service...');
+    logger.info('Cleaning up Translation Service...');
     
     // Save cache
     await this.saveTranslationCache();

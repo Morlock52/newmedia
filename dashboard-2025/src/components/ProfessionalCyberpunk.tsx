@@ -33,7 +33,7 @@ export default function ProfessionalCyberpunk() {
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
 
-    let particles: Array<{x: number, y: number, vx: number, vy: number, size: number}> = []
+    const particles: Array<{x: number, y: number, vx: number, vy: number, size: number}> = []
     
     for (let i = 0; i < 50; i++) {
       particles.push({

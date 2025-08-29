@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Plex Integration Module
  * Complete Plex API integration with X-Plex-Token authentication
@@ -58,7 +59,7 @@ class PlexIntegration extends EventEmitter {
                         const parsed = await this.parser.parseStringPromise(response.data);
                         response.data = parsed;
                     } catch (error) {
-                        console.warn('Failed to parse XML response:', error);
+                        logger.warn('Failed to parse XML response:', error);
                     }
                 }
                 return response;
@@ -497,7 +498,7 @@ class PlexIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Plex webhook error:', error);
+                logger.error('Plex webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

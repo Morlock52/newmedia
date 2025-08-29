@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Seedbox Manager Service
  * Manages torrent downloads, cross-seeding, and seedbox operations
@@ -70,7 +71,7 @@ class SeedboxManager {
 
     async initialize() {
         try {
-            console.log('Initializing SeedboxManager...');
+            logger.info('Initializing SeedboxManager...');
             
             // Initialize default seedbox configurations
             await this.loadSeedboxConfigurations();
@@ -82,9 +83,9 @@ class SeedboxManager {
             await this.updateStats();
             
             this.initialized = true;
-            console.log('SeedboxManager initialized successfully');
+            logger.info('SeedboxManager initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize SeedboxManager:', error);
+            logger.error('Failed to initialize SeedboxManager:', error);
             this.initialized = true; // Continue with limited functionality
         }
     }
@@ -120,12 +121,12 @@ class SeedboxManager {
                 seedbox.lastChecked = new Date().toISOString();
                 
                 if (isConnected) {
-                    console.log(`✅ Connected to ${clientName}`);
+                    logger.info(`✅ Connected to ${clientName}`);
                 } else {
-                    console.log(`❌ Failed to connect to ${clientName}`);
+                    logger.info(`❌ Failed to connect to ${clientName}`);
                 }
             } catch (error) {
-                console.log(`❌ Error testing ${clientName}:`, error.message);
+                logger.info(`❌ Error testing ${clientName}:`, error.message);
                 seedbox.connected = false;
                 seedbox.status = 'error';
                 seedbox.error = error.message;
@@ -336,7 +337,7 @@ class SeedboxManager {
                         // Update seedbox stats
                         seedbox.stats = stats;
                     } catch (error) {
-                        console.error(`Failed to get stats for ${seedbox.name}:`, error.message);
+                        logger.error(`Failed to get stats for ${seedbox.name}:`, error.message);
                     }
                 }
             }
@@ -352,7 +353,7 @@ class SeedboxManager {
                 lastUpdated: new Date().toISOString()
             };
         } catch (error) {
-            console.error('Failed to update seedbox stats:', error);
+            logger.error('Failed to update seedbox stats:', error);
         }
     }
 
@@ -466,7 +467,7 @@ class SeedboxManager {
                 ...options
             };
             
-            console.log('Starting cross-seed with options:', this.crossSeedConfig);
+            logger.info('Starting cross-seed with options:', this.crossSeedConfig);
             
             // In a real implementation, this would start the cross-seeding process
             // For now, return success status
@@ -606,11 +607,11 @@ class SeedboxManager {
                 await this.updateStats();
                 await this.testClientConnections();
             } catch (error) {
-                console.error('Monitoring error:', error);
+                logger.error('Monitoring error:', error);
             }
         }, 60000); // Every minute
         
-        console.log('Seedbox monitoring started');
+        logger.info('Seedbox monitoring started');
     }
 
     stopMonitoring() {
@@ -619,7 +620,7 @@ class SeedboxManager {
             this.monitoringInterval = null;
         }
         this.monitoring = false;
-        console.log('Seedbox monitoring stopped');
+        logger.info('Seedbox monitoring stopped');
     }
 
     // Utility methods

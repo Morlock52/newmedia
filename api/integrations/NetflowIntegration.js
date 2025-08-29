@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Netflow Integration Module
  * Network flow analysis for media streaming monitoring and optimization
@@ -75,7 +76,7 @@ class NetflowIntegration extends EventEmitter {
         });
         
         this.collector.bind(this.collectorPort, () => {
-            console.log(`NetFlow collector listening on port ${this.collectorPort}`);
+            logger.info(`NetFlow collector listening on port ${this.collectorPort}`);
             this.emit('collectorStarted', this.collectorPort);
         });
     }
@@ -604,7 +605,7 @@ class NetflowIntegration extends EventEmitter {
                 this.emit('webhookFlowReceived', flowData);
                 res.status(200).json({ success: true, processed: Array.isArray(flowData) ? flowData.length : 1 });
             } catch (error) {
-                console.error('NetFlow webhook error:', error);
+                logger.error('NetFlow webhook error:', error);
                 res.status(500).json({ error: 'Flow processing failed' });
             }
         });

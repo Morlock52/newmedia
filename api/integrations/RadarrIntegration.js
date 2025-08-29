@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Radarr Integration Module
  * Complete Radarr API v3 integration with movie management
@@ -577,7 +578,7 @@ class RadarrIntegration extends EventEmitter {
                 
                 res.status(200).json({ success: true });
             } catch (error) {
-                console.error('Radarr webhook error:', error);
+                logger.error('Radarr webhook error:', error);
                 res.status(500).json({ error: 'Webhook processing failed' });
             }
         });

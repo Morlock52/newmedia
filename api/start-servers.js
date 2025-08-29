@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const logger = require('../middleware/logger.js');
+require('../scripts/console-shim');
 
 /**
  * Development Server Startup Script
@@ -25,7 +27,7 @@ class ServerManager {
             reset: '\x1b[0m'     // Reset
         };
         
-        console.log(`${colors[type]}[${timestamp}] ${message}${colors.reset}`);
+        logger.info(`${colors[type]}[${timestamp}] ${message}${colors.reset}`);
     }
 
     async startServer(name, scriptPath, port, env = {}) {
@@ -220,7 +222,7 @@ class ServerManager {
 
     printStatus() {
         this.log('📊 Server Status:', 'info');
-        console.log('='.repeat(50));
+        logger.info('='.repeat(50));
         
         for (const [name, info] of Object.entries(this.getStatus())) {
             const statusEmoji = {
@@ -232,9 +234,9 @@ class ServerManager {
             }[info.status] || '❓';
             
             const uptime = info.uptime > 0 ? `(${Math.round(info.uptime / 1000)}s)` : '';
-            console.log(`  ${statusEmoji} ${name.padEnd(20)} Port: ${info.port.toString().padEnd(5)} Status: ${info.status} ${uptime}`);
+            logger.info(`  ${statusEmoji} ${name.padEnd(20)} Port: ${info.port.toString().padEnd(5)} Status: ${info.status} ${uptime}`);
         }
-        console.log('='.repeat(50));
+        logger.info('='.repeat(50));
     }
 }
 
@@ -248,13 +250,13 @@ async function main() {
     
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
-        console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+        logger.info('\n🛑 Received SIGINT, shutting down gracefully...');
         await manager.shutdown();
         process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
-        console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+        logger.info('\n🛑 Received SIGTERM, shutting down gracefully...');
         await manager.shutdown();
         process.exit(0);
     });
@@ -340,7 +342,7 @@ async function main() {
 // Run if this file is executed directly
 if (require.main === module) {
     main().catch(error => {
-        console.error('Server manager error:', error);
+        logger.error('Server manager error:', error);
         process.exit(1);
     });
 }

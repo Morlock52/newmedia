@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * AutheliaService - ForwardAuth with Traefik, TOTP and LDAP support
  * Provides centralized authentication and authorization using Authelia
@@ -55,7 +56,7 @@ class AutheliaService extends EventEmitter {
      */
     async initialize() {
         try {
-            console.log('🔐 Initializing AutheliaService...');
+            logger.info('🔐 Initializing AutheliaService...');
             
             // Test Authelia connection
             await this.testAutheliaConnection();
@@ -76,11 +77,11 @@ class AutheliaService extends EventEmitter {
             
             this.isInitialized = true;
             this.emit('initialized');
-            console.log('✅ AutheliaService initialized successfully');
+            logger.info('✅ AutheliaService initialized successfully');
             
             return { success: true, message: 'AutheliaService initialized' };
         } catch (error) {
-            console.error('❌ AutheliaService initialization failed:', error);
+            logger.error('❌ AutheliaService initialization failed:', error);
             this.emit('error', error);
             throw error;
         }
@@ -99,9 +100,9 @@ class AutheliaService extends EventEmitter {
                 throw new Error('Authelia health check failed');
             }
             
-            console.log('✅ Authelia connection verified');
+            logger.info('✅ Authelia connection verified');
         } catch (error) {
-            console.error('❌ Authelia connection failed:', error.message);
+            logger.error('❌ Authelia connection failed:', error.message);
             throw error;
         }
     }
@@ -171,9 +172,9 @@ class AutheliaService extends EventEmitter {
                 });
             });
             
-            console.log(`✅ Access policies initialized: ${this.accessPolicies.size} policies`);
+            logger.info(`✅ Access policies initialized: ${this.accessPolicies.size} policies`);
         } catch (error) {
-            console.error('❌ Access policy initialization failed:', error);
+            logger.error('❌ Access policy initialization failed:', error);
         }
     }
 
@@ -214,9 +215,9 @@ class AutheliaService extends EventEmitter {
                 this.users.set(username, user);
             });
             
-            console.log(`✅ Users loaded: ${this.users.size} users`);
+            logger.info(`✅ Users loaded: ${this.users.size} users`);
         } catch (error) {
-            console.error('❌ User loading failed:', error);
+            logger.error('❌ User loading failed:', error);
         }
     }
 
@@ -226,16 +227,16 @@ class AutheliaService extends EventEmitter {
     async initializeLDAP() {
         try {
             if (!this.config.ldapUrl) {
-                console.warn('⚠️ LDAP URL not configured');
+                logger.warn('⚠️ LDAP URL not configured');
                 return;
             }
             
             // Test LDAP connection
             // In production, use proper LDAP client library
-            console.log('✅ LDAP connection configured');
+            logger.info('✅ LDAP connection configured');
             this.ldapEnabled = true;
         } catch (error) {
-            console.error('❌ LDAP initialization failed:', error);
+            logger.error('❌ LDAP initialization failed:', error);
             this.ldapEnabled = false;
         }
     }
@@ -312,7 +313,7 @@ class AutheliaService extends EventEmitter {
                 }
             };
         } catch (error) {
-            console.error('❌ First factor authentication failed:', error);
+            logger.error('❌ First factor authentication failed:', error);
             throw error;
         }
     }
@@ -354,7 +355,7 @@ class AutheliaService extends EventEmitter {
                 authenticationLevel: session.authenticationLevel
             };
         } catch (error) {
-            console.error('❌ Second factor authentication failed:', error);
+            logger.error('❌ Second factor authentication failed:', error);
             throw error;
         }
     }
@@ -447,7 +448,7 @@ class AutheliaService extends EventEmitter {
                 }
             };
         } catch (error) {
-            console.error('❌ Forward auth failed:', error);
+            logger.error('❌ Forward auth failed:', error);
             return this.createUnauthorizedResponse('Authentication error');
         }
     }
@@ -690,11 +691,11 @@ class AutheliaService extends EventEmitter {
             });
             
             if (expiredCount > 0) {
-                console.log(`🧹 Cleaned up ${expiredCount} expired sessions`);
+                logger.info(`🧹 Cleaned up ${expiredCount} expired sessions`);
             }
         }, 5 * 60 * 1000); // Every 5 minutes
         
-        console.log('✅ Session cleanup started');
+        logger.info('✅ Session cleanup started');
     }
 
     /**
@@ -714,7 +715,7 @@ class AutheliaService extends EventEmitter {
             
             return { success: false, message: 'Session not found' };
         } catch (error) {
-            console.error('❌ Logout failed:', error);
+            logger.error('❌ Logout failed:', error);
             throw error;
         }
     }
@@ -761,7 +762,7 @@ class AutheliaService extends EventEmitter {
      */
     async cleanup() {
         try {
-            console.log('🧹 Cleaning up AutheliaService...');
+            logger.info('🧹 Cleaning up AutheliaService...');
             
             this.users.clear();
             this.sessions.clear();
@@ -770,9 +771,9 @@ class AutheliaService extends EventEmitter {
             this.removeAllListeners();
             
             this.isInitialized = false;
-            console.log('✅ AutheliaService cleanup completed');
+            logger.info('✅ AutheliaService cleanup completed');
         } catch (error) {
-            console.error('❌ AutheliaService cleanup failed:', error);
+            logger.error('❌ AutheliaService cleanup failed:', error);
         }
     }
 }

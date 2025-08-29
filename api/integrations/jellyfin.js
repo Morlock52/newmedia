@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Jellyfin Integration Wrapper
  * Simplified interface for Jellyfin media server integration
@@ -41,14 +42,14 @@ async function quickSetup(options = {}) {
         // Test connection and authenticate if needed
         const connectionResult = await jellyfin.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Jellyfin integration setup successfully');
+            logger.info('✅ Jellyfin integration setup successfully');
         } else {
-            console.warn('⚠️ Jellyfin connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Jellyfin connection test failed:', connectionResult.error);
         }
         
         return jellyfin;
     } catch (error) {
-        console.error('❌ Jellyfin quick setup failed:', error.message);
+        logger.error('❌ Jellyfin quick setup failed:', error.message);
         throw error;
     }
 }

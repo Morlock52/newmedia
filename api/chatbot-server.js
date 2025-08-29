@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -45,12 +46,12 @@ async function loadSystemPrompt() {
         if (!systemPromptCache || !promptLastModified || stats.mtime > promptLastModified) {
             systemPromptCache = await fs.readFile(promptPath, 'utf-8');
             promptLastModified = stats.mtime;
-            console.log('System prompt loaded/reloaded');
+            logger.info('System prompt loaded/reloaded');
         }
         
         return systemPromptCache;
     } catch (error) {
-        console.error('Error loading system prompt:', error);
+        logger.error('Error loading system prompt:', error);
         // Fallback prompt if file doesn't exist
         return `You are a helpful Media Server Assistant focused exclusively on topics related to media servers, streaming, and content management. 
 
@@ -141,7 +142,7 @@ app.post('/api/chat', async (req, res) => {
         const assistantResponse = completion.choices[0].message.content;
         
         // Log token usage for monitoring
-        console.log(`Tokens used: ${completion.usage.total_tokens}`);
+        logger.info(`Tokens used: ${completion.usage.total_tokens}`);
         
         res.json({
             response: assistantResponse,
@@ -153,7 +154,7 @@ app.post('/api/chat', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('OpenAI API error:', error);
+        logger.error('OpenAI API error:', error);
         
         // Handle specific OpenAI errors
         if (error.status === 429) {
@@ -183,7 +184,7 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
+    logger.error('Unhandled error:', err);
     res.status(500).json({ 
         error: 'An unexpected error occurred',
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -192,21 +193,21 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Media Assistant API server running on port ${PORT}`);
-    console.log(`OpenAI API Key configured: ${!!process.env.OPENAI_API_KEY}`);
+    logger.info(`Media Assistant API server running on port ${PORT}`);
+    logger.info(`OpenAI API Key configured: ${!!process.env.OPENAI_API_KEY}`);
     
     // Check for API key
     if (!process.env.OPENAI_API_KEY) {
-        console.warn('WARNING: OPENAI_API_KEY environment variable is not set!');
-        console.warn('Set it using: export OPENAI_API_KEY=your-api-key-here');
+        logger.warn('WARNING: OPENAI_API_KEY environment variable is not set!');
+        logger.warn('Set it using: export OPENAI_API_KEY=your-api-key-here');
     }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
+    logger.info('SIGTERM signal received: closing HTTP server');
     app.close(() => {
-        console.log('HTTP server closed');
+        logger.info('HTTP server closed');
     });
 });
 

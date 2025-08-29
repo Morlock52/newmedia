@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Configuration Manager Service
  * Handles application configuration management
@@ -83,9 +84,9 @@ class ConfigManager {
         try {
             await this.loadConfiguration();
             this.initialized = true;
-            console.log('ConfigManager initialized successfully');
+            logger.info('ConfigManager initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize ConfigManager:', error);
+            logger.error('Failed to initialize ConfigManager:', error);
             // Use default config if loading fails
             this.initialized = true;
         }
@@ -99,14 +100,14 @@ class ConfigManager {
             // Merge with defaults to ensure all required fields exist
             this.config = this.mergeConfig(this.config, loadedConfig);
             
-            console.log('Configuration loaded from:', this.configPath);
+            logger.info('Configuration loaded from:', this.configPath);
             return this.config;
         } catch (error) {
             if (error.code === 'ENOENT') {
-                console.log('Config file not found, creating default configuration');
+                logger.info('Config file not found, creating default configuration');
                 await this.saveConfiguration();
             } else {
-                console.error('Failed to load configuration:', error);
+                logger.error('Failed to load configuration:', error);
                 throw error;
             }
         }
@@ -123,10 +124,10 @@ class ConfigManager {
                 'utf8'
             );
             
-            console.log('Configuration saved to:', this.configPath);
+            logger.info('Configuration saved to:', this.configPath);
             return true;
         } catch (error) {
-            console.error('Failed to save configuration:', error);
+            logger.error('Failed to save configuration:', error);
             throw error;
         }
     }

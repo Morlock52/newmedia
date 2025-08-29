@@ -7,6 +7,8 @@ import axios from 'axios';
 import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import path from 'path';
+import logger from '../logger.js';
+import logger from '../logger.js';
 
 export class SpeechService extends EventEmitter {
   constructor(config = {}) {
@@ -82,7 +84,7 @@ export class SpeechService extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Speech Service...');
+      logger.info('Initializing Speech Service...');
       
       // Create cache directory
       await this.ensureCacheDirectory();
@@ -100,11 +102,11 @@ export class SpeechService extends EventEmitter {
       this.setupCleanupIntervals();
       
       this.isInitialized = true;
-      console.log('Speech Service initialized successfully');
+      logger.info('Speech Service initialized successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Speech Service:', error);
+      logger.error('Failed to initialize Speech Service:', error);
       throw error;
     }
   }
@@ -147,9 +149,9 @@ export class SpeechService extends EventEmitter {
       const providers = ['azure', 'google', 'elevenlabs'];
       if (result.status === 'fulfilled') {
         this.providerStatus[providers[index]] = true;
-        console.log(`✅ ${providers[index]} speech provider connected`);
+        logger.info(`✅ ${providers[index]} speech provider connected`);
       } else {
-        console.warn(`⚠️  ${providers[index]} speech provider not available:`, result.reason.message);
+        logger.warn(`⚠️  ${providers[index]} speech provider not available: ${result.reason?.message || result.reason}`);
       }
     });
   }
@@ -260,9 +262,9 @@ export class SpeechService extends EventEmitter {
         this.supportedLanguages.add(voice.Locale);
       });
 
-      console.log(`Loaded ${voices.length} Azure voices`);
+      logger.info(`Loaded ${voices.length} Azure voices`);
     } catch (error) {
-      console.warn('Failed to load Azure voices:', error.message);
+      logger.warn('Failed to load Azure voices:', error.message);
     }
   }
 
@@ -288,9 +290,9 @@ export class SpeechService extends EventEmitter {
         });
       });
 
-      console.log(`Loaded ${voices.length} ElevenLabs voices`);
+      logger.info(`Loaded ${voices.length} ElevenLabs voices`);
     } catch (error) {
-      console.warn('Failed to load ElevenLabs voices:', error.message);
+      logger.warn('Failed to load ElevenLabs voices:', error.message);
     }
   }
 
@@ -323,9 +325,9 @@ export class SpeechService extends EventEmitter {
         this.ttsCache.set(key, value);
       });
       
-      console.log(`Loaded ${this.ttsCache.size} TTS cache entries`);
+      logger.info(`Loaded ${this.ttsCache.size} TTS cache entries`);
     } catch (error) {
-      console.log('No existing TTS cache found');
+      logger.info('No existing TTS cache found');
     }
   }
 
@@ -383,8 +385,8 @@ export class SpeechService extends EventEmitter {
             enablePunctuationAndCapitalization,
             enableProfanityFilter
           });
-        } catch (error) {
-          console.warn(`Transcription with ${fallbackProvider} failed:`, error.message);
+          } catch (error) {
+          logger.warn(`Transcription with ${fallbackProvider} failed: ${error.message}`);
         }
       }
 
@@ -392,7 +394,7 @@ export class SpeechService extends EventEmitter {
       return this.transcribeLocally(audioData, options);
 
     } catch (error) {
-      console.error('Transcription failed:', error);
+      logger.error('Transcription failed:', error);
       throw error;
     }
   }
@@ -604,7 +606,7 @@ export class SpeechService extends EventEmitter {
           }
         }
       } catch (error) {
-        console.error('Real-time transcription error:', error);
+        logger.error('Real-time transcription error:', error);
       }
     }
 
@@ -673,7 +675,7 @@ export class SpeechService extends EventEmitter {
             });
             break;
           } catch (error) {
-            console.warn(`TTS with ${fallbackProvider} failed:`, error.message);
+          logger.warn(`TTS with ${fallbackProvider} failed: ${error.message}`);
           }
         }
       }
@@ -694,7 +696,7 @@ export class SpeechService extends EventEmitter {
       return audioBuffer;
 
     } catch (error) {
-      console.error('TTS synthesis failed:', error);
+      logger.error('TTS synthesis failed:', error);
       throw error;
     }
   }
@@ -951,7 +953,7 @@ export class SpeechService extends EventEmitter {
       );
       await fs.writeFile(cacheFile, JSON.stringify(cacheData, null, 2));
     } catch (error) {
-      console.warn('Failed to save TTS cache:', error.message);
+      logger.warn('Failed to save TTS cache:', error.message);
     }
   }
 
@@ -1069,7 +1071,7 @@ export class SpeechService extends EventEmitter {
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Speech Service...');
+    logger.info('Cleaning up Speech Service...');
     
     // Save TTS cache
     await this.saveTTSCache();

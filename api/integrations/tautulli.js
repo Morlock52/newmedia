@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Tautulli Integration Wrapper
  * Simplified interface for Tautulli analytics and monitoring
@@ -39,14 +40,14 @@ async function quickSetup(options = {}) {
         // Test connection
         const connectionResult = await tautulli.testConnection();
         if (connectionResult.success) {
-            console.log('✅ Tautulli integration setup successfully');
+            logger.info('✅ Tautulli integration setup successfully');
         } else {
-            console.warn('⚠️ Tautulli connection test failed:', connectionResult.error);
+            logger.warn('⚠️ Tautulli connection test failed:', connectionResult.error);
         }
         
         return tautulli;
     } catch (error) {
-        console.error('❌ Tautulli quick setup failed:', error.message);
+        logger.error('❌ Tautulli quick setup failed:', error.message);
         throw error;
     }
 }

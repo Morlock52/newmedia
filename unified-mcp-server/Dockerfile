@@ -18,6 +18,7 @@ RUN npm ci --only=production
 
 # Copy server files
 COPY . .
+COPY ../scripts/console-shim.js ./scripts/console-shim.js
 
 # Create directories for logs and data
 RUN mkdir -p /app/logs /app/data
@@ -37,4 +38,4 @@ ENV NODE_ENV=production
 ENV MCP_SERVER_PORT=3000
 
 # Start the server
-CMD ["node", "server.js"]
+CMD ["node", "-r", "./scripts/console-shim.js", "server.js"]

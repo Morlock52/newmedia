@@ -6,6 +6,7 @@
 import axios from 'axios';
 import { EventEmitter } from 'events';
 import * as sentiment from 'sentiment';
+import logger from '../logger.js';
 
 export class EmotionDetector extends EventEmitter {
   constructor(config = {}) {
@@ -88,7 +89,7 @@ export class EmotionDetector extends EventEmitter {
    */
   async initialize() {
     try {
-      console.log('Initializing Emotion Detection Service...');
+      logger.info('Initializing Emotion Detection Service...');
       
       // Test provider connectivity
       await this.testProviderConnectivity();
@@ -97,11 +98,11 @@ export class EmotionDetector extends EventEmitter {
       await this.loadCalibrationData();
       
       this.isInitialized = true;
-      console.log('Emotion Detection Service initialized successfully');
+      logger.info('Emotion Detection Service initialized successfully');
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize Emotion Detection Service:', error);
+      logger.error('Failed to initialize Emotion Detection Service:', error);
       throw error;
     }
   }
@@ -138,9 +139,9 @@ export class EmotionDetector extends EventEmitter {
       const providers = ['hume', 'azure', 'aws', 'google'];
       if (result.status === 'fulfilled') {
         this.providerStatus[providers[index]] = true;
-        console.log(`✅ ${providers[index]} emotion detection provider connected`);
+        logger.info(`✅ ${providers[index]} emotion detection provider connected`);
       } else {
-        console.warn(`⚠️  ${providers[index]} emotion detection provider not available:`, result.reason.message);
+        logger.warn(`⚠️  ${providers[index]} emotion detection provider not available: ${result.reason?.message || result.reason}`);
       }
     });
   }
@@ -257,7 +258,7 @@ export class EmotionDetector extends EventEmitter {
       
       return calibratedResults;
     } catch (error) {
-      console.error('Emotion analysis failed:', error);
+      logger.error('Emotion analysis failed:', error);
       this.emit('analysisError', error);
       throw error;
     }
@@ -410,7 +411,7 @@ export class EmotionDetector extends EventEmitter {
       
       return this.parseHumeResults(results);
     } catch (error) {
-      console.error('Hume audio analysis failed:', error);
+      logger.error('Hume audio analysis failed:', error);
       throw error;
     }
   }
@@ -439,7 +440,7 @@ export class EmotionDetector extends EventEmitter {
       
       return this.parseHumeResults(results);
     } catch (error) {
-      console.error('Hume text analysis failed:', error);
+      logger.error('Hume text analysis failed:', error);
       throw error;
     }
   }
@@ -721,7 +722,7 @@ export class EmotionDetector extends EventEmitter {
    * Cleanup resources
    */
   async cleanup() {
-    console.log('Cleaning up Emotion Detection Service...');
+    logger.info('Cleaning up Emotion Detection Service...');
     this.isInitialized = false;
     this.removeAllListeners();
   }

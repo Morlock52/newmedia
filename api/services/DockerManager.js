@@ -1,3 +1,4 @@
+const logger = require('../../middleware/logger.js');
 /**
  * Docker Manager Service
  * Comprehensive Docker Compose service management with profile support
@@ -48,9 +49,9 @@ class DockerManager {
             // Initialize service definitions
             await this.initializeServiceDefinitions();
             
-            console.log('DockerManager initialized successfully');
+            logger.info('DockerManager initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize DockerManager:', error);
+            logger.error('Failed to initialize DockerManager:', error);
             throw error;
         }
     }
@@ -58,10 +59,10 @@ class DockerManager {
     async verifyDocker() {
         try {
             const { stdout } = await execAsync('docker --version');
-            console.log('Docker version:', stdout.trim());
+            logger.info('Docker version:', stdout.trim());
             
             const { stdout: composeVersion } = await execAsync('docker compose version');
-            console.log('Docker Compose version:', composeVersion.trim());
+            logger.info('Docker Compose version:', composeVersion.trim());
         } catch (error) {
             throw new Error('Docker or Docker Compose not available: ' + error.message);
         }
@@ -75,7 +76,7 @@ class DockerManager {
             
             // Extract service names
             this.availableServices = Object.keys(this.composeConfig.services || {});
-            console.log('Available services:', this.availableServices);
+            logger.info('Available services:', this.availableServices);
         } catch (error) {
             throw new Error('Failed to load Docker Compose configuration: ' + error.message);
         }
@@ -328,7 +329,7 @@ class DockerManager {
 
             return status;
         } catch (error) {
-            console.error(`Failed to get status for ${serviceName}:`, error);
+            logger.error(`Failed to get status for ${serviceName}:`, error);
             
             // Return fallback status
             return {
@@ -361,7 +362,7 @@ class DockerManager {
                 };
             }
         } catch (error) {
-            console.error(`Failed to get stats for ${containerName}:`, error);
+            logger.error(`Failed to get stats for ${containerName}:`, error);
         }
         
         return null;
@@ -439,7 +440,7 @@ class DockerManager {
                 command += ' up -d';
             }
 
-            console.log('Executing:', command);
+            logger.info('Executing:', command);
             const { stdout, stderr } = await execAsync(command, { cwd: this.projectPath });
             
             // Clear cache to force refresh
@@ -468,7 +469,7 @@ class DockerManager {
                 command += ' down';
             }
 
-            console.log('Executing:', command);
+            logger.info('Executing:', command);
             const { stdout, stderr } = await execAsync(command, { cwd: this.projectPath });
             
             // Clear cache to force refresh
@@ -496,7 +497,7 @@ class DockerManager {
                 command += ' restart';
             }
 
-            console.log('Executing:', command);
+            logger.info('Executing:', command);
             const { stdout, stderr } = await execAsync(command, { cwd: this.projectPath });
             
             // Clear cache to force refresh

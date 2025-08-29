@@ -1,3 +1,4 @@
+const logger = require('../middleware/logger.js');
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -58,10 +59,10 @@ async function extractApiKeys() {
         const match = content.match(/<ApiKey>([^<]+)<\/ApiKey>/);
         if (match) {
           service.apiKey = match[1];
-          console.log(`✅ Extracted API key for ${name}`);
+          logger.info(`✅ Extracted API key for ${name}`);
         }
       } catch (error) {
-        console.log(`⚠️ Could not extract API key for ${name}:`, error.message);
+        logger.info(`⚠️ Could not extract API key for ${name}:`, error.message);
       }
     }
   }
@@ -210,7 +211,7 @@ app.get('/api/media/stats', async (req, res) => {
       stats.artists = artists.data.length;
     }
   } catch (error) {
-    console.error('Error fetching media stats:', error.message);
+    logger.error('Error fetching media stats:', error.message);
   }
   
   res.json(stats);
@@ -257,7 +258,7 @@ app.get('/api/downloads/queue', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error fetching download queue:', error.message);
+    logger.error('Error fetching download queue:', error.message);
   }
   
   res.json(queue);
@@ -265,7 +266,7 @@ app.get('/api/downloads/queue', async (req, res) => {
 
 // WebSocket for real-time updates
 wss.on('connection', (ws) => {
-  console.log('WebSocket client connected');
+  logger.info('WebSocket client connected');
   
   // Send initial status
   getServiceStatus('sonarr', services.sonarr).then(status => {
@@ -284,7 +285,7 @@ wss.on('connection', (ws) => {
   }, 5000);
   
   ws.on('close', () => {
-    console.log('WebSocket client disconnected');
+    logger.info('WebSocket client disconnected');
     clearInterval(interval);
   });
 });
@@ -301,7 +302,7 @@ async function start() {
   await extractApiKeys();
   
   server.listen(PORT, () => {
-    console.log(`
+    logger.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║  🚀 Media Server API Running                             ║
 ║  📡 API: http://localhost:${PORT}                            ║
