@@ -6,6 +6,7 @@
 import axios from 'axios';
 import { EventEmitter } from 'events';
 import logger from '../logger.js';
+import OpenAIRealtimeClient from './OpenAIRealtimeClient.js';
 
 export class LLMProcessor extends EventEmitter {
   constructor(config = {}) {
@@ -63,6 +64,17 @@ export class LLMProcessor extends EventEmitter {
     this.voicePrompts = this.initializeVoicePrompts();
     
     this.isInitialized = false;
+    this.openaiRealtime = null;
+    this.enableOpenAIRealtime = process.env.OPENAI_REALTIME_ENABLED === 'true';
+    if (this.enableOpenAIRealtime) {
+      try {
+        this.openaiRealtime = new OpenAIRealtimeClient({ apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_REALTIME_MODEL });
+      } catch (e) {
+        logger.warn('OpenAI Realtime init failed:', e.message);
+        this.openaiRealtime = null;
+        this.enableOpenAIRealtime = false;
+      }
+    }
   }
 
   /**
@@ -272,8 +284,37 @@ export class LLMProcessor extends EventEmitter {
       // Generate prompt based on context
       const prompt = this.generateContextualPrompt(enhancedContext);
 
-      // Process with available provider
-      const result = await this.processWithProvider(prompt, enhancedContext);
+      // If OpenAI realtime is enabled, prefer it for low-latency responses
+      let result;
+      if (this.enableOpenAIRealtime && this.openaiRealtime) {
+        try {
+          await this.openaiRealtime.connect();
+          const reqId = await this.openaiRealtime.requestResponse(prompt, { modalities: ['text'] });
+          // listen for response events
+          result = await new Promise((resolve, reject) => {
+            const onMessage = (msg) => {
+              if (msg && msg.type === 'response.delta' && msg.response) {
+                // accumulate or resolve on final
+                if (msg.response.final) {
+                  this.openaiRealtime.removeListener('message', onMessage);
+                  resolve({ text: msg.response.text, model: this.model, confidence: msg.response.confidence || 0.9 });
+                }
+              }
+            };
+            this.openaiRealtime.on('message', onMessage);
+            setTimeout(() => {
+              this.openaiRealtime.removeListener('message', onMessage);
+              reject(new Error('OpenAI realtime response timeout'));
+            }, 15000);
+          });
+        } catch (e) {
+          logger.warn('OpenAI realtime processing failed, falling back:', e.message);
+          result = await this.processWithProvider(prompt, enhancedContext);
+        }
+      } else {
+        // Process with available provider
+        result = await this.processWithProvider(prompt, enhancedContext);
+      }
 
       // Update conversation memory
       this.updateConversationMemory(conversationId || sessionId, {

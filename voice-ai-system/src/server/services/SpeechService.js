@@ -8,6 +8,7 @@ import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import path from 'path';
 import logger from '../logger.js';
+import OpenAIRealtimeClient from './OpenAIRealtimeClient.js';
 import logger from '../logger.js';
 
 export class SpeechService extends EventEmitter {
@@ -65,6 +66,23 @@ export class SpeechService extends EventEmitter {
       elevenlabs: false,
       local: true
     };
+
+    // Realtime OpenAI client (optional)
+    this.openaiRealtime = null;
+    this.enableOpenAIRealtime = process.env.OPENAI_REALTIME_ENABLED === 'true';
+    if (this.enableOpenAIRealtime) {
+      try {
+        this.openaiRealtime = new OpenAIRealtimeClient({
+          apiKey: process.env.OPENAI_API_KEY,
+          model: process.env.OPENAI_REALTIME_MODEL
+        });
+        // Attempt connect lazily later
+      } catch (e) {
+        logger.warn('OpenAI Realtime client init failed:', e.message);
+        this.openaiRealtime = null;
+        this.enableOpenAIRealtime = false;
+      }
+    }
 
     // Real-time transcription sessions
     this.transcriptionSessions = new Map();
@@ -364,6 +382,33 @@ export class SpeechService extends EventEmitter {
 
     try {
       // Try primary provider first
+      // If OpenAI Realtime is enabled and available, use it for low-latency transcription
+      if (this.enableOpenAIRealtime && this.openaiRealtime) {
+        try {
+          await this.openaiRealtime.connect();
+          // send audio chunk as base64
+          const b64 = Buffer.from(audioData).toString('base64');
+          await this.openaiRealtime.sendAudioChunk(b64);
+          await this.openaiRealtime.flushAudio();
+          // Wait for message event with transcription (consumer listens on events)
+          return new Promise((resolve, reject) => {
+            const onMsg = (msg) => {
+              if (msg && msg.type === 'transcript' && msg.text) {
+                this.openaiRealtime.removeListener('message', onMsg);
+                resolve({ text: msg.text, confidence: msg.confidence || 0.9, language: msg.language || language });
+              }
+            };
+            this.openaiRealtime.on('message', onMsg);
+            setTimeout(() => {
+              this.openaiRealtime.removeListener('message', onMsg);
+              reject(new Error('OpenAI realtime transcription timeout'));
+            }, 10000);
+          });
+        } catch (e) {
+          logger.warn('OpenAI realtime transcription failed, falling back:', e.message);
+        }
+      }
+
       if (this.providerStatus[provider]) {
         return await this.transcribeWithProvider(audioData, provider, {
           language,
