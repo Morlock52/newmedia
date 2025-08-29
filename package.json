@@ -72,6 +72,7 @@
     "sqlite3": "^5.1.6",
     "web-vitals": "^3.5.0",
     "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
     "workbox-sw": "^7.0.0"
   },
   "devDependencies": {
