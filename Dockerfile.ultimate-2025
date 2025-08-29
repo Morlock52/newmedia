@@ -15,7 +15,7 @@ COPY api/package*.json ./
 RUN npm ci --production
 COPY api/ ./
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Install s6-overlay for process management
 ARG S6_OVERLAY_VERSION=3.1.6.2

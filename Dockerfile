@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for complete media server stack
-FROM ubuntu:22.04 as base
+FROM ubuntu:24.04 as base
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive

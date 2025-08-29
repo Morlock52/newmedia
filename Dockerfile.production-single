@@ -2,7 +2,7 @@
 # Based on Agent Consensus Architecture
 # Version: 2025.08.09
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 
 # Metadata
 LABEL maintainer="Media Server AI Team"
