@@ -103,7 +103,7 @@ RUN case ${TARGETARCH} in \
 # Note: qBittorrent will be installed via apt in final stage
 
 # Stage 5: Homepage builder (simplified)
-FROM node:20-alpine AS homepage-builder
+FROM node:24-alpine AS homepage-builder
 
 # Create a minimal homepage placeholder
 RUN mkdir -p /homepage-dist && \

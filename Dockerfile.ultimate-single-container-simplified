@@ -1,7 +1,7 @@
 # Ultimate Media Server 2025 - Simplified Single Container
 # All 18 Components + Services
 
-FROM node:20-slim
+FROM node:24-slim
 
 # Install basic dependencies
 RUN apt-get update && apt-get install -y \
