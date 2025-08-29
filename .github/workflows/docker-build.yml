@@ -29,3 +29,12 @@ jobs:
           sleep 5
           curl -fsS http://127.0.0.1:3002/health || true
           docker rm -f newmedia-api-test || true
+
+      - name: Run realtime integration tests (if OPENAI API key provided)
+        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_REALTIME_ENABLED: 'true'
+        run: |
+          npm ci
+          npm run test:realtime
