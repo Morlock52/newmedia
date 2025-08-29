@@ -38,7 +38,8 @@
     "audit:performance": "npm audit && lighthouse-ci collect --url=http://localhost:3004",
     "test:ui:playwright": "playwright test",
     "playwright:install": "npx playwright install --with-deps",
-    "test:realtime": "node tests/voice/run-realtime-test.js"
+    "test:realtime": "node tests/voice/run-realtime-test.js",
+    "test:webrtc": "node tests/voice/webrtc-client-test.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.61",

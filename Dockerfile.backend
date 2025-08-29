@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
@@ -8,6 +8,17 @@ ENV NODE_ENV=production \
 
 # Install minimal runtime dependencies for the real backend
 COPY docker/backend-package.json ./package.json
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    python3-dev \
+    pkg-config \
+    libopus-dev \
+    libvpx-dev \
+    libssl-dev \
+    curl \
+    wget \
+    ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN npm install --omit=dev --no-audit --no-fund
 
 # Copy server and optional compose file for service discovery

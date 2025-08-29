@@ -1,14 +1,22 @@
 # Unified MCP Server Docker Image
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies for Docker integration
-RUN apk add --no-cache \
-    docker-cli \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    python3-dev \
+    pkg-config \
+    libopus-dev \
+    libvpx-dev \
+    libssl-dev \
+    docker.io \
     curl \
-    bash
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
