@@ -3,7 +3,7 @@
 # Complete Media Server + Monitoring + Auth Stack
 # ========================================
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL maintainer="Integration Specialist"
 LABEL description="Complete media server stack with 30+ interconnected services"

@@ -2,7 +2,7 @@
 # 30+ Services with Full Interconnection
 # August 2025 - Production Ready
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 
 # Metadata
 LABEL maintainer="Media Server AI"
