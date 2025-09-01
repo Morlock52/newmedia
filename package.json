@@ -61,7 +61,7 @@
     "imagemin-pngquant": "^9.0.2",
     "imagemin-webp": "^8.0.0",
     "ioredis": "^5.3.2",
-    "joi": "^17.11.0",
+    "joi": "^18.0.1",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "lru-cache": "^10.1.0",
