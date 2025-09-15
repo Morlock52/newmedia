@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.13.9",
-    "@apollo/experimental-nextjs-app-support": "^0.12.3",
+    "@apollo/experimental-nextjs-app-support": "^0.13.1",
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@mediapipe/hands": "^0.4.1675469240",
     "@tensorflow/tfjs": "^4.22.0",
