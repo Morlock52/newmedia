@@ -42,7 +42,7 @@
     "test:webrtc": "node tests/voice/webrtc-client-test.js"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.61",
+    "@anthropic-ai/claude-code": "^1.0.120",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.2.2",
