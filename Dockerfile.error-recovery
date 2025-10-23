@@ -1,5 +1,5 @@
 # Error Recovery System Dockerfile
-FROM node:18-alpine
+FROM node:25-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
